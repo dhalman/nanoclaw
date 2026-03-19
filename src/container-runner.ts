@@ -60,6 +60,35 @@ interface VolumeMount {
   readonly: boolean;
 }
 
+/**
+ * Sync entries from srcDir to dstDir, copying only when source is newer.
+ * When `directories` is true, syncs subdirectories (recursive copy).
+ * When false, syncs individual files.
+ */
+function syncIfNewer(
+  srcDir: string,
+  dstDir: string,
+  opts: { directories?: boolean } = {},
+): void {
+  if (!fs.existsSync(srcDir)) return;
+  fs.mkdirSync(dstDir, { recursive: true });
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (opts.directories && !entry.isDirectory()) continue;
+    const src = path.join(srcDir, entry.name);
+    const dst = path.join(dstDir, entry.name);
+    const srcMtime = fs.statSync(src).mtimeMs;
+    const dstMtime = fs.existsSync(dst) ? fs.statSync(dst).mtimeMs : 0;
+    if (srcMtime > dstMtime) {
+      if (opts.directories) {
+        fs.cpSync(src, dst, { recursive: true });
+      } else {
+        fs.copyFileSync(src, dst);
+      }
+    }
+  }
+}
+
 function buildVolumeMounts(
   group: RegisteredGroup,
   isMain: boolean,
@@ -151,21 +180,11 @@ function buildVolumeMounts(
   }
 
   // Sync skills from container/skills/ into each group's .claude/skills/
-  // Only copies a skill if the source is newer than the destination.
-  const skillsSrc = path.join(process.cwd(), 'container', 'skills');
-  const skillsDst = path.join(groupSessionsDir, 'skills');
-  if (fs.existsSync(skillsSrc)) {
-    for (const entry of fs.readdirSync(skillsSrc, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const srcDir = path.join(skillsSrc, entry.name);
-      const dstDir = path.join(skillsDst, entry.name);
-      const srcMtime = fs.statSync(srcDir).mtimeMs;
-      const dstMtime = fs.existsSync(dstDir) ? fs.statSync(dstDir).mtimeMs : 0;
-      if (srcMtime > dstMtime) {
-        fs.cpSync(srcDir, dstDir, { recursive: true });
-      }
-    }
-  }
+  syncIfNewer(
+    path.join(process.cwd(), 'container', 'skills'),
+    path.join(groupSessionsDir, 'skills'),
+    { directories: true },
+  );
   mounts.push({
     hostPath: groupSessionsDir,
     containerPath: '/home/node/.claude',
@@ -184,35 +203,18 @@ function buildVolumeMounts(
     readonly: false,
   });
 
-  // Copy agent-runner source into a per-group writable location so agents
-  // can customize it (add tools, change behavior) without affecting other
-  // groups. Recompiled on container startup via entrypoint.sh.
-  const agentRunnerSrc = path.join(
-    projectRoot,
-    'container',
-    'agent-runner',
-    'src',
-  );
+  // Sync agent-runner source into a per-group writable location so agents
+  // can customize it without affecting other groups. Recompiled on container startup.
   const groupAgentRunnerDir = path.join(
     DATA_DIR,
     'sessions',
     group.folder,
     'agent-runner-src',
   );
-  // Always sync agent-runner source on every spawn — never serve stale code.
-  // Compares mtime per file so unchanged files are skipped; only updated files are copied.
-  if (fs.existsSync(agentRunnerSrc)) {
-    fs.mkdirSync(groupAgentRunnerDir, { recursive: true });
-    for (const entry of fs.readdirSync(agentRunnerSrc)) {
-      const src = path.join(agentRunnerSrc, entry);
-      const dst = path.join(groupAgentRunnerDir, entry);
-      const srcMtime = fs.statSync(src).mtimeMs;
-      const dstMtime = fs.existsSync(dst) ? fs.statSync(dst).mtimeMs : 0;
-      if (srcMtime > dstMtime) {
-        fs.copyFileSync(src, dst);
-      }
-    }
-  }
+  syncIfNewer(
+    path.join(projectRoot, 'container', 'agent-runner', 'src'),
+    groupAgentRunnerDir,
+  );
   mounts.push({
     hostPath: groupAgentRunnerDir,
     containerPath: '/app/src',
@@ -792,66 +794,3 @@ export async function runContainerAgent(
   });
 }
 
-export function writeTasksSnapshot(
-  groupFolder: string,
-  isMain: boolean,
-  tasks: Array<{
-    id: string;
-    groupFolder: string;
-    prompt: string;
-    schedule_type: string;
-    schedule_value: string;
-    status: string;
-    next_run: string | null;
-  }>,
-): void {
-  // Write filtered tasks to the group's IPC directory
-  const groupIpcDir = resolveGroupIpcPath(groupFolder);
-  fs.mkdirSync(groupIpcDir, { recursive: true });
-
-  // Main sees all tasks, others only see their own
-  const filteredTasks = isMain
-    ? tasks
-    : tasks.filter((t) => t.groupFolder === groupFolder);
-
-  const tasksFile = path.join(groupIpcDir, 'current_tasks.json');
-  fs.writeFileSync(tasksFile, JSON.stringify(filteredTasks, null, 2));
-}
-
-export interface AvailableGroup {
-  jid: string;
-  name: string;
-  lastActivity: string;
-  isRegistered: boolean;
-}
-
-/**
- * Write available groups snapshot for the container to read.
- * Only main group can see all available groups (for activation).
- * Non-main groups only see their own registration status.
- */
-export function writeGroupsSnapshot(
-  groupFolder: string,
-  isMain: boolean,
-  groups: AvailableGroup[],
-  registeredJids: Set<string>,
-): void {
-  const groupIpcDir = resolveGroupIpcPath(groupFolder);
-  fs.mkdirSync(groupIpcDir, { recursive: true });
-
-  // Main sees all groups; others see nothing (they can't activate groups)
-  const visibleGroups = isMain ? groups : [];
-
-  const groupsFile = path.join(groupIpcDir, 'available_groups.json');
-  fs.writeFileSync(
-    groupsFile,
-    JSON.stringify(
-      {
-        groups: visibleGroups,
-        lastSync: new Date().toISOString(),
-      },
-      null,
-      2,
-    ),
-  );
-}

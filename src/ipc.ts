@@ -13,7 +13,7 @@ import {
   editJarvisMessage,
   deleteJarvisMessage,
 } from './channels/telegram.js';
-import { AvailableGroup } from './container-runner.js';
+import { AvailableGroup } from './snapshots.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
 import { isValidGroupFolder } from './group-folder.js';
 import { logger } from './logger.js';
@@ -29,7 +29,6 @@ export interface IpcDeps {
     groupFolder: string,
     isMain: boolean,
     availableGroups: AvailableGroup[],
-    registeredJids: Set<string>,
   ) => void;
 }
 
@@ -61,14 +60,7 @@ function getStatusEntries(): Map<string, StatusEntry> {
       if (raw) {
         const parsed = JSON.parse(raw);
         _statusEntries = new Map(
-          Object.entries(parsed).map(([k, v]) => [
-            k,
-            typeof v === 'object' &&
-            v !== null &&
-            'messageId' in (v as Record<string, unknown>)
-              ? (v as StatusEntry)
-              : { messageId: Number(v), lastWasStatus: true },
-          ]),
+          Object.entries(parsed).map(([k, v]) => [k, v as StatusEntry]),
         );
       } else {
         _statusEntries = new Map();
@@ -122,16 +114,6 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
     saveStatusEntries();
     logger.info({ chatJid }, 'Status message sent');
   }
-}
-
-// Backward compat shims
-function getStatusMessageIds(): Map<string, number> {
-  const ids = new Map<string, number>();
-  for (const [k, v] of getStatusEntries()) ids.set(k, v.messageId);
-  return ids;
-}
-function saveStatusMessageIds(_map: Map<string, number>): void {
-  saveStatusEntries();
 }
 
 function readExpectedBuildId(): string | null {
@@ -725,12 +707,7 @@ export async function processTaskIpc(
         await deps.syncGroups(true);
         // Write updated snapshot immediately
         const availableGroups = deps.getAvailableGroups();
-        deps.writeGroupsSnapshot(
-          sourceGroup,
-          true,
-          availableGroups,
-          new Set(Object.keys(registeredGroups)),
-        );
+        deps.writeGroupsSnapshot(sourceGroup, true, availableGroups);
       } else {
         logger.warn(
           { sourceGroup },
