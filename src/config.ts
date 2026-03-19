@@ -17,6 +17,8 @@ export const ASSISTANT_NAME =
 export const ASSISTANT_HAS_OWN_NUMBER =
   (process.env.ASSISTANT_HAS_OWN_NUMBER ||
     envConfig.ASSISTANT_HAS_OWN_NUMBER) === 'true';
+// Passed to containers via env var — controls whether secretary LLM classification
+// is used (false) or bypassed in favor of keyword classification (true).
 export const DISABLE_SECRETARY =
   (process.env.DISABLE_SECRETARY || envConfig.DISABLE_SECRETARY) === '1';
 export const POLL_INTERVAL = 2000;

@@ -1,11 +1,14 @@
 #!/bin/bash
 # Build the NanoClaw agent container image
-# Always: stops nanoclaw, purges builder cache, does a clean build, then restarts.
+#
+# Pipeline: lint → test → version bump → build → verify → commit → tag → restart
+# Tests gate the deploy — if they fail, the build aborts and nothing ships.
 #
 # Usage:
 #   ./container/build.sh          # bump patch version + build
 #   ./container/build.sh --minor  # bump minor version
 #   ./container/build.sh --major  # bump major version
+#   ./container/build.sh --skip-tests  # skip test gate (emergency hotfix only)
 
 set -e
 
@@ -17,22 +20,59 @@ IMAGE_NAME="nanoclaw-agent"
 TAG="latest"
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 BUMP=patch
+SKIP_TESTS=false
 
 for arg in "$@"; do
   case $arg in
     --minor) BUMP=minor ;;
     --major) BUMP=major ;;
+    --skip-tests) SKIP_TESTS=true ;;
   esac
 done
 
-# Stop nanoclaw service (standalone builds only — managed builds are already inside the service)
+# ---------------------------------------------------------------------------
+# 1. Stop nanoclaw (standalone builds only)
+# ---------------------------------------------------------------------------
 if [ "${NANOCLAW_MANAGED}" != "1" ]; then
   echo "Stopping nanoclaw..."
   launchctl stop gui/$(id -u)/com.nanoclaw 2>/dev/null || true
 fi
 
-# Always bump version — every build, deploy, and code change gets a new version.
-# Restarts (launchctl kickstart without build.sh) do NOT bump.
+# ---------------------------------------------------------------------------
+# 2. TypeScript compile check
+# ---------------------------------------------------------------------------
+echo "Compiling TypeScript..."
+cd "$PROJECT_ROOT"
+/opt/homebrew/bin/npm run build
+cd "$SCRIPT_DIR"
+
+# ---------------------------------------------------------------------------
+# 3. Test gate — abort if tests fail
+# ---------------------------------------------------------------------------
+if [ "$SKIP_TESTS" = "true" ]; then
+  echo "⚠️  Tests skipped (--skip-tests)"
+else
+  echo "Running test suite..."
+  cd "$PROJECT_ROOT"
+  TEST_OUTPUT=$(/opt/homebrew/bin/npm test 2>&1)
+  # Strip ANSI codes, check only the "Test Files" and "Tests" summary lines
+  CLEAN_OUTPUT=$(echo "$TEST_OUTPUT" | sed 's/\x1B\[[0-9;]*m//g')
+  SUMMARY=$(echo "$CLEAN_OUTPUT" | grep -E "^\s*(Test Files|Tests)\s" || true)
+  if echo "$SUMMARY" | grep -q "failed"; then
+    echo "$TEST_OUTPUT"
+    echo ""
+    echo "❌ TESTS FAILED — deploy aborted. Fix the failing tests before deploying."
+    echo "   Run 'npm test' to see details."
+    exit 1
+  fi
+  PASS_COUNT=$(echo "$SUMMARY" | grep "Tests" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "all")
+  echo "✅ Tests passed (${PASS_COUNT} tests)"
+  cd "$SCRIPT_DIR"
+fi
+
+# ---------------------------------------------------------------------------
+# 4. Version bump
+# ---------------------------------------------------------------------------
 CURRENT_VERSION=$(node -p "require('$PROJECT_ROOT/package.json').version" 2>/dev/null || echo "0.0.0")
 IFS='.' read -r _MAJOR _MINOR _PATCH <<< "$CURRENT_VERSION"
 case "$BUMP" in
@@ -44,7 +84,9 @@ echo "$BUILD_ID" > "$PROJECT_ROOT/container/ollama-runner/build-id.txt"
 /opt/homebrew/bin/npm version "$BUILD_ID" --no-git-tag-version --prefix "$PROJECT_ROOT" > /dev/null 2>&1 \
   && echo "Version bumped to v${BUILD_ID}" || echo "Warning: could not update package.json version"
 
-# Generate changelog entry from commits since last tag
+# ---------------------------------------------------------------------------
+# 5. Changelog
+# ---------------------------------------------------------------------------
 PREV_TAG="v${CURRENT_VERSION}"
 if git -C "$PROJECT_ROOT" rev-parse "$PREV_TAG" >/dev/null 2>&1; then
   COMMIT_RANGE="${PREV_TAG}..HEAD"
@@ -62,7 +104,6 @@ result = subprocess.run(
     capture_output=True, text=True
 )
 commits = [line.split(' ', 1)[1] for line in result.stdout.strip().splitlines() if ' ' in line]
-# Filter out version bump commits
 commits = [c for c in commits if not c.startswith('build: v')]
 title = commits[0] if commits else f'Build {new_ver}'
 
@@ -78,24 +119,24 @@ with open(changelog_path, 'w') as f:
 print(f'Changelog updated: v{new_ver}')
 PYEOF
 
-# Kill all running agent containers so the new image is picked up immediately
-echo "Killing running agent containers..."
+# ---------------------------------------------------------------------------
+# 6. Kill all containers — Jarvis auto-restarts SearXNG if it detects it's down
+# ---------------------------------------------------------------------------
+echo "Killing running containers..."
 docker kill $(docker ps -q) 2>/dev/null || true
 docker rm $(docker ps -aq) 2>/dev/null || true
 
+# ---------------------------------------------------------------------------
+# 7. Docker build
+# ---------------------------------------------------------------------------
 echo "Building NanoClaw agent container image..."
 echo "Image: ${IMAGE_NAME}:${TAG}"
 
-# Stable layers (apt-get, npm globals, npm install) are reused from cache.
-# Source layers (COPY agent-runner/, COPY ollama-runner/) are invalidated
-# automatically by Docker's content-hash detection when files change.
-# build-id.txt is always written fresh before this runs, guaranteeing
-# the ollama-runner COPY is always invalidated.
 ${CONTAINER_RUNTIME} build --build-arg CACHEBUST="$(date +%s)" -t "${IMAGE_NAME}:${TAG}" .
 
-# Verify the baked-in build ID matches what we wrote to build-id.txt.
-# Buildkit's content cache can silently serve stale file bytes even with CACHEBUST,
-# producing a "successful" build with old source. This catches it immediately.
+# ---------------------------------------------------------------------------
+# 8. Image verification
+# ---------------------------------------------------------------------------
 BAKED_ID=$(${CONTAINER_RUNTIME} run --rm --entrypoint cat "${IMAGE_NAME}:${TAG}" /app/ollama-runner/build-id.txt 2>/dev/null || echo "unknown")
 if [ "$BAKED_ID" != "$BUILD_ID" ]; then
   echo "⚠️  Image verification failed — baked ID is ${BAKED_ID}, expected ${BUILD_ID}"
@@ -114,10 +155,9 @@ echo ""
 echo "Build complete!"
 echo "Image: ${IMAGE_NAME}:${TAG}"
 
-# Ollama-runner source is bind-mounted from the host at runtime, so no
-# post-build sync is needed — containers always compile from the latest source.
-
-# Commit and tag the new version
+# ---------------------------------------------------------------------------
+# 9. Git commit + tag
+# ---------------------------------------------------------------------------
 git -C "$PROJECT_ROOT" add \
   container/ollama-runner/build-id.txt \
   package.json \
@@ -135,7 +175,9 @@ git -C "$PROJECT_ROOT" tag -f "v${BUILD_ID}" \
   2>/dev/null && echo "Tagged v${BUILD_ID}" \
   || echo "Warning: git tag failed"
 
-# Restart nanoclaw with the new image (skip when called from within the service)
+# ---------------------------------------------------------------------------
+# 10. Restart
+# ---------------------------------------------------------------------------
 if [ "${NANOCLAW_MANAGED}" != "1" ]; then
   echo "Restarting nanoclaw..."
   launchctl kickstart -k gui/$(id -u)/com.nanoclaw 2>/dev/null || true

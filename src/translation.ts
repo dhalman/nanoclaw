@@ -93,7 +93,10 @@ export async function translateText(
 ): Promise<string | null> {
   if (sourceLanguage === targetLanguage) return null;
 
-  const sourceName = getLanguageName(sourceLanguage);
+  const isAuto = sourceLanguage === 'auto';
+  const sourceName = isAuto
+    ? 'the source language'
+    : getLanguageName(sourceLanguage);
   const targetName = getLanguageName(targetLanguage);
 
   try {
@@ -105,7 +108,7 @@ export async function translateText(
         messages: [
           {
             role: 'system',
-            content: `Translate the following ${sourceName} text to ${targetName}. Return ONLY the translation, nothing else. No explanations, no notes, no quotes.`,
+            content: `Translate the following ${sourceName} text to ${targetName}. VERBATIM word-for-word translation — do not paraphrase, summarize, or rephrase. Return ONLY the translated text, nothing else. No explanations, no notes, no quotes, no preamble.`,
           },
           { role: 'user', content: text },
         ],

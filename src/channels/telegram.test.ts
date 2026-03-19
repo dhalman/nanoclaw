@@ -800,7 +800,7 @@ describe('TelegramChannel', () => {
 
       expect(currentBot().api.sendMessage).toHaveBeenCalledWith(
         '100200300',
-        '_🎙 "pick up milk"_',
+        '_🎙 [English] "pick up milk"_',
         { parse_mode: 'Markdown' },
       );
     });

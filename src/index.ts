@@ -4,6 +4,7 @@ import path from 'path';
 import {
   ASSISTANT_NAME,
   CREDENTIAL_PROXY_PORT,
+  GROUPS_DIR,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
   JARVIS_BOT_TOKEN,
@@ -80,6 +81,24 @@ let messageLoopRunning = false;
 
 // Tracks the last trigger message ID per chatJid for reply-to in groups
 const lastTriggerMessageId: Record<string, number> = {};
+
+/** Read a user preference from the group's preferences file (host-side). */
+function getUserPref(
+  groupFolder: string,
+  userId: string,
+  key: string,
+): unknown {
+  try {
+    const prefsPath = path.join(GROUPS_DIR, groupFolder, '.preferences.json');
+    if (!fs.existsSync(prefsPath)) return undefined;
+    const prefs = JSON.parse(fs.readFileSync(prefsPath, 'utf-8'));
+    const userVal = prefs?.users?.[userId]?.[key];
+    if (userVal !== undefined) return userVal;
+    return prefs?.group?.[key];
+  } catch {
+    return undefined;
+  }
+}
 
 // Per-group set of user IDs Jarvis is currently engaged with.
 // A user becomes engaged when they trigger Jarvis by name.
@@ -570,9 +589,19 @@ async function startMessageLoop(): Promise<void> {
                 (m.is_from_me ||
                   isTriggerAllowed(chatJid, m.sender, allowlistCfg)),
             );
-            const engagedMessages = groupMessages.filter(
-              (m) => !m.is_from_me && engaged.has(m.sender),
-            );
+            // Check per-user engagement mode preference
+            // "per_message" = must say Jarvis's name every time
+            // "persistent" (default) = stays engaged until dismissed
+            const engagedMessages = groupMessages.filter((m) => {
+              if (m.is_from_me || !engaged.has(m.sender)) return false;
+              const userEngMode = getUserPref(
+                group.folder,
+                m.sender,
+                'engagement_mode',
+              );
+              if (userEngMode === 'per_message') return false; // require trigger every time
+              return true;
+            });
 
             if (triggerMessages.length === 0 && engagedMessages.length === 0)
               continue;
@@ -830,6 +859,8 @@ async function main(): Promise<void> {
       isGroup?: boolean,
     ) => storeChatMetadata(chatJid, timestamp, name, channel, isGroup),
     registeredGroups: () => registeredGroups,
+    isUserEngaged: (chatJid: string, userId: string) =>
+      engagedUsers[chatJid]?.has(userId) ?? false,
   };
 
   // Create and connect all registered channels.

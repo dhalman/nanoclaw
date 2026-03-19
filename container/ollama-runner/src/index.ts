@@ -649,8 +649,8 @@ export const MODELS = {
 // Set of models that support tool-calling (vision models do not)
 const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION]);
 
-// Set of models that support the think: true flag (qwen3 non-coder only)
-const MODELS_WITH_THINK = new Set([MODELS.COORDINATOR, MODELS.SECRETARY]);
+// Only coordinator supports think: true — secretary is classification-only
+const MODELS_WITH_THINK = new Set([MODELS.COORDINATOR]);
 
 // Models that stay pinned in VRAM (keep_alive: -1)
 const MODELS_PINNED = new Set([MODELS.COORDINATOR]);
@@ -936,8 +936,8 @@ function getStatusLabel(model: string, think: boolean): string {
 }
 
 
-// gradeSecretaryResponse removed — secretary is now classification-only (no drafts to grade).
-// Secretary feedback still accumulates via the feedback file for routing corrections.
+// Secretary provides classification only. Routing corrections still accumulate in
+// SECRETARY_FEEDBACK_FILE and are injected into the classify prompt for self-calibration.
 
 function writeOutput(output: ContainerOutput): void {
   console.log(OUTPUT_START_MARKER);
@@ -1154,8 +1154,9 @@ Use Telegram formatting only: *bold* (single asterisks only), _italic_, • bull
 *Language behaviour:*
 - Respond in the same language the user writes in. If the user writes in Spanish, respond in Spanish. If English, respond in English.
 - Exception: if a user has a "response_language" preference set (via the preferences tool), always use that language for responses to them regardless of input language.
-- In group chats: if "translator_languages" is configured, the system automatically translates voice messages to all subscribed languages. You do not need to translate manually — the infrastructure handles it.
-- When translating your own responses in a group with active language subscriptions: after your response, append translations for each subscribed language as a plain block — no preamble, no "Translation:", just the translated text separated by blank lines. Only do this if the group has translator_languages set AND your response language differs from a subscribed language.
+- Do NOT translate your own responses or commands directed at you. The infrastructure silently translates member-to-member communication — text and voice messages are auto-translated to subscribed languages, and users react with 👀 for on-demand translation.
+- When not actively engaged with anyone, you are in *passive mode* — do not speak unless spoken to. The infrastructure acts as a silent translator with no added or modified content.
+- All translations (when you are asked directly) must be verbatim — word-for-word, not paraphrased or summarized. No added context, no explanations, no reformatting.
 
 *Reasoning* — call set_status to narrate non-trivial steps as you work: e.g. "Analyzing the request...", "Checking available models...", "Enhancing prompt...". This keeps the user informed in real time.
 
@@ -1416,7 +1417,7 @@ export async function handleToolCall(
         const ckpts = data?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0] ?? [];
         if (ckpts.length) sections.push('*Checkpoints:*\n' + ckpts.map((c: string) => `• ${c}`).join('\n'));
       }
-    } catch { /* ignore */ }
+    } catch (err) { log(`ComfyUI checkpoints query failed: ${err instanceof Error ? err.message : String(err)}`); }
     // UNETs (FLUX)
     try {
       const resp = await fetch(`${comfyHost}/object_info/UNETLoader`, { signal: AbortSignal.timeout(5000) });
@@ -1425,7 +1426,7 @@ export async function handleToolCall(
         const unets = data?.UNETLoader?.input?.required?.unet_name?.[0] ?? [];
         if (unets.length) sections.push('*UNETs:*\n' + unets.map((u: string) => `• ${u}`).join('\n'));
       }
-    } catch { /* ignore */ }
+    } catch (err) { log(`ComfyUI UNETs query failed: ${err instanceof Error ? err.message : String(err)}`); }
     // LoRAs
     try {
       const resp = await fetch(`${comfyHost}/object_info/LoraLoader`, { signal: AbortSignal.timeout(5000) });
@@ -1434,7 +1435,7 @@ export async function handleToolCall(
         const loras = data?.LoraLoader?.input?.required?.lora_name?.[0] ?? [];
         if (loras.length) sections.push('*LoRAs:*\n' + loras.map((l: string) => `• ${l}`).join('\n'));
       }
-    } catch { /* ignore */ }
+    } catch (err) { log(`ComfyUI LoRAs query failed: ${err instanceof Error ? err.message : String(err)}`); }
     return sections.join('\n\n') || 'ComfyUI is not running or has no models installed.';
   }
 
