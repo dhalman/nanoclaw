@@ -1,4 +1,11 @@
 {
+  "0.2.8": {
+    "date": "2026-03-19",
+    "title": "feat: auto-translation pipeline, passive mode, engagement preferences, code audit",
+    "notes": [
+      "feat: auto-translation pipeline, passive mode, engagement preferences, code audit"
+    ]
+  },
   "0.2.7": {
     "date": "2026-03-19",
     "title": "Build 0.2.7",
