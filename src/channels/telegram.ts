@@ -41,15 +41,12 @@ function getUserPreferredLanguages(
   }
 }
 
-/** Get translator languages for a group (always includes 'en'). */
+/** Get translator languages for a group — only what's explicitly subscribed. */
 function getTranslatorLanguages(groupFolder: string): string[] {
   const raw = getGroupPref(groupFolder, 'translator_languages');
-  const languages = Array.isArray(raw)
+  return Array.isArray(raw)
     ? raw.filter((l): l is string => typeof l === 'string')
     : [];
-  // Always include English
-  if (!languages.includes('en')) languages.unshift('en');
-  return languages;
 }
 import { registerChannel, ChannelOpts } from './registry.js';
 import {
