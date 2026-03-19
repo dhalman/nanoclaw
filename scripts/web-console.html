@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>NanoClaw</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #000; overflow: hidden; touch-action: manipulation; }
+
+    #terminal {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      bottom: 44px;
+    }
+
+    #terminal .xterm { height: 100%; }
+
+    #status {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #666;
+      font-family: monospace;
+      font-size: 14px;
+      z-index: 50;
+    }
+
+    #keybar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 44px;
+      background: #111;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 4px 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-top: 1px solid #333;
+      z-index: 100;
+    }
+
+    #keybar::-webkit-scrollbar { display: none; }
+
+    .k {
+      flex-shrink: 0;
+      height: 34px;
+      min-width: 38px;
+      padding: 0 8px;
+      background: #222;
+      color: #ccc;
+      border: 1px solid #444;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .k:active { background: #555; }
+    .k.on { background: #c33; border-color: #e55; color: #fff; }
+    .sep { width: 6px; flex-shrink: 0; }
+
+    @media (min-width: 768px) and (hover: hover) {
+      #terminal { bottom: 0; }
+      #keybar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <div id="status">Connecting...</div>
+
+  <div id="keybar">
+    <button class="k" id="btn-ctrl">Ctrl</button>
+    <button class="k" data-s="\x1b">Esc</button>
+    <button class="k" data-s="\t">Tab</button>
+    <div class="sep"></div>
+    <button class="k" data-s="\x1b[A">&#9650;</button>
+    <button class="k" data-s="\x1b[B">&#9660;</button>
+    <button class="k" data-s="\x1b[D">&#9664;</button>
+    <button class="k" data-s="\x1b[C">&#9654;</button>
+    <div class="sep"></div>
+    <button class="k" data-c="c">^C</button>
+    <button class="k" data-c="d">^D</button>
+    <button class="k" data-c="z">^Z</button>
+    <button class="k" data-c="l">^L</button>
+    <button class="k" data-c="r">^R</button>
+    <div class="sep"></div>
+    <button class="k" data-s="|">|</button>
+    <button class="k" data-s="/">/</button>
+    <button class="k" data-s="~">~</button>
+    <button class="k" data-s="-">-</button>
+    <button class="k" data-s="_">_</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+  <script>
+    (function() {
+      var statusEl = document.getElementById('status');
+      var termEl = document.getElementById('terminal');
+
+      // Create terminal
+      var term = new Terminal({
+        fontSize: 15,
+        fontFamily: "'Menlo', 'DejaVu Sans Mono', 'Consolas', monospace",
+        cursorBlink: true,
+        cursorStyle: 'bar',
+        theme: {
+          background: '#000000',
+          foreground: '#e0e0e0',
+          cursor: '#ffffff',
+          selectionBackground: '#444444'
+        },
+        allowProposedApi: true,
+        scrollback: 5000
+      });
+
+      var fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.loadAddon(new WebLinksAddon.WebLinksAddon());
+      term.open(termEl);
+      fitAddon.fit();
+
+      // Connect to ttyd websocket
+      var wsUrl = 'ws://' + location.hostname + ':TTYD_PORT/ws';
+      var ws;
+
+      function connect() {
+        statusEl.textContent = 'Connecting...';
+        statusEl.style.display = 'block';
+        ws = new WebSocket(wsUrl, ['tty']);
+
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = function() {
+          statusEl.style.display = 'none';
+          // Send auth token (empty for no auth)
+          ws.send(JSON.stringify({ AuthToken: '' }));
+          // Send initial size
+          sendResize();
+        };
+
+        ws.onmessage = function(ev) {
+          if (typeof ev.data === 'string') {
+            // Text protocol: first char is command type
+            var cmd = ev.data[0];
+            var payload = ev.data.slice(1);
+            switch (cmd) {
+              case '0': // output
+                term.write(payload);
+                break;
+              case '1': // set window title
+                document.title = payload || 'NanoClaw';
+                break;
+              case '2': // set prefs (JSON)
+                break;
+            }
+            return;
+          }
+          // Binary output (some ttyd versions)
+          var data = new Uint8Array(ev.data);
+          term.write(data.slice(1));
+        };
+
+        ws.onclose = function() {
+          statusEl.textContent = 'Disconnected. Tap to reconnect.';
+          statusEl.style.display = 'block';
+        };
+
+        ws.onerror = function() {
+          statusEl.textContent = 'Connection error.';
+          statusEl.style.display = 'block';
+        };
+      }
+
+      statusEl.addEventListener('click', connect);
+
+      function sendData(data) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        // ttyd text protocol: "0" + input data
+        ws.send('0' + data);
+      }
+
+      function sendResize() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        // ttyd expects text: "2" + JSON
+        ws.send('2' + JSON.stringify({ columns: term.cols, rows: term.rows }));
+      }
+
+      // Terminal input -> websocket
+      term.onData(function(data) {
+        sendData(data);
+      });
+
+      // Handle resize
+      var resizeTimeout;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+          fitAddon.fit();
+          sendResize();
+        }, 150);
+      });
+
+      // Virtual keyboard
+      var ctrlActive = false;
+      var ctrlBtn = document.getElementById('btn-ctrl');
+
+      ctrlBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        ctrlActive = !ctrlActive;
+        ctrlBtn.classList.toggle('on', ctrlActive);
+      });
+
+      // Decode escape strings from data attributes
+      function decodeSeq(s) {
+        return s.replace(/\\x1b/g, '\x1b').replace(/\\t/g, '\t');
+      }
+
+      document.getElementById('keybar').addEventListener('click', function(e) {
+        var btn = e.target.closest('.k');
+        if (!btn || btn.id === 'btn-ctrl') return;
+        e.preventDefault();
+
+        if (btn.dataset.c) {
+          // Ctrl+key
+          sendData(String.fromCharCode(btn.dataset.c.charCodeAt(0) - 96));
+        } else if (btn.dataset.s) {
+          var seq = decodeSeq(btn.dataset.s);
+          if (ctrlActive) {
+            // Apply ctrl modifier if it's a printable char
+            if (seq.length === 1 && seq >= 'a' && seq <= 'z') {
+              sendData(String.fromCharCode(seq.charCodeAt(0) - 96));
+            } else {
+              sendData(seq);
+            }
+            ctrlActive = false;
+            ctrlBtn.classList.remove('on');
+          } else {
+            sendData(seq);
+          }
+        }
+
+        term.focus();
+      });
+
+      // Prevent double-tap zoom on keybar
+      document.getElementById('keybar').addEventListener('touchend', function(e) {
+        if (e.target.closest('.k')) {
+          e.preventDefault();
+          e.target.closest('.k').click();
+        }
+      });
+
+      connect();
+    })();
+  </script>
+</body>
+</html>
