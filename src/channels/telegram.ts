@@ -754,12 +754,13 @@ export async function pinJarvisMessage(
 export async function reactToMessage(
   chatId: string,
   messageId: number,
+  emoji: string = '👀',
 ): Promise<void> {
   if (!jarvisApi) return;
   const numericId = chatId.replace(/^tg(-j)?:/, '');
   try {
     await jarvisApi.setMessageReaction(numericId, messageId, [
-      { type: 'emoji', emoji: '👀' as any },
+      { type: 'emoji', emoji: emoji as any },
     ]);
   } catch {
     /* ignore — reactions may not be available in all chats */

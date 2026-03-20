@@ -3,7 +3,6 @@ import path from 'path';
 
 import {
   ASSISTANT_NAME,
-  DISMISS_PATTERN,
   GROUPS_DIR,
   TRIGGER_PATTERN,
 } from './config.js';
@@ -114,22 +113,34 @@ export async function checkEngagement(
   group: RegisteredGroup,
   messages: NewMessage[],
   allowlistCfg: SenderAllowlistConfig,
-): Promise<boolean> {
+): Promise<{ shouldProcess: boolean; dismissals: Array<{ message: NewMessage; emoji: string }> }> {
   const isMainGroup = group.isMain === true;
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
-  if (!needsTrigger) return true;
+  if (!needsTrigger) return { shouldProcess: true, dismissals: [] };
 
   const engaged = getEngaged(chatJid);
 
-  // Dismissal: disengage users who send clear farewell messages
+  // Trivial/dismissal responses: disengage and react with an emoji instead of responding.
+  // Returns the emoji to react with, or null if the message is not trivial.
+  const TRIVIAL_REACTIONS: Array<{ pattern: RegExp; emoji: string }> = [
+    { pattern: /^\s*(?:thanks?|thank\s*you|thx|ty)\s*[!.]?\s*$/i, emoji: '🙏' },
+    { pattern: /^\s*(?:ok|okay|k|kk|got\s*it|understood|roger|copy)\s*[!.]?\s*$/i, emoji: '👍' },
+    { pattern: /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit)\s*[!.]?\s*$/i, emoji: '🔥' },
+    { pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i, emoji: '🫡' },
+    { pattern: /^\s*(?:lol|lmao|haha|😂|🤣|😆)\s*$/i, emoji: '😁' },
+    { pattern: /^\s*(?:bye|goodbye|go away|later|peace|cya|see\s*ya)\s*[!.]?\s*$/i, emoji: '👋' },
+    { pattern: /^\s*(?:stop|cancel|nevermind|nah|nope|no\s*thanks?|enough|done|that'?s\s*(?:all|enough|it)|i'?m\s*good|we'?re\s*good|whatever|quiet|shut\s*up|leave)\s*[!.]?\s*$/i, emoji: '👍' },
+    { pattern: /^\s*(?:👋|👍|👌|🙏|🫡|💯|✅|🤙)\s*$/i, emoji: '👍' },
+  ];
+  const dismissedMessages: Array<{ message: NewMessage; emoji: string }> = [];
   for (const m of messages) {
-    if (
-      !m.is_from_me &&
-      engaged.has(m.sender) &&
-      DISMISS_PATTERN.test(m.content.trim())
-    ) {
-      engaged.delete(m.sender);
-      logger.info({ chatJid, user: m.sender }, 'Disengaged (dismissal)');
+    if (!m.is_from_me && engaged.has(m.sender)) {
+      const trivial = TRIVIAL_REACTIONS.find((r) => r.pattern.test(m.content.trim()));
+      if (trivial) {
+        engaged.delete(m.sender);
+        dismissedMessages.push({ message: m, emoji: trivial.emoji });
+        logger.info({ chatJid, user: m.sender, emoji: trivial.emoji }, 'Disengaged (trivial)');
+      }
     }
   }
 
@@ -182,7 +193,7 @@ export async function checkEngagement(
   }
 
   if (triggerMessages.length === 0 && engagedMessages.length === 0)
-    return false;
+    return { shouldProcess: false, dismissals: dismissedMessages };
 
-  return true;
+  return { shouldProcess: true, dismissals: dismissedMessages };
 }

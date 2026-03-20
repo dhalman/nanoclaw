@@ -181,15 +181,18 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   if (missedMessages.length === 0) return true;
 
   // Unified engagement check: trigger detection, per-user prefs, dismissal
-  if (
-    !(await checkEngagement(
-      chatJid,
-      group,
-      missedMessages,
-      loadSenderAllowlist(),
-    ))
-  )
-    return true;
+  const engagement = await checkEngagement(
+    chatJid,
+    group,
+    missedMessages,
+    loadSenderAllowlist(),
+  );
+  // React to trivial dismissals with emoji
+  for (const d of engagement.dismissals) {
+    const msgId = parseInt(d.message.id, 10);
+    if (!isNaN(msgId)) reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
+  }
+  if (!engagement.shouldProcess) return true;
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
 
@@ -492,15 +495,18 @@ async function startMessageLoop(): Promise<void> {
           }
 
           // Unified engagement check: trigger detection, per-user prefs, dismissal
-          if (
-            !(await checkEngagement(
-              chatJid,
-              group,
-              groupMessages,
-              allowlistCfg,
-            ))
-          )
-            continue;
+          const engResult = await checkEngagement(
+            chatJid,
+            group,
+            groupMessages,
+            allowlistCfg,
+          );
+          // React to trivial dismissals with emoji
+          for (const d of engResult.dismissals) {
+            const msgId = parseInt(d.message.id, 10);
+            if (!isNaN(msgId)) reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
+          }
+          if (!engResult.shouldProcess) continue;
 
           // Pull all messages since lastAgentTimestamp so non-trigger
           // context that accumulated between triggers is included.
@@ -521,8 +527,8 @@ async function startMessageLoop(): Promise<void> {
             const numId = parseInt(lastUserMsg.id, 10);
             if (!isNaN(numId)) {
               lastTriggerMessageId[chatJid] = numId;
-              // Instant acknowledgment: react with 👀 so user knows Jarvis heard them
-              reactToMessage(chatJid, numId).catch(() => {});
+              // Instant acknowledgment reaction
+              reactToMessage(chatJid, numId, '🧐').catch(() => {});
             }
           }
 
