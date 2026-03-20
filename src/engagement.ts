@@ -22,7 +22,6 @@ const MENTION_PATTERN = new RegExp(
 
 /**
  * NLP intent check: is this message directed at the assistant, or just mentioning them?
- * Returns 'engage' (directed at assistant), 'observe' (mentioned but not directed), or null (error/timeout).
  */
 async function classifyIntent(
   text: string,
@@ -59,8 +58,6 @@ async function classifyIntent(
 }
 
 // Per-group set of user IDs the assistant is currently engaged with.
-// A user becomes engaged when they trigger by name.
-// Disengaged via <disengage:userId/> tag or host-side dismissal pattern.
 const engagedUsers: Record<string, Set<string>> = {};
 
 function getEngaged(chatJid: string): Set<string> {
@@ -92,26 +89,25 @@ export function isEngaged(chatJid: string, userId: string): boolean {
 
 export function engageUser(chatJid: string, userId: string): void {
   getEngaged(chatJid).add(userId);
-  logger.info({ chatJid, user: userId }, 'Engaged mode: user on');
+  logger.info({ chatJid, user: userId }, 'Engaged');
 }
 
 export function disengageUser(chatJid: string, userId: string): void {
   engagedUsers[chatJid]?.delete(userId);
-  logger.info({ chatJid, user: userId }, 'Engaged mode: user disengaged');
+  logger.info({ chatJid, user: userId }, 'Disengaged');
 }
 
 export function disengageAll(chatJid: string): void {
   engagedUsers[chatJid]?.clear();
-  logger.info({ chatJid }, 'Engaged mode: all users disengaged');
+  logger.info({ chatJid }, 'All disengaged');
 }
 
 /**
- * Check engagement state for a group's messages and return whether the
- * assistant should process them. Handles trigger detection, per-user
- * engagement mode preferences, and host-side dismissal — all in one place.
- *
- * Returns true if messages should be processed, false to skip.
- * Side effect: updates engaged user state (engage new triggers, dismiss).
+ * Engagement model:
+ * - Direct address (name mention + NLP "directed") → engage, respond
+ * - Already engaged → passively listen, respond without name requirement
+ * - Dismissal ("bye", "thanks", "done") → disengage, go quiet
+ * - After dismissal → only re-engage on direct address or skill-related trigger
  */
 export async function checkEngagement(
   chatJid: string,
@@ -123,18 +119,35 @@ export async function checkEngagement(
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
   if (!needsTrigger) return true;
 
-  // Direct address only — every message must mention the assistant by name.
-  logger.info({ chatJid, messageCount: messages.length }, 'Checking engagement');
+  const engaged = getEngaged(chatJid);
+
+  // Dismissal: disengage users who send clear farewell messages
+  for (const m of messages) {
+    if (
+      !m.is_from_me &&
+      engaged.has(m.sender) &&
+      DISMISS_PATTERN.test(m.content.trim())
+    ) {
+      engaged.delete(m.sender);
+      logger.info({ chatJid, user: m.sender }, 'Disengaged (dismissal)');
+    }
+  }
+
+  // Already-engaged users: passively listening — respond without name
+  const engagedMessages = messages.filter(
+    (m) => !m.is_from_me && engaged.has(m.sender),
+  );
 
   // Owner triggers (is_from_me) always work via regex
   const ownerTriggers = messages.filter(
     (m) => m.is_from_me && TRIGGER_PATTERN.test(m.content.trim()),
   );
 
-  // Other users: mention check → NLP intent
+  // New triggers: mention check → NLP intent (only for non-engaged users)
   const candidates = messages.filter(
     (m) =>
       !m.is_from_me &&
+      !engaged.has(m.sender) &&
       MENTION_PATTERN.test(m.content.trim()) &&
       isTriggerAllowed(chatJid, m.sender, allowlistCfg),
   );
@@ -151,26 +164,25 @@ export async function checkEngagement(
     for (const { message, intent } of intents) {
       if (intent === 'engage') {
         triggerMessages.push(message);
-        logger.info(
-          { chatJid, user: message.sender },
-          'Direct address detected (NLP)',
-        );
       } else if (intent === null) {
         // NLP failed — fall back to regex
         if (TRIGGER_PATTERN.test(message.content.trim())) {
           triggerMessages.push(message);
-          logger.info(
-            { chatJid, user: message.sender },
-            'Direct address detected (regex fallback)',
-          );
         }
       }
     }
   }
 
-  const triggered = triggerMessages.length > 0;
-  if (!triggered) {
-    logger.info({ chatJid, candidates: candidates.length }, 'No trigger detected');
+  // Engage new users
+  for (const m of triggerMessages) {
+    if (m.sender && !engaged.has(m.sender)) {
+      engaged.add(m.sender);
+      logger.info({ chatJid, user: m.sender }, 'Engaged');
+    }
   }
-  return triggered;
+
+  if (triggerMessages.length === 0 && engagedMessages.length === 0)
+    return false;
+
+  return true;
 }
