@@ -962,7 +962,13 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
       architect: MODELS.ARCHITECT,
       artist:    MODELS.COORDINATOR,
     };
-    const model = MODEL_MAP[c.model] ?? MODELS.COORDINATOR;
+    let model = MODEL_MAP[c.model] ?? MODELS.COORDINATOR;
+
+    // Guard: image/video/art mentions should never route to coder
+    if (model === MODELS.CODER && /\b(?:image|picture|photo|art|painting|video|film|animation)\b/i.test(text)) {
+      log(`[classify] override: coder→coordinator (creative keywords detected)`);
+      model = MODELS.COORDINATOR;
+    }
 
     let think = !!c.think || c.model === 'analyst';
     if (c.complexity === 'high' && (c.model === 'default' || !c.model)) {
