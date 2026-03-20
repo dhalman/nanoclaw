@@ -1,4 +1,14 @@
 {
+  "0.2.61": {
+    "date": "2026-03-19",
+    "title": "fix: translate command prompts for language when none registered",
+    "notes": [
+      "fix: translate command prompts for language when none registered",
+      "fix: translate command works in DMs too, shows hint without reply",
+      "fix: remove auto-translation of Jarvis responses",
+      "fix: version pattern before status, tighten status pattern"
+    ]
+  },
   "0.2.60": {
     "date": "2026-03-19",
     "title": "fix: single status message (no doubles), restart as secretary-direct",
