@@ -3118,7 +3118,9 @@ async function main(): Promise<void> {
       // the same translateToMultiple path as voice messages, for consistent UX.
 
       // Secretary direct execution: simple queries bypass the coordinator
-      const directResult = await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
+      // (noskip) tag forces full coordinator path — no shortcuts
+      const noSkip = /\(noskip\)/i.test(prompt);
+      const directResult = noSkip ? null : await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
       if (directResult) {
         const userMsg: Message = { role: 'user', content: prompt };
         history = [...history, userMsg, { role: 'assistant', content: directResult }];
