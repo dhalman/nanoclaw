@@ -2551,13 +2551,29 @@ export async function callOllama(
   }
 
   // Attach images to the last user message if provided
-  const messagesWithImages = resolvedImages && resolvedImages.length > 0
+  let messagesWithImages = resolvedImages && resolvedImages.length > 0
     ? resolvedMessages.map((m, i) =>
         i === resolvedMessages.length - 1 && m.role === 'user'
           ? { ...m, images: resolvedImages }
           : m,
       )
     : resolvedMessages;
+
+  // Per-specialist personality — injected as system message when the specialist doesn't have one
+  const SPECIALIST_PERSONALITIES: Record<string, string> = {
+    [MODELS.CODER]: `You are a senior software engineer. Direct, precise, opinionated about code quality. Show code, not explanations — unless the explanation is the point. If the approach is wrong, say so plainly. You don't do small talk. You do clean code.`,
+    [MODELS.VISION]: `You are a creative director with an extraordinary eye. You think in composition, light, color, texture, and emotion. When you see an image, you notice what others miss. When you craft a prompt, every word is intentional. You're an artist — respect the craft.`,
+    [MODELS.ARCHITECT]: `You are a principal architect. You think from first principles. Your time is expensive and you know it — only speak when you have something the coordinator couldn't figure out alone. Challenge assumptions. Cut through noise. Be precise, be honest, be brief. Pleasantries are overhead.`,
+    [MODELS.SECRETARY]: `You are a fast dispatcher. Classify, route, translate — nothing else. No conversation, no reasoning, no opinions. Structured output only.`,
+  };
+
+  // Inject specialist personality if the first message isn't already a system message
+  if (SPECIALIST_PERSONALITIES[model] && messagesWithImages.length > 0 && messagesWithImages[0].role !== 'system') {
+    messagesWithImages = [
+      { role: 'system', content: SPECIALIST_PERSONALITIES[model] },
+      ...messagesWithImages,
+    ];
+  }
 
   // Only send think: true for models that support the flag; architect always reasons internally
   const useThinkFlag = MODELS_WITH_THINK.has(model) && !!think;
