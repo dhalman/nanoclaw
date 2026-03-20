@@ -231,6 +231,40 @@ export async function initJarvisBot(
 
       const text = ctx.message.text;
 
+      // On-demand translation: reply to any message with "translate" to translate it.
+      // Intercept before storage/auto-translate — this is a meta-command, not a chat message.
+      const TRANSLATE_CMD = /^\s*(?:translate|translation|🌐)\s*$/i;
+      if (
+        isGroup &&
+        ctx.message.reply_to_message &&
+        TRANSLATE_CMD.test(text)
+      ) {
+        const replyText =
+          ctx.message.reply_to_message.text ||
+          (ctx.message.reply_to_message as any).caption;
+        if (replyText) {
+          const targetLangs = getTranslatorLanguages(group.folder);
+          if (targetLangs.length > 0) {
+            translateToMultiple(replyText, 'auto', targetLangs)
+              .then((translations) => {
+                if (translations.length > 0) {
+                  const echo = translations
+                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                    .join('\n');
+                  sendJarvisMessage(
+                    chatJid,
+                    echo,
+                    ctx.message.reply_to_message!.message_id,
+                  ).catch(() => {});
+                }
+              })
+              .catch(() => {});
+          }
+        }
+        // Don't store or process the "translate" command itself
+        return;
+      }
+
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
@@ -264,37 +298,6 @@ export async function initJarvisBot(
               }
             })
             .catch(() => {});
-        }
-      }
-
-      // On-demand translation: reply to any message with "translate" to translate it
-      const TRANSLATE_CMD = /^\s*(?:translate|translation|🌐)\s*$/i;
-      if (
-        isGroup &&
-        ctx.message.reply_to_message &&
-        TRANSLATE_CMD.test(text)
-      ) {
-        const replyText =
-          ctx.message.reply_to_message.text ||
-          (ctx.message.reply_to_message as any).caption;
-        if (replyText) {
-          const targetLangs = getTranslatorLanguages(group.folder);
-          if (targetLangs.length > 0) {
-            translateToMultiple(replyText, 'auto', targetLangs)
-              .then((translations) => {
-                if (translations.length > 0) {
-                  const echo = translations
-                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                    .join('\n');
-                  sendJarvisMessage(
-                    chatJid,
-                    echo,
-                    ctx.message.reply_to_message!.message_id,
-                  ).catch(() => {});
-                }
-              })
-              .catch(() => {});
-          }
         }
       }
 
@@ -482,7 +485,9 @@ export async function initJarvisBot(
                   content += `\n[${t.targetName}: ${t.text}]`;
                 }
               }
-              sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(() => {});
+              sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
+                () => {},
+              );
             } else {
               content = '[Voice message - transcription unavailable]';
             }
