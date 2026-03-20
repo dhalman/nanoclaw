@@ -1,4 +1,11 @@
 {
+  "0.2.66": {
+    "date": "2026-03-19",
+    "title": "fix: ask for languages when enabling without specifying, terse disable",
+    "notes": [
+      "fix: ask for languages when enabling without specifying, terse disable"
+    ]
+  },
   "0.2.65": {
     "date": "2026-03-19",
     "title": "feat: secretary-direct disable/remove translation languages",
