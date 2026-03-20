@@ -888,14 +888,20 @@ export async function classifyMessage(text: string, hasImages: boolean): Promise
 
   // LLM-based classification (when secretary is enabled)
   const feedbackHint = formatFeedbackForPrompt(loadSecretaryFeedback());
-  const classifyPrompt = `Route this message to the right model.${feedbackHint}
+  const classifyPrompt = `Classify this message. Identify the ACTION VERB and RECIPIENT to determine intent.${feedbackHint}
 Return JSON only, no explanation:
 {"model":"default|coder|analyst|architect|artist","think":true|false,"complexity":"low|medium|high","task_type":"chat|code|creative|analysis|decision|debug|research","needs_web":true|false}
 
 Rules:
-- model: "default" (general), "coder" (write/debug/refactor code), "analyst" (complex reasoning, trade-offs), "architect" (hardest problems), "artist" (image/video generation)
+- model: choose based on the PRIMARY ACTION VERB, not modal verbs (can/could/would)
+  - "default" — general chat, greetings, questions, opinions, casual conversation
+  - "coder" — ONLY when the action verb is code-specific: write/debug/refactor/implement/deploy code
+  - "analyst" — complex reasoning, trade-offs, multi-step analysis
+  - "architect" — hardest problems requiring deep expertise
+  - "artist" — image/video generation (draw, paint, generate image/video)
 - think: true only for multi-step reasoning, trade-offs, or complex analysis
 - needs_web: true only for live/current data (news, prices, weather, recent events)
+- When in doubt, use "default" — it can delegate to specialists itself
 
 Message: ${JSON.stringify(text.slice(0, 400))}`;
 
