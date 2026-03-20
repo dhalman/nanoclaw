@@ -43,7 +43,11 @@ function getUserPreferredLanguages(
 
 /** Get translator languages for a group — only what's explicitly subscribed. */
 function getTranslatorLanguages(groupFolder: string): string[] {
-  const raw = getGroupPref(groupFolder, 'translator_languages');
+  let raw = getGroupPref(groupFolder, 'translator_languages');
+  // Handle double-serialized values (stored as string instead of array)
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(raw); } catch { return []; }
+  }
   return Array.isArray(raw)
     ? raw.filter((l): l is string => typeof l === 'string')
     : [];

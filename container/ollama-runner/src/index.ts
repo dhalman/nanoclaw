@@ -1273,7 +1273,12 @@ async function translateForListeners(
   senderName: string,
   chatJid: string,
 ): Promise<void> {
-  const langs = getPref('translator_languages') as string[] | undefined;
+  let rawLangs = getPref('translator_languages');
+  // Handle double-serialized values (stored as string instead of array)
+  if (typeof rawLangs === 'string') {
+    try { rawLangs = JSON.parse(rawLangs); } catch { return; }
+  }
+  const langs = rawLangs as string[] | undefined;
   if (!langs || !Array.isArray(langs) || langs.length === 0) return;
 
   // Short messages aren't worth translating
