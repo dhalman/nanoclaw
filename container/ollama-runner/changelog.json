@@ -1,4 +1,11 @@
 {
+  "0.2.36": {
+    "date": "2026-03-19",
+    "title": "feat: 35B re-translation on dissatisfaction with translation quality",
+    "notes": [
+      "feat: 35B re-translation on dissatisfaction with translation quality"
+    ]
+  },
   "0.2.35": {
     "date": "2026-03-19",
     "title": "fix: use 3B for all auto-translations, 35B only on direct request",
