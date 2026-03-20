@@ -1,4 +1,11 @@
 {
+  "0.2.46": {
+    "date": "2026-03-19",
+    "title": "feat: NLP intent detection for engagement, translate all messages",
+    "notes": [
+      "feat: NLP intent detection for engagement, translate all messages"
+    ]
+  },
   "0.2.45": {
     "date": "2026-03-19",
     "title": "fix: add missing getUserPref import",
