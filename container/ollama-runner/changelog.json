@@ -1,4 +1,46 @@
 {
+  "0.2.12": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.12",
+    "notes": []
+  },
+  "0.2.11": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.11",
+    "notes": []
+  },
+  "0.2.10": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.10",
+    "notes": []
+  },
+  "0.2.9": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.9",
+    "notes": []
+  },
+  "0.2.8": {
+    "date": "2026-03-19",
+    "title": "feat: auto-translation pipeline, passive mode, engagement preferences, code audit",
+    "notes": [
+      "feat: auto-translation pipeline, passive mode, engagement preferences, code audit"
+    ]
+  },
+  "0.2.7": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.7",
+    "notes": []
+  },
+  "0.2.6": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.6",
+    "notes": []
+  },
+  "0.2.5": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.5",
+    "notes": []
+  },
   "0.2.4": {
     "date": "2026-03-19",
     "title": "Build 0.2.4",

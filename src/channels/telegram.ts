@@ -21,6 +21,26 @@ function getGroupPref(groupFolder: string, key: string): unknown {
   }
 }
 
+/** Get a user's preferred language from group preferences. */
+function getUserPreferredLanguages(
+  groupFolder: string,
+  userId: string,
+): string[] {
+  try {
+    const prefsPath = path.join(GROUPS_DIR, groupFolder, '.preferences.json');
+    if (!fs.existsSync(prefsPath)) return ['en'];
+    const prefs = JSON.parse(fs.readFileSync(prefsPath, 'utf-8'));
+    // Check user override first, then group default
+    const userLang = prefs?.users?.[userId]?.response_language;
+    if (userLang && typeof userLang === 'string') return [userLang];
+    const groupLang = prefs?.group?.response_language;
+    if (groupLang && typeof groupLang === 'string') return [groupLang];
+    return ['en'];
+  } catch {
+    return ['en'];
+  }
+}
+
 /** Get translator languages for a group (always includes 'en'). */
 function getTranslatorLanguages(groupFolder: string): string[] {
   const raw = getGroupPref(groupFolder, 'translator_languages');
@@ -43,6 +63,7 @@ export interface TelegramChannelOpts {
   onMessage: OnInboundMessage;
   onChatMetadata: OnChatMetadata;
   registeredGroups: () => Record<string, RegisteredGroup>;
+  isUserEngaged?: (chatJid: string, userId: string) => boolean;
 }
 
 /**
@@ -203,15 +224,43 @@ export async function initJarvisBot(
       const group = opts.registeredGroups()[chatJid];
       if (!group) return;
 
+      const text = ctx.message.text;
+
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
         sender,
         sender_name: senderName,
-        content: ctx.message.text,
+        content: text,
         timestamp,
         is_from_me: false,
       });
+
+      // Auto-translate in groups: translate when message is member-to-member.
+      // A message is directed at Jarvis if: mentions his name AND not replying to another member.
+      // Even if engaged, replying to someone else = member-to-member = translate.
+      const mentionsJarvis = TRIGGER_PATTERN.test(text);
+      const isReplyToOther =
+        ctx.message.reply_to_message &&
+        ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
+      const isDirectedAtJarvis = mentionsJarvis && !isReplyToOther;
+      if (isGroup && !isDirectedAtJarvis) {
+        const targetLangs = getTranslatorLanguages(group.folder);
+        if (targetLangs.length > 0 && text.length > 2) {
+          translateToMultiple(text, 'auto', targetLangs)
+            .then((translations) => {
+              if (translations.length > 0) {
+                const echo = translations
+                  .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                  .join('\n');
+                sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
+                  () => {},
+                );
+              }
+            })
+            .catch(() => {});
+        }
+      }
 
       logger.info(
         { chatJid, chatName, sender: senderName },
@@ -377,9 +426,12 @@ export async function initJarvisBot(
                 { chatJid, chars: result.text.length, lang: result.language },
                 'Jarvis voice message transcribed',
               );
-              // Translate to all subscribed languages for this group
-              const targetLangs = getTranslatorLanguages(group.folder);
-              let echo = `_🎙 "${result.text}"_`;
+              // Always translate voice memos: all subscribed languages in groups,
+              // user's preferred language in DMs
+              const targetLangs = isGroup
+                ? getTranslatorLanguages(group.folder)
+                : getUserPreferredLanguages(group.folder, sender);
+              let echo = `_🎙 [${getLanguageName(result.language)}] "${result.text}"_`;
               const translations = await translateToMultiple(
                 result.text,
                 result.language,
@@ -387,7 +439,7 @@ export async function initJarvisBot(
               );
               if (translations.length > 0) {
                 for (const t of translations) {
-                  echo += `\n_🌐 [${getLanguageName(result.language)} → ${t.targetName}] "${t.text}"_`;
+                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
                 }
                 content = `[Voice (${getLanguageName(result.language)}): ${result.text}]`;
                 for (const t of translations) {
@@ -436,6 +488,56 @@ export async function initJarvisBot(
         logger.info(
           { chatJid, userId: member.id, name },
           'New member welcomed',
+        );
+      }
+    });
+
+    // 🌐 reaction handler — translate the reacted message on demand
+    jarvisBot.on('message_reaction', async (ctx) => {
+      const chatJid = `tg-j:${ctx.chat.id}`;
+      const group = opts.registeredGroups()[chatJid];
+      if (!group) return;
+
+      const reactions = ctx.messageReaction?.new_reaction ?? [];
+      // Use 👀 (eyes) as the translate trigger — it's in Telegram's supported emoji list
+      // and semantically means "let me see this in my language"
+      const hasTranslateEmoji = reactions.some(
+        (r) =>
+          (r.type === 'emoji' && r.emoji === '👀') || r.type === 'custom_emoji',
+      );
+      if (!hasTranslateEmoji) return;
+
+      const messageId = ctx.messageReaction?.message_id;
+      if (!messageId) return;
+
+      // Look up the message content from DB
+      try {
+        const { getMessageById } = await import('../db.js');
+        const msg = getMessageById?.(chatJid, messageId.toString());
+        if (!msg?.content) return;
+
+        const targetLangs = getTranslatorLanguages(group.folder);
+        if (targetLangs.length === 0) return;
+
+        // Detect source language via a quick inference, then translate
+        const { translateToMultiple, getLanguageName } =
+          await import('../translation.js');
+        // Use 'auto' detection — translate to all subscribed languages
+        const translations = await translateToMultiple(
+          msg.content,
+          'auto',
+          targetLangs,
+        );
+        if (translations.length > 0) {
+          const echo = translations
+            .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+            .join('\n');
+          sendJarvisMessage(chatJid, echo, messageId).catch(() => {});
+        }
+      } catch (err) {
+        logger.debug(
+          { chatJid, messageId, err },
+          'Reaction translation failed',
         );
       }
     });
@@ -784,8 +886,13 @@ export class TelegramChannel implements Channel {
                 { chatJid, chars: result.text.length, lang: result.language },
                 'Voice message transcribed',
               );
-              const targetLangs = getTranslatorLanguages(group.folder);
-              let echo = `_🎙 "${result.text}"_`;
+              const targetLangs = isGroup
+                ? getTranslatorLanguages(group.folder)
+                : getUserPreferredLanguages(
+                    group.folder,
+                    ctx.from?.id?.toString() || '',
+                  );
+              let echo = `_🎙 [${getLanguageName(result.language)}] "${result.text}"_`;
               const translations = await translateToMultiple(
                 result.text,
                 result.language,
@@ -793,7 +900,7 @@ export class TelegramChannel implements Channel {
               );
               if (translations.length > 0) {
                 for (const t of translations) {
-                  echo += `\n_🌐 [${getLanguageName(result.language)} → ${t.targetName}] "${t.text}"_`;
+                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
                 }
                 content = `[Voice (${getLanguageName(result.language)}): ${result.text}]`;
                 for (const t of translations) {

@@ -339,6 +339,37 @@ export function getNewMessages(
   return { messages: rows, newTimestamp };
 }
 
+export function getMessageById(
+  chatJid: string,
+  messageId: string,
+): NewMessage | undefined {
+  const row = db
+    .prepare(
+      'SELECT id, chat_jid, sender, sender_name, content, timestamp, is_from_me FROM messages WHERE chat_jid = ? AND id = ?',
+    )
+    .get(chatJid, messageId) as
+    | {
+        id: string;
+        chat_jid: string;
+        sender: string;
+        sender_name: string;
+        content: string;
+        timestamp: string;
+        is_from_me: number;
+      }
+    | undefined;
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    chat_jid: row.chat_jid,
+    sender: row.sender,
+    sender_name: row.sender_name,
+    content: row.content,
+    timestamp: row.timestamp,
+    is_from_me: !!row.is_from_me,
+  };
+}
+
 export function getMessagesSince(
   chatJid: string,
   sinceTimestamp: string,
