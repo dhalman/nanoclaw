@@ -87,6 +87,14 @@ export const TRIGGER_PATTERN = new RegExp(
   'im',
 );
 
+// Host-side dismissal: disengage when user sends a clear farewell
+export const DISMISS_PATTERN =
+  /^\s*(?:bye|goodbye|go away|stop|leave|dismiss|shut up|quiet|enough|done|no thanks?|nah|nope|not now|i'?m good|we'?re good|that'?s (?:all|enough|it)|never\s?mind|whatever|ok bye|k bye|👋)\s*[.!]?\s*$/i;
+
+// Cancel command: kill the active container immediately
+export const CANCEL_PATTERN =
+  /^\s*(\/stop|\/cancel|stop|cancel|nevermind)\s*$/i;
+
 // Timezone for scheduled tasks (cron expressions, etc.)
 // Uses system timezone by default
 export const TIMEZONE =

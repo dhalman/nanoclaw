@@ -3,14 +3,13 @@ import path from 'path';
 
 import {
   ASSISTANT_NAME,
+  CANCEL_PATTERN,
   CREDENTIAL_PROXY_PORT,
-  GROUPS_DIR,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
   JARVIS_BOT_TOKEN,
   TELEGRAM_BOT_POOL,
   TIMEZONE,
-  TRIGGER_PATTERN,
 } from './config.js';
 import {
   initBotPool,
@@ -18,6 +17,12 @@ import {
   sendJarvisMessage,
 } from './channels/telegram.js';
 import { startCredentialProxy } from './credential-proxy.js';
+import {
+  checkEngagement,
+  disengageAll,
+  disengageUser,
+  isEngaged,
+} from './engagement.js';
 import './channels/index.js';
 import {
   getChannelFactory,
@@ -26,8 +31,6 @@ import {
 import {
   ContainerOutput,
   runContainerAgent,
-  writeGroupsSnapshot,
-  writeTasksSnapshot,
 } from './container-runner.js';
 import {
   cleanupOrphans,
@@ -35,10 +38,8 @@ import {
   PROXY_BIND_HOST,
 } from './container-runtime.js';
 import {
-  getAllChats,
   getAllRegisteredGroups,
   getAllSessions,
-  getAllTasks,
   getMessagesSince,
   getNewMessages,
   getRegisteredGroup,
@@ -55,13 +56,17 @@ import { resolveGroupFolderPath } from './group-folder.js';
 import { markUserActivity, sendStoppedStatus, startIpcWatcher } from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
+  getAvailableGroups as getAvailableGroupsFromSnapshots,
+  prepareAndWriteSnapshots,
+  writeGroupsSnapshot,
+} from './snapshots.js';
+import {
   restoreRemoteControl,
   startRemoteControl,
   stopRemoteControl,
 } from './remote-control.js';
 import {
   isSenderAllowed,
-  isTriggerAllowed,
   loadSenderAllowlist,
   shouldDropMessage,
 } from './sender-allowlist.js';
@@ -70,8 +75,6 @@ import { Channel, NewMessage, RegisteredGroup } from './types.js';
 import { cancelVideoBackends } from './video-cancel.js';
 import { logger } from './logger.js';
 
-// Re-export for backwards compatibility during refactor
-export { escapeXml, formatMessages } from './router.js';
 
 let lastTimestamp = '';
 let sessions: Record<string, string> = {};
@@ -82,28 +85,6 @@ let messageLoopRunning = false;
 // Tracks the last trigger message ID per chatJid for reply-to in groups
 const lastTriggerMessageId: Record<string, number> = {};
 
-/** Read a user preference from the group's preferences file (host-side). */
-function getUserPref(
-  groupFolder: string,
-  userId: string,
-  key: string,
-): unknown {
-  try {
-    const prefsPath = path.join(GROUPS_DIR, groupFolder, '.preferences.json');
-    if (!fs.existsSync(prefsPath)) return undefined;
-    const prefs = JSON.parse(fs.readFileSync(prefsPath, 'utf-8'));
-    const userVal = prefs?.users?.[userId]?.[key];
-    if (userVal !== undefined) return userVal;
-    return prefs?.group?.[key];
-  } catch {
-    return undefined;
-  }
-}
-
-// Per-group set of user IDs Jarvis is currently engaged with.
-// A user becomes engaged when they trigger Jarvis by name.
-// Jarvis disengages a user by including <disengage:userId/> in his farewell.
-const engagedUsers: Record<string, Set<string>> = {};
 
 // Pending images per chatJid (base64). Accumulated from incoming photo messages,
 // consumed (and cleared) when an agent is spawned for that chatJid.
@@ -160,22 +141,9 @@ function registerGroup(jid: string, group: RegisteredGroup): void {
   );
 }
 
-/**
- * Get available groups list for the agent.
- * Returns groups ordered by most recent activity.
- */
-export function getAvailableGroups(): import('./container-runner.js').AvailableGroup[] {
-  const chats = getAllChats();
-  const registeredJids = new Set(Object.keys(registeredGroups));
-
-  return chats
-    .filter((c) => c.jid !== '__group_sync__' && c.is_group)
-    .map((c) => ({
-      jid: c.jid,
-      name: c.name,
-      lastActivity: c.last_message_time,
-      isRegistered: registeredJids.has(c.jid),
-    }));
+/** @internal - wraps snapshots.getAvailableGroups with module state. Used by routing.test.ts. */
+export function getAvailableGroups(): import('./snapshots.js').AvailableGroup[] {
+  return getAvailableGroupsFromSnapshots(registeredGroups);
 }
 
 /** @internal - exported for testing */
@@ -210,28 +178,9 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
 
   if (missedMessages.length === 0) return true;
 
-  // For non-main groups, check if trigger is required and present
-  if (!isMainGroup && group.requiresTrigger !== false) {
-    const allowlistCfg = loadSenderAllowlist();
-    if (!engagedUsers[chatJid]) engagedUsers[chatJid] = new Set();
-    const engaged = engagedUsers[chatJid];
-    const triggerMessages = missedMessages.filter(
-      (m) =>
-        TRIGGER_PATTERN.test(m.content.trim()) &&
-        (m.is_from_me || isTriggerAllowed(chatJid, m.sender, allowlistCfg)),
-    );
-    const engagedMessages = missedMessages.filter(
-      (m) => !m.is_from_me && engaged.has(m.sender),
-    );
-    if (triggerMessages.length === 0 && engagedMessages.length === 0)
-      return true;
-    for (const m of triggerMessages) {
-      if (m.sender && !engaged.has(m.sender)) {
-        engaged.add(m.sender);
-        logger.info({ chatJid, user: m.sender }, 'Engaged mode: user on');
-      }
-    }
-  }
+  // Unified engagement check: trigger detection, per-user prefs, dismissal
+  if (!checkEngagement(chatJid, group, missedMessages, loadSenderAllowlist()))
+    return true;
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
 
@@ -281,17 +230,10 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       );
       for (const match of disengageMatches) {
         const userId = (match[1] || match[2] || '').trim();
-        if (engagedUsers[chatJid]) {
-          if (!userId || userId === 'all') {
-            engagedUsers[chatJid].clear();
-            logger.info({ chatJid }, 'Engaged mode: all users disengaged');
-          } else {
-            engagedUsers[chatJid].delete(userId);
-            logger.info(
-              { chatJid, user: userId },
-              'Engaged mode: user disengaged',
-            );
-          }
+        if (!userId || userId === 'all') {
+          disengageAll(chatJid);
+        } else {
+          disengageUser(chatJid, userId);
         }
       }
       text = text
@@ -359,30 +301,8 @@ async function runAgent(
   const isMain = group.isMain === true;
   const sessionId = sessions[group.folder];
 
-  // Update tasks snapshot for container to read (filtered by group)
-  const tasks = getAllTasks();
-  writeTasksSnapshot(
-    group.folder,
-    isMain,
-    tasks.map((t) => ({
-      id: t.id,
-      groupFolder: t.group_folder,
-      prompt: t.prompt,
-      schedule_type: t.schedule_type,
-      schedule_value: t.schedule_value,
-      status: t.status,
-      next_run: t.next_run,
-    })),
-  );
-
-  // Update available groups snapshot (main group only can see all groups)
-  const availableGroups = getAvailableGroups();
-  writeGroupsSnapshot(
-    group.folder,
-    isMain,
-    availableGroups,
-    new Set(Object.keys(registeredGroups)),
-  );
+  // Write task + group snapshots for container to read
+  prepareAndWriteSnapshots(group.folder, isMain, registeredGroups);
 
   // Wrap onOutput to track session ID from streamed results
   const wrappedOnOutput = onOutput
@@ -419,6 +339,8 @@ async function runAgent(
       wrappedOnOutput,
     );
 
+    // Safety net: wrappedOnOutput handles session tracking during streaming,
+    // but this catches the final output when onOutput is undefined (task-scheduler path).
     if (output.newSessionId) {
       sessions[group.folder] = output.newSessionId;
       setSession(group.folder, output.newSessionId);
@@ -454,25 +376,7 @@ function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
     const isMain = group.isMain === true;
     const sessionId = sessions[group.folder];
 
-    writeTasksSnapshot(
-      group.folder,
-      isMain,
-      getAllTasks().map((t) => ({
-        id: t.id,
-        groupFolder: t.group_folder,
-        prompt: t.prompt,
-        schedule_type: t.schedule_type,
-        schedule_value: t.schedule_value,
-        status: t.status,
-        next_run: t.next_run,
-      })),
-    );
-    writeGroupsSnapshot(
-      group.folder,
-      isMain,
-      getAvailableGroups(),
-      new Set(Object.keys(registeredGroups)),
-    );
+    prepareAndWriteSnapshots(group.folder, isMain, registeredGroups);
 
     await runContainerAgent(
       group,
@@ -575,67 +479,9 @@ async function startMessageLoop(): Promise<void> {
             continue;
           }
 
-          const isMainGroup = group.isMain === true;
-          const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
-
-          if (needsTrigger) {
-            if (!engagedUsers[chatJid]) engagedUsers[chatJid] = new Set();
-            const engaged = engagedUsers[chatJid];
-
-            // Check which messages have a trigger or come from engaged users
-            const triggerMessages = groupMessages.filter(
-              (m) =>
-                TRIGGER_PATTERN.test(m.content.trim()) &&
-                (m.is_from_me ||
-                  isTriggerAllowed(chatJid, m.sender, allowlistCfg)),
-            );
-            // Check per-user engagement mode preference
-            // "per_message" = must say Jarvis's name every time
-            // "persistent" (default) = stays engaged until dismissed
-            const engagedMessages = groupMessages.filter((m) => {
-              if (m.is_from_me || !engaged.has(m.sender)) return false;
-              const userEngMode = getUserPref(
-                group.folder,
-                m.sender,
-                'engagement_mode',
-              );
-              if (userEngMode === 'per_message') return false; // require trigger every time
-              return true;
-            });
-
-            // Host-side dismissal: if an engaged user sends a clear dismissal,
-            // disengage them immediately (don't wait for Jarvis to include the marker)
-            // Explicit dismissal OR negative sentiment after a Jarvis response
-            const DISMISS_PATTERN =
-              /^\s*(?:bye|goodbye|go away|stop|leave|dismiss|shut up|quiet|enough|done|no thanks?|nah|nope|not now|i'?m good|we'?re good|that'?s (?:all|enough|it)|never\s?mind|whatever|ok bye|k bye|👋)\s*[.!]?\s*$/i;
-            for (const m of groupMessages) {
-              if (
-                !m.is_from_me &&
-                engaged.has(m.sender) &&
-                DISMISS_PATTERN.test(m.content.trim())
-              ) {
-                engaged.delete(m.sender);
-                logger.info(
-                  { chatJid, user: m.sender },
-                  'Engaged mode: user dismissed (host-side)',
-                );
-              }
-            }
-
-            if (triggerMessages.length === 0 && engagedMessages.length === 0)
-              continue;
-
-            // Engage any new users who triggered by name
-            for (const m of triggerMessages) {
-              if (m.sender && !engaged.has(m.sender)) {
-                engaged.add(m.sender);
-                logger.info(
-                  { chatJid, user: m.sender },
-                  'Engaged mode: user on',
-                );
-              }
-            }
-          }
+          // Unified engagement check: trigger detection, per-user prefs, dismissal
+          if (!checkEngagement(chatJid, group, groupMessages, allowlistCfg))
+            continue;
 
           // Pull all messages since lastAgentTimestamp so non-trigger
           // context that accumulated between triggers is included.
@@ -658,8 +504,6 @@ async function startMessageLoop(): Promise<void> {
           }
 
           // Cancel command: kill the active container immediately
-          const CANCEL_PATTERN =
-            /^\s*(\/stop|\/cancel|stop|cancel|nevermind)\s*$/i;
           const isCancelCommand = groupMessages.some(
             (m) => m.is_from_me && CANCEL_PATTERN.test(m.content.trim()),
           );
@@ -837,42 +681,52 @@ async function main(): Promise<void> {
         pendingImages[chatJid].push(...msg.images);
         pendingImageTimestamps[chatJid] = Date.now();
 
-        // Also persist to group folder so active containers can access them via loadLatestImage()
+        // Persist to group folder async so active containers can access via loadLatestImage()
         const group = registeredGroups[chatJid];
         if (group?.containerConfig?.ollamaRunner) {
-          try {
-            const groupDir = resolveGroupFolderPath(group.folder);
-            const latestImageFile = path.join(groupDir, '.latest-image.json');
-            fs.writeFileSync(
+          const groupDir = resolveGroupFolderPath(group.folder);
+          const latestImageFile = path.join(groupDir, '.latest-image.json');
+          fs.promises
+            .writeFile(
               latestImageFile,
               JSON.stringify({ images: msg.images, savedAt: Date.now() }),
+            )
+            .catch((err) =>
+              logger.debug(
+                { chatJid, err },
+                'Failed to persist latest image to group folder',
+              ),
             );
-          } catch (err) {
-            logger.debug(
-              { chatJid, err },
-              'Failed to persist latest image to group folder',
-            );
-          }
         }
       }
 
-      // Persist received video to group folder for video generation context
+      // Persist received video to group folder async for video generation context
       if (msg.videoBase64) {
         const group = registeredGroups[chatJid];
         if (group?.containerConfig?.ollamaRunner) {
-          try {
-            const groupDir = resolveGroupFolderPath(group.folder);
-            const videoPath = path.join(groupDir, '.latest-video.mp4');
-            const metaPath = path.join(groupDir, '.latest-video.json');
-            fs.writeFileSync(videoPath, Buffer.from(msg.videoBase64, 'base64'));
-            fs.writeFileSync(metaPath, JSON.stringify({ savedAt: Date.now() }));
-            logger.debug({ chatJid }, 'Latest video persisted to group folder');
-          } catch (err) {
-            logger.debug(
-              { chatJid, err },
-              'Failed to persist latest video to group folder',
+          const groupDir = resolveGroupFolderPath(group.folder);
+          const videoPath = path.join(groupDir, '.latest-video.mp4');
+          const metaPath = path.join(groupDir, '.latest-video.json');
+          const videoBuf = Buffer.from(msg.videoBase64, 'base64');
+          Promise.all([
+            fs.promises.writeFile(videoPath, videoBuf),
+            fs.promises.writeFile(
+              metaPath,
+              JSON.stringify({ savedAt: Date.now() }),
+            ),
+          ])
+            .then(() =>
+              logger.debug(
+                { chatJid },
+                'Latest video persisted to group folder',
+              ),
+            )
+            .catch((err) =>
+              logger.debug(
+                { chatJid, err },
+                'Failed to persist latest video to group folder',
+              ),
             );
-          }
         }
       }
     },
@@ -885,7 +739,7 @@ async function main(): Promise<void> {
     ) => storeChatMetadata(chatJid, timestamp, name, channel, isGroup),
     registeredGroups: () => registeredGroups,
     isUserEngaged: (chatJid: string, userId: string) =>
-      engagedUsers[chatJid]?.has(userId) ?? false,
+      isEngaged(chatJid, userId),
   };
 
   // Create and connect all registered channels.
@@ -949,9 +803,8 @@ async function main(): Promise<void> {
           .map((ch) => ch.syncGroups!(force)),
       );
     },
-    getAvailableGroups,
-    writeGroupsSnapshot: (gf, im, ag, rj) =>
-      writeGroupsSnapshot(gf, im, ag, rj),
+    getAvailableGroups: () => getAvailableGroupsFromSnapshots(registeredGroups),
+    writeGroupsSnapshot,
   });
   queue.setProcessMessagesFn(processGroupMessages);
 
