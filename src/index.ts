@@ -176,7 +176,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   if (missedMessages.length === 0) return true;
 
   // Unified engagement check: trigger detection, per-user prefs, dismissal
-  if (!checkEngagement(chatJid, group, missedMessages, loadSenderAllowlist()))
+  if (!(await checkEngagement(chatJid, group, missedMessages, loadSenderAllowlist())))
     return true;
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
@@ -503,7 +503,7 @@ async function startMessageLoop(): Promise<void> {
           }
 
           // Unified engagement check: trigger detection, per-user prefs, dismissal
-          if (!checkEngagement(chatJid, group, groupMessages, allowlistCfg))
+          if (!(await checkEngagement(chatJid, group, groupMessages, allowlistCfg)))
             continue;
 
           // Pull all messages since lastAgentTimestamp so non-trigger

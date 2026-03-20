@@ -303,18 +303,10 @@ export async function initJarvisBot(
         is_from_me: false,
       });
 
-      // Auto-translate in groups: translate when message is member-to-member.
-      // A message is directed at Jarvis if: mentions his name AND not replying to another member.
-      // Even if engaged, replying to someone else = member-to-member = translate.
-      const mentionsJarvis = TRIGGER_PATTERN.test(text);
-      const isReplyToOther =
-        ctx.message.reply_to_message &&
-        ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
-      const isDirectedAtJarvis = mentionsJarvis && !isReplyToOther;
-      // Skip auto-translate for messages that are already translations
+      // Auto-translate all group messages (skip messages that are already translations)
       const isTranslationOutput =
         /^_?🌐\s*\[/.test(text) || /^_?🎙\s/.test(text) || /^_?💬\s/.test(text);
-      if (isGroup && !isDirectedAtJarvis && !isTranslationOutput) {
+      if (isGroup && !isTranslationOutput) {
         const targetLangs = getTranslatorLanguages(group.folder);
         if (targetLangs.length > 0 && text.length > 2) {
           translateToMultiple(text, 'auto', targetLangs)

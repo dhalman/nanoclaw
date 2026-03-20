@@ -58,11 +58,11 @@ afterEach(() => {
 // --- getUserPref ---
 
 describe('getUserPref', () => {
-  it('returns undefined when preferences file does not exist', () => {
+  it('returns undefined when preferences file does not exist', async () => {
     expect(getUserPref('nonexistent', 'user1', 'theme')).toBeUndefined();
   });
 
-  it('reads user-level preference', () => {
+  it('reads user-level preference', async () => {
     const folder = path.join(tmpDir, 'test_group');
     fs.mkdirSync(folder, { recursive: true });
     fs.writeFileSync(
@@ -75,7 +75,7 @@ describe('getUserPref', () => {
     // so we test the logic indirectly through checkEngagement
   });
 
-  it('falls back to group-level preference when user has none', () => {
+  it('falls back to group-level preference when user has none', async () => {
     // Tested indirectly through checkEngagement below
   });
 });
@@ -83,19 +83,19 @@ describe('getUserPref', () => {
 // --- engage / disengage ---
 
 describe('engagement state', () => {
-  it('engageUser makes user engaged', () => {
+  it('engageUser makes user engaged', async () => {
     expect(isEngaged('tg:123', 'user1')).toBe(false);
     engageUser('tg:123', 'user1');
     expect(isEngaged('tg:123', 'user1')).toBe(true);
   });
 
-  it('disengageUser removes user', () => {
+  it('disengageUser removes user', async () => {
     engageUser('tg:123', 'user1');
     disengageUser('tg:123', 'user1');
     expect(isEngaged('tg:123', 'user1')).toBe(false);
   });
 
-  it('disengageAll clears all users for a group', () => {
+  it('disengageAll clears all users for a group', async () => {
     engageUser('tg:123', 'user1');
     engageUser('tg:123', 'user2');
     disengageAll('tg:123');
@@ -103,17 +103,17 @@ describe('engagement state', () => {
     expect(isEngaged('tg:123', 'user2')).toBe(false);
   });
 
-  it('engagement is per-group', () => {
+  it('engagement is per-group', async () => {
     engageUser('tg:123', 'user1');
     expect(isEngaged('tg:123', 'user1')).toBe(true);
     expect(isEngaged('tg:456', 'user1')).toBe(false);
   });
 
-  it('disengageUser on non-existent group does not throw', () => {
+  it('disengageUser on non-existent group does not throw', async () => {
     expect(() => disengageUser('tg:999', 'user1')).not.toThrow();
   });
 
-  it('disengageAll on non-existent group does not throw', () => {
+  it('disengageAll on non-existent group does not throw', async () => {
     expect(() => disengageAll('tg:999')).not.toThrow();
   });
 });
@@ -121,49 +121,49 @@ describe('engagement state', () => {
 // --- checkEngagement ---
 
 describe('checkEngagement', () => {
-  it('returns true for main group (no trigger required)', () => {
+  it('returns true for main group (no trigger required)', async () => {
     const group = makeGroup({ isMain: true });
     const msgs = [makeMsg({ content: 'random message' })];
-    expect(checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
+    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
   });
 
-  it('returns true when requiresTrigger is false', () => {
+  it('returns true when requiresTrigger is false', async () => {
     const group = makeGroup({ requiresTrigger: false });
     const msgs = [makeMsg({ content: 'random message' })];
-    expect(checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
+    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
   });
 
-  it('returns false when no trigger and no engaged users', () => {
+  it('returns false when no trigger and no engaged users', async () => {
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'random message' })];
-    expect(checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(false);
+    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(false);
   });
 
-  it('returns true and engages user on trigger message', () => {
+  it('returns true and engages user on trigger message', async () => {
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'Jarvis, help me' })];
-    expect(checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
+    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
     expect(isEngaged('tg:123', 'user1')).toBe(true);
   });
 
-  it('returns true for messages from already-engaged users', () => {
+  it('returns true for messages from already-engaged users', async () => {
     engageUser('tg:123', 'user1');
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'follow up question' })];
-    expect(checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
+    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
   });
 
-  it('dismisses engaged user on farewell message but still processes it', () => {
+  it('dismisses engaged user on farewell message but still processes it', async () => {
     engageUser('tg:123', 'user1');
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'bye' })];
     // The "bye" message is from an engaged user, so it gets processed.
     // The user is disengaged as a side effect for NEXT time.
-    expect(checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
+    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(true);
     expect(isEngaged('tg:123', 'user1')).toBe(false);
   });
 
-  it('dismissal patterns are case insensitive', () => {
+  it('dismissal patterns are case insensitive', async () => {
     engageUser('tg:123', 'user1');
     const group = makeGroup();
     for (const farewell of ['Bye', 'GOODBYE', 'nah', 'No Thanks', "I'm good"]) {
@@ -174,7 +174,7 @@ describe('checkEngagement', () => {
     }
   });
 
-  it('does not dismiss on non-farewell messages', () => {
+  it('does not dismiss on non-farewell messages', async () => {
     engageUser('tg:123', 'user1');
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'bye the way, this is great' })];
@@ -183,7 +183,7 @@ describe('checkEngagement', () => {
     expect(isEngaged('tg:123', 'user1')).toBe(true);
   });
 
-  it('does not dismiss own messages', () => {
+  it('does not dismiss own messages', async () => {
     engageUser('tg:123', 'user1');
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'bye', is_from_me: true })];
@@ -191,7 +191,7 @@ describe('checkEngagement', () => {
     expect(isEngaged('tg:123', 'user1')).toBe(true);
   });
 
-  it('respects sender allowlist for triggers', () => {
+  it('respects sender allowlist for triggers', async () => {
     const restrictedAllowlist: SenderAllowlistConfig = {
       default: { allow: ['allowed_user'], mode: 'trigger' },
       chats: {},
@@ -200,13 +200,13 @@ describe('checkEngagement', () => {
     const group = makeGroup();
     // Denied user triggers — should not engage
     const msgs = [makeMsg({ sender: 'denied_user', content: 'Jarvis, help' })];
-    expect(checkEngagement('tg:123', group, msgs, restrictedAllowlist)).toBe(
+    expect(await checkEngagement('tg:123', group, msgs, restrictedAllowlist)).toBe(
       false,
     );
     expect(isEngaged('tg:123', 'denied_user')).toBe(false);
   });
 
-  it('allows is_from_me triggers regardless of allowlist', () => {
+  it('allows is_from_me triggers regardless of allowlist', async () => {
     const restrictedAllowlist: SenderAllowlistConfig = {
       default: { allow: [], mode: 'trigger' },
       chats: {},
@@ -214,7 +214,7 @@ describe('checkEngagement', () => {
     };
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'Jarvis, test', is_from_me: true })];
-    expect(checkEngagement('tg:123', group, msgs, restrictedAllowlist)).toBe(
+    expect(await checkEngagement('tg:123', group, msgs, restrictedAllowlist)).toBe(
       true,
     );
   });
