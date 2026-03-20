@@ -1,4 +1,11 @@
 {
+  "0.2.67": {
+    "date": "2026-03-19",
+    "title": "fix: send response before compression \u2014 was blocking on sync compress",
+    "notes": [
+      "fix: send response before compression \u2014 was blocking on sync compress"
+    ]
+  },
   "0.2.66": {
     "date": "2026-03-19",
     "title": "fix: ask for languages when enabling without specifying, terse disable",
