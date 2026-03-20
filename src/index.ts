@@ -69,6 +69,7 @@ import {
 } from './sender-allowlist.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
+import { translateToMultiple } from './translation.js';
 import { cancelVideoBackends } from './video-cancel.js';
 import { logger } from './logger.js';
 
@@ -237,16 +238,38 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
         .trim();
       logger.info({ group: group.name }, `Agent output: ${raw.slice(0, 200)}`);
       if (text) {
+        let sentMsgId: number | null = null;
         if (group.containerConfig?.ollamaRunner) {
           // Reply to the trigger message for the first response only
           const replyTo = !outputSentToUser
             ? lastTriggerMessageId[chatJid]
             : undefined;
-          await sendJarvisMessage(chatJid, text, replyTo);
+          sentMsgId = await sendJarvisMessage(chatJid, text, replyTo);
         } else {
           await channel.sendMessage(chatJid, text);
         }
         outputSentToUser = true;
+
+        // Auto-translate Jarvis's response (reply-to the response message)
+        if (sentMsgId && text.length > 4) {
+          const prefs = getUserPref(group.folder, '', 'translator_languages');
+          let langs = prefs;
+          if (typeof langs === 'string') {
+            try { langs = JSON.parse(langs); } catch { langs = null; }
+          }
+          if (Array.isArray(langs) && langs.length > 0) {
+            translateToMultiple(text, 'auto', langs)
+              .then((translations) => {
+                if (translations.length > 0) {
+                  const echo = translations
+                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                    .join('\n');
+                  sendJarvisMessage(chatJid, echo, sentMsgId!).catch(() => {});
+                }
+              })
+              .catch(() => {});
+          }
+        }
       }
       // Only reset idle timer on actual results, not session-update markers (result: null)
       resetIdleTimer();

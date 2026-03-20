@@ -3112,10 +3112,7 @@ async function main(): Promise<void> {
         newSessionId: sessionId,
       });
 
-      // Auto-translate all Jarvis responses (verbatim, no commentary)
-      if (response && response.length > 4) {
-        translateForListeners(response, assistantName, chatJid).catch(() => {});
-      }
+      // Response translations handled on host side (reply-to the sent message)
 
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });
