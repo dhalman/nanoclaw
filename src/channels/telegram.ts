@@ -282,7 +282,7 @@ export async function initJarvisBot(
                     prefix +
                     translations
                       .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                      .join('\n');
+                      .join('\n\n');
                   sendJarvisMessage(chatJid, echo, replyTarget).catch(() => {});
                 }
               })
@@ -314,7 +314,7 @@ export async function initJarvisBot(
               if (translations.length > 0) {
                 const echo = translations
                   .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                  .join('\n');
+                  .join('\n\n');
                 sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
                   () => {},
                 );
@@ -501,7 +501,7 @@ export async function initJarvisBot(
               );
               if (translations.length > 0) {
                 for (const t of translations) {
-                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
+                  echo += `\n\n_🌐 [${t.targetName}] ${t.text}_`;
                 }
                 content = `[Voice (${getLanguageName(result.language)}): ${result.text}]`;
                 for (const t of translations) {
@@ -595,7 +595,7 @@ export async function initJarvisBot(
         if (translations.length > 0) {
           const echo = translations
             .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-            .join('\n');
+            .join('\n\n');
           sendJarvisMessage(chatJid, echo, messageId).catch(() => {});
         }
       } catch (err) {
@@ -982,7 +982,7 @@ export class TelegramChannel implements Channel {
               );
               if (translations.length > 0) {
                 for (const t of translations) {
-                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
+                  echo += `\n\n_🌐 [${t.targetName}] ${t.text}_`;
                 }
                 content = `[Voice (${getLanguageName(result.language)}): ${result.text}]`;
                 for (const t of translations) {

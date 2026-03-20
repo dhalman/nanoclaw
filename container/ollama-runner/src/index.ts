@@ -1377,7 +1377,7 @@ async function translateForListeners(
   // Format matching host-side UX: italic lines with [Language] prefix
   const translationMsg = translations
     .map((t) => `_🌐 [${t.name}] ${t.text}_`)
-    .join('\n');
+    .join('\n\n');
 
   try {
     const ipcFile = path.join(IPC_MSG_DIR, `translate-${Date.now()}.json`);
