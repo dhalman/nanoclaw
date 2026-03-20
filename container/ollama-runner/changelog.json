@@ -1,4 +1,12 @@
 {
+  "0.3.24": {
+    "date": "2026-03-20",
+    "title": "feat: per-specialist personality prompts",
+    "notes": [
+      "feat: per-specialist personality prompts",
+      "feat: Jarvis is a peer, his team is staff \u2014 each irreplaceable"
+    ]
+  },
   "0.3.23": {
     "date": "2026-03-20",
     "title": "feat: Jarvis personality \u2014 trusted friend who knows everyone",
