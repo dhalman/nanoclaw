@@ -722,7 +722,7 @@ export async function unpinJarvisMessage(
   if (!jarvisApi) return;
   const numericId = chatId.replace(/^tg(-j)?:/, '');
   try {
-    await jarvisApi.unpinChatMessage(numericId, { message_id: messageId });
+    await jarvisApi.unpinChatMessage(numericId, messageId);
   } catch {
     /* ignore — message may not be pinned */
   }
