@@ -543,9 +543,11 @@ export async function initJarvisBot(
         );
       }
 
-      // Voice messages in a Jarvis group are always directed at Jarvis
-      // (user intentionally pressed mic). Prepend name so engagement triggers.
-      const triggerContent = content.includes(ASSISTANT_NAME)
+      // Voice messages directed at Jarvis: prepend name so engagement triggers.
+      // Skip if replying to another user's message (that's member-to-member).
+      const isReplyToOther = ctx.message.reply_to_message &&
+        ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
+      const triggerContent = isReplyToOther || content.includes(ASSISTANT_NAME)
         ? content
         : `${ASSISTANT_NAME}, ${content}`;
       opts.onMessage(chatJid, {
