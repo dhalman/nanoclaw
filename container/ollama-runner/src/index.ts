@@ -1735,45 +1735,52 @@ export async function handleToolCall(
   }
 
   if (toolName === 'get_help') {
-    return `*What I can do* (v${buildId})
+    return `*Hey! Here's what I can help with* (v${buildId})
 
-🗣 *Chat & Reasoning*
-• Ask questions, brainstorm, get explanations — I handle most things directly
-• Say "think harder" or "step by step" for deeper reasoning mode
-• Say "stop" or "cancel" to cut off a long response
+🗣 *Just talk to me*
+• Ask anything — I'll answer, look it up, or find someone who knows
+• Say _(think)_ or "think harder" and I'll take more time to reason through it
+• Say "stop" or "cancel" anytime to cut me off
 
-🌐 *Web*
-• "Search for [topic]" — I'll search the live web and summarise results
-• "Read [URL]" — I'll fetch and read any page
-• I use web search proactively when I need current information
+🌐 *Web search*
+• "What's the weather in..." / "Search for..." — I'll check the live web
+• "Read this link" — I'll fetch and summarise any URL
 
 🖼 *Images*
-• "Generate an image of [description]" — Artist (qwen2.5vl) crafts an expert prompt and generates
-• Send me photos and I'll describe, edit, or use them as reference
+• "Draw me a..." / "Generate an image of..." — my Artist creates it
+• Send me a photo and I'll describe it, edit it, or use it as reference
 
 🎬 *Video*
-• "Generate a video of [description]" — Cinematographer (qwen2.5vl) crafts a cinematic prompt and generates
-• "Use this as a start frame" to animate a reference image
+• "Make a video of..." — my Cinematographer handles the creative direction
+• Send a photo first to use it as the starting frame
 
 🎙 *Voice*
-• Send voice notes — I'll transcribe and respond
+• Send a voice note — I'll transcribe it and respond
+• Voice messages in group chat are automatically translated if languages are set up
 
-⏰ *Scheduling*
-• "Remind me tomorrow at 9am to [thing]" — I'll set a task that runs in this chat
-• "Every morning, check [X] and tell me" — recurring tasks, cron or interval
-• "Show my tasks" — list active scheduled tasks
+🌐 *Translation*
+• Reply to any message with "translate" to translate it
+• React with 👀 to translate a message
+• "Add spanish, german for translation" to auto-translate group chat
+• "Turn off translations" to stop
 
-🧠 *Memory*
-• I keep notes between sessions and update them proactively
-• Each chat group has its own isolated memory
+⏰ *Reminders*
+• "Remind me in 2 hours to..." — I'll ping you when it's time
+• "Every morning at 9am, tell me..." — recurring reminders
+• "Show my tasks" — see what's scheduled
 
-💻 *Code & Commands*
-• I can run shell commands in my workspace (ask me to)
-• I can read and edit files in my git repo at /workspace/extra/nanoclaw
+🏷 *Shortcuts*
+• _(fast)_ — quick answer from the small model
+• _(coder)_ — send straight to the code expert
+• _(deep)_ — maximum reasoning power
+• _(art)_ — creative director for images/video
+• _(nojar)_ — make me ignore a message completely
 
 📋 *Other*
-• "What's new?" or "changelog" — see what's changed
-• "Help" — this menu`;
+• "What's new?" — friendly summary of recent updates
+• "Changelog" — detailed release notes
+• "Status" — check if all services are running
+• "Restart" — restart me fresh`;
   }
 
   if (toolName === 'get_changelog') {
@@ -2426,13 +2433,19 @@ Respond with ONLY valid JSON, no explanation, no markdown:
       const scheduleValue = String(toolArgs.schedule_value ?? '').trim();
       if (!prompt || !scheduleType || !scheduleValue) return 'Error: create requires prompt, schedule_type, and schedule_value';
 
-      // Group chat restriction: only reminders (text responses) allowed.
-      // Execution tasks (code, config changes, service commands) require DM.
-      const isGroupChat = chatJid.includes('-'); // group JIDs have negative IDs
-      if (isGroupChat) {
-        const isReminder = /\b(?:remind|reminder|notify|alert|ping|tell\s+me|let\s+me\s+know)\b/i.test(prompt);
-        if (!isReminder) {
-          return 'Execution tasks can only be scheduled from a private DM. In group chats, I can only set reminders. Try: "remind me in 2 hours to..."';
+      // Task scheduling permissions:
+      // - Anyone can schedule reminders (text notifications)
+      // - Only DJ (365278370) can schedule execution tasks
+      const OWNER_ID = '365278370';
+      const isReminder = /\b(?:remind|reminder|notify|alert|ping|tell\s+me|let\s+me\s+know)\b/i.test(prompt);
+      if (!isReminder) {
+        // Check if the current user is DJ — extract sender from the prompt XML
+        const senderMatch = prompt.match(/<message\s+sender="([^"]*)"/);
+        const senderId = senderMatch ? senderMatch[1] : '';
+        // Also check if chatJid is DJ's DM
+        const isDjDm = chatJid.includes(OWNER_ID);
+        if (senderId !== OWNER_ID && !isDjDm) {
+          return 'Only reminders can be scheduled by group members. For execution tasks, ask DJ to set it up.';
         }
       }
       const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
