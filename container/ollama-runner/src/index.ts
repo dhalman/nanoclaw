@@ -694,8 +694,12 @@ const CREATIVE_PATTERN = /(?:write|tell|create|compose|craft|generate|draw|paint
 const BRAINSTORM_PATTERN = /(?:brainstorm|ideas? for|suggest(?:ions)?|what if|alternatives?|possibilities|ways to|how (?:could|might|would|can)(?: (?:i|we))?|how can\b|give me \d+ |list \d+ )/im;
 const ANALYSIS_PATTERN = /(?:analyz|explain|summariz|describ|compar|what (?:is|are|does|do)|how does|why (?:is|does|do)|tell me about|define|difference between)/im;
 
-// Explicit user requests for deeper reasoning, or inherently complex tasks
-const THINK_PATTERN = /\bthink\b|\bthinking\b|\bsure\b|\bdetermine\b|\bcompare\b|\blearn\b|\bteach\b|\btry\b|(?:think (?:hard(?:er)?|carefully|deeper|step.by.step|it through|about this)|think(?:ing)? mode|reason(?:ing)? through|show (?:all |your |me )?(?:thinking|reasoning|thoughts?)|slow(?:ly)? (?:think|reason)|be (?:thorough|careful|precise)|use (?:your )?(?:full )?(?:thinking|reasoning)|(?:complex|difficult|hard|tricky|multi.step) (?:problem|question|task|reasoning)|(?:math|logic|proof|calcul|deriv|solv(?:e|ing))|step.by.step|work(?:ing)? (?:this )?out)/im;
+// Explicit escalation — user wants the heaviest model (deepseek-r1:70b)
+const ESCALATE_PATTERN = /\b(?:escalate|use (?:deepseek|reasoning model|architect|biggest model)|think (?:much )?harder|really think|maximum (?:reasoning|thinking|effort))\b/im;
+
+// Explicit user requests for deeper reasoning (think=true on coordinator)
+// Tightened to avoid false positives on casual words like "sure", "try", "learn"
+const THINK_PATTERN = /(?:think (?:hard(?:er)?|carefully|deeper|step.by.step|it through|about (?:this|it))|think(?:ing)? mode|reason(?:ing)? (?:through|mode)|show (?:all |your |me )?(?:thinking|reasoning|thoughts?)|slow(?:ly)? (?:think|reason)|be (?:thorough|careful|precise)|use (?:your )?(?:full )?(?:thinking|reasoning)|(?:complex|difficult|hard|tricky|multi.step) (?:problem|question|task)|(?:math|logic|proof|calcul|deriv|solv(?:e|ing))|step.by.step|work(?:ing)? (?:this )?out)/im;
 
 // Hard decisions only — casual recommendations and "which is better?" don't warrant thinking overhead
 const DECISION_PATTERN = /\bshould (?:i|we)\b|help me (?:decide|choose|figure out)\b|pros? and cons?\b|trade.?offs?\b/im;
@@ -705,8 +709,13 @@ export function shouldThinkFallback(text: string): boolean {
   return THINK_PATTERN.test(text) || DECISION_PATTERN.test(text);
 }
 
+export function shouldEscalateFallback(text: string): boolean {
+  return ESCALATE_PATTERN.test(text);
+}
+
 export function selectModelFallback(text: string, hasImages?: boolean): string {
   if (hasImages) return MODELS.VISION;
+  if (ESCALATE_PATTERN.test(text)) return MODELS.ARCHITECT;
   if (CODING_PATTERN.test(text)) return MODELS.CODER;
   return MODELS.COORDINATOR;
 }
@@ -793,6 +802,7 @@ export function buildRouteHint(text: string, hasImages: boolean): string {
   if (think) parts.push('complex reasoning — consider thinking mode or analyst tier');
   if (hasImages) parts.push('images attached — vision task');
   if (detectDissatisfaction(text)) parts.push('USER DISSATISFIED with previous response — escalate to a higher tier or change approach entirely');
+  if (shouldEscalateFallback(text)) parts.push('USER REQUESTS ESCALATION — use the escalate tool to route to deepseek-r1:70b immediately');
 
   return `[Route: ${parts.join(' · ')}]`;
 }
@@ -861,14 +871,16 @@ export async function classifyMessage(text: string, hasImages: boolean): Promise
   // The coordinator gets a route hint injected into context to act on.
   if (process.env.DISABLE_SECRETARY === '1') {
     const classifyStart = Date.now();
+    const escalate = shouldEscalateFallback(text);
     const model = selectModelFallback(text);
-    const think = shouldThinkFallback(text);
+    const think = shouldThinkFallback(text) || escalate;
     const taskType = detectTaskType(text);
     const taskTypeRich = detectRichTaskType(text);
-    const complexity = estimateComplexity(text);
+    const complexity = escalate ? 'high' as const : estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
     const dissatisfied = detectDissatisfaction(text);
     logPerf({ type: 'classify', buildId, timestamp: new Date().toISOString(), classifyMs: Date.now() - classifyStart, classifyMethod: 'keyword' });
+    if (escalate) logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_escalation' });
     if (dissatisfied) logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
     return { model, think: think || dissatisfied, taskType, taskTypeRich, temperature: getTemperature(text), complexity: dissatisfied ? 'high' : complexity, needsWeb, usedSecretary: false };
   }
@@ -936,11 +948,12 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
     return { model, think, taskType, taskTypeRich, temperature, complexity, needsWeb, usedSecretary: true };
   } catch (err) {
     log(`[classify] fallback to regex: ${err instanceof Error ? err.message : String(err)}`);
+    const escalate = shouldEscalateFallback(text);
     const model = selectModelFallback(text);
-    const think = shouldThinkFallback(text);
+    const think = shouldThinkFallback(text) || escalate;
     const taskType = detectTaskType(text);
     const taskTypeRich = detectRichTaskType(text);
-    const complexity = estimateComplexity(text);
+    const complexity = escalate ? 'high' as const : estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
     return { model, think, taskType, taskTypeRich, temperature: getTemperature(text), complexity, needsWeb, usedSecretary: false };
   }
