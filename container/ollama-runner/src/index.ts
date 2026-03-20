@@ -861,7 +861,38 @@ function formatFeedbackForPrompt(grades: SecretaryGrade[]): string {
  * For low-complexity messages the secretary also drafts an answer — the coordinator
  * reviews it and either echoes it or steps in with their own response.
  * Falls back to regex classifiers if the call fails or times out. */
+// Force-routing tags: (TagName) anywhere in the message overrides classification.
+// Can be used mid-conversation to escalate or redirect a running task.
+const FORCE_ROUTE_TAGS: Array<{ pattern: RegExp; model: string; think: boolean; label: string }> = [
+  { pattern: /\(secretary\)/i,  model: MODELS.SECRETARY,   think: false, label: 'secretary' },
+  { pattern: /\(jarvis\)/i,     model: MODELS.COORDINATOR, think: false, label: 'coordinator' },
+  { pattern: /\(coder\)/i,      model: MODELS.CODER,       think: false, label: 'coder' },
+  { pattern: /\(think\)/i,      model: MODELS.COORDINATOR, think: true,  label: 'think' },
+  { pattern: /\(artist\)/i,     model: MODELS.VISION,      think: false, label: 'artist' },
+  { pattern: /\(deep\)/i,       model: MODELS.ARCHITECT,   think: true,  label: 'architect' },
+  { pattern: /\(vision\)/i,     model: MODELS.VISION,      think: false, label: 'vision' },
+  { pattern: /\(art\)/i,        model: MODELS.VISION,      think: false, label: 'artist' },
+  { pattern: /\(fast\)/i,       model: MODELS.SECRETARY,   think: false, label: 'fast' },
+];
+
 export async function classifyMessage(text: string, hasImages: boolean): Promise<MessageClassification> {
+  // Force-routing tags override all classification
+  for (const tag of FORCE_ROUTE_TAGS) {
+    if (tag.pattern.test(text)) {
+      log(`[classify] force-routed via (${tag.label}) tag`);
+      return {
+        model: tag.model,
+        think: tag.think,
+        taskType: tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis',
+        taskTypeRich: tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis',
+        temperature: 0.3,
+        complexity: tag.think ? 'high' : 'medium',
+        needsWeb: false,
+        usedSecretary: false,
+      };
+    }
+  }
+
   // Images always route to the vision model regardless of content
   if (hasImages) {
     return { model: MODELS.VISION, think: false, taskType: 'analysis', taskTypeRich: 'analysis', temperature: 0.3, complexity: 'low', usedSecretary: false };
@@ -2774,7 +2805,21 @@ async function runWithConcurrentPoll(
           log('Cancel detected in IPC — aborting immediately');
           cancelled = true;
           writeOutput({ status: 'success', result: '_Stopped._', newSessionId: sessionIdLocal });
-          // Exit process — prespawn will restart cleanly
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+
+        // Mid-task force escalation: (deep), (think), (coder) etc.
+        const escalationTag = FORCE_ROUTE_TAGS.find((t) => t.pattern.test(rawText));
+        if (escalationTag) {
+          log(`Mid-task escalation via (${escalationTag.label}) — restarting at ${escalationTag.model}`);
+          cancelled = true;
+          writeOutput({ status: 'success', result: `_Escalating to ${escalationTag.label}..._`, newSessionId: sessionIdLocal });
+          // Write the original prompt + escalation tag back to IPC input so it gets re-processed
+          const requeueFile = path.join(IPC_INPUT_DIR, `escalate-${Date.now()}.json`);
+          const tempPath = `${requeueFile}.tmp`;
+          fs.writeFileSync(tempPath, JSON.stringify({ type: 'message', text: rawText }));
+          fs.renameSync(tempPath, requeueFile);
           setTimeout(() => process.exit(0), 100);
           return;
         }
