@@ -1,4 +1,11 @@
 {
+  "0.3.22": {
+    "date": "2026-03-20",
+    "title": "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt",
+    "notes": [
+      "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt"
+    ]
+  },
   "0.3.21": {
     "date": "2026-03-20",
     "title": "feat: context-aware engagement via system prompt + <silent/> output",
