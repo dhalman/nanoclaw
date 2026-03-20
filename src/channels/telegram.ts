@@ -234,11 +234,7 @@ export async function initJarvisBot(
       // On-demand translation: reply to any message with "translate" to translate it.
       // Intercept before storage/auto-translate — this is a meta-command, not a chat message.
       const TRANSLATE_CMD = /^\s*(?:translate|translation|🌐)\s*$/i;
-      if (
-        isGroup &&
-        ctx.message.reply_to_message &&
-        TRANSLATE_CMD.test(text)
-      ) {
+      if (isGroup && ctx.message.reply_to_message && TRANSLATE_CMD.test(text)) {
         const replyText =
           ctx.message.reply_to_message.text ||
           (ctx.message.reply_to_message as any).caption;
@@ -283,7 +279,9 @@ export async function initJarvisBot(
         ctx.message.reply_to_message &&
         ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
       const isDirectedAtJarvis = mentionsJarvis && !isReplyToOther;
-      if (isGroup && !isDirectedAtJarvis) {
+      // Skip auto-translate for messages that are already translations
+      const isTranslationOutput = /^_?🌐\s*\[/.test(text) || /^_?🎙\s/.test(text) || /^_?💬\s/.test(text);
+      if (isGroup && !isDirectedAtJarvis && !isTranslationOutput) {
         const targetLangs = getTranslatorLanguages(group.folder);
         if (targetLangs.length > 0 && text.length > 2) {
           translateToMultiple(text, 'auto', targetLangs)
