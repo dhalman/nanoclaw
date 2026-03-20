@@ -1,4 +1,9 @@
 {
+  "0.3.3": {
+    "date": "2026-03-19",
+    "title": "Build 0.3.3",
+    "notes": []
+  },
   "0.3.2": {
     "date": "2026-03-19",
     "title": "feat: v0.3.0 \u2014 Translation pipeline, NLP router, optimized routines",
