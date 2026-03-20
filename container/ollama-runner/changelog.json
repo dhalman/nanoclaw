@@ -1,4 +1,11 @@
 {
+  "0.2.64": {
+    "date": "2026-03-19",
+    "title": "fix: kill all nanoclaw containers on deploy",
+    "notes": [
+      "fix: kill all nanoclaw containers on deploy"
+    ]
+  },
   "0.2.63": {
     "date": "2026-03-19",
     "title": "feat: secretary-direct language registration for translations",
