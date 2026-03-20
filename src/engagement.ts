@@ -203,8 +203,18 @@ export async function checkEngagement(
     },
     {
       pattern:
-        /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit)\s*[!.]?\s*$/i,
+        /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit|impressive|proud|love it|beautiful|excellent|fantastic|brilliant|solid|🔥|💯|❤️)\s*[!.]?\s*$/i,
       emoji: '🔥',
+    },
+    {
+      pattern:
+        /^\s*(?:(?:i(?:'?m| am)\s+)?(?:very\s+)?(?:proud|impressed|happy|pleased)(?:\s+of\s+you)?)[!.]?\s*$/i,
+      emoji: '❤',
+    },
+    {
+      // Multi-word praise that mentions the assistant — "Impressive Jarvis!", "Good job Jarvis"
+      pattern: new RegExp(`^\\s*(?:impressive|proud|well done|good job|nice work|great job|love it|bravo)\\b[^.?]*$`, 'i'),
+      emoji: '❤',
     },
     {
       pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i,

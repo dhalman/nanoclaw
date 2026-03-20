@@ -729,5 +729,12 @@
       "In group chats, reasoning blocks are stripped from the visible response and forwarded privately to DJ's DM. Keeps group chat clean while preserving full transparency for the owner.",
       "Reasoning arrives as: 🧠 [GroupName] reasoning: ... in the Jarvis DM."
     ]
+  },
+  "0.3.37": {
+    "date": "2026-03-20",
+    "title": "Broader praise detection for emoji reactions",
+    "notes": [
+      "Short praise like \"Impressive!\", \"I'm proud\", \"Love it\" now gets an emoji reaction instead of a 14s coordinator response. Expanded trivial patterns to catch multi-word praise."
+    ]
   }
 }
