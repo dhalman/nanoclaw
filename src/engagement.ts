@@ -1,7 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-import { ASSISTANT_NAME, DISMISS_PATTERN, GROUPS_DIR, TRIGGER_PATTERN } from './config.js';
+import {
+  ASSISTANT_NAME,
+  DISMISS_PATTERN,
+  GROUPS_DIR,
+  TRIGGER_PATTERN,
+} from './config.js';
 import { logger } from './logger.js';
 import { SenderAllowlistConfig, isTriggerAllowed } from './sender-allowlist.js';
 import { NewMessage, RegisteredGroup } from './types.js';
@@ -10,13 +15,18 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
 const INTENT_MODEL = process.env.OLLAMA_MODEL_SECRETARY || 'qwen2.5:3b';
 
 // Fast regex: does the message mention the assistant name at all?
-const MENTION_PATTERN = new RegExp(`\\b${ASSISTANT_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+const MENTION_PATTERN = new RegExp(
+  `\\b${ASSISTANT_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+  'i',
+);
 
 /**
  * NLP intent check: is this message directed at the assistant, or just mentioning them?
  * Returns 'engage' (directed at assistant), 'observe' (mentioned but not directed), or null (error/timeout).
  */
-async function classifyIntent(text: string): Promise<'engage' | 'observe' | null> {
+async function classifyIntent(
+  text: string,
+): Promise<'engage' | 'observe' | null> {
   try {
     const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
       method: 'POST',
@@ -24,7 +34,10 @@ async function classifyIntent(text: string): Promise<'engage' | 'observe' | null
       body: JSON.stringify({
         model: INTENT_MODEL,
         messages: [
-          { role: 'system', content: `Is this message directed AT ${ASSISTANT_NAME} (asking/telling them something), or just MENTIONING ${ASSISTANT_NAME} in passing? Reply with exactly one word: "directed" or "mention"` },
+          {
+            role: 'system',
+            content: `Is this message directed AT ${ASSISTANT_NAME} (asking/telling them something), or just MENTIONING ${ASSISTANT_NAME} in passing? Reply with exactly one word: "directed" or "mention"`,
+          },
           { role: 'user', content: text },
         ],
         keep_alive: -1,
@@ -34,9 +47,10 @@ async function classifyIntent(text: string): Promise<'engage' | 'observe' | null
       signal: AbortSignal.timeout(3000),
     });
     if (!resp.ok) return null;
-    const data = await resp.json() as { message: { content: string } };
+    const data = (await resp.json()) as { message: { content: string } };
     const answer = data.message.content.trim().toLowerCase();
-    if (answer.includes('directed') || answer.includes('direct')) return 'engage';
+    if (answer.includes('directed') || answer.includes('direct'))
+      return 'engage';
     if (answer.includes('mention')) return 'observe';
     return null;
   } catch {
@@ -109,34 +123,16 @@ export async function checkEngagement(
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
   if (!needsTrigger) return true;
 
-  const engaged = getEngaged(chatJid);
+  // Direct address only — no persistent engagement mode.
+  // Every message must mention the assistant by name to get a response.
+  // NLP intent detection distinguishes "Jarvis, help" from "Jarvis said..."
 
-  // Host-side dismissal: disengage users who send clear farewell messages
-  for (const m of messages) {
-    if (
-      !m.is_from_me &&
-      engaged.has(m.sender) &&
-      DISMISS_PATTERN.test(m.content.trim())
-    ) {
-      engaged.delete(m.sender);
-      logger.info(
-        { chatJid, user: m.sender },
-        'Engaged mode: user dismissed (host-side)',
-      );
-    }
-  }
+  // Owner triggers (is_from_me) always work via regex
+  const ownerTriggers = messages.filter(
+    (m) => m.is_from_me && TRIGGER_PATTERN.test(m.content.trim()),
+  );
 
-  // Detect messages from already-engaged users, respecting per-user mode
-  const engagedMessages = messages.filter((m) => {
-    if (m.is_from_me || !engaged.has(m.sender)) return false;
-    const userEngMode = getUserPref(group.folder, m.sender, 'engagement_mode');
-    if (userEngMode === 'per_message') return false;
-    return true;
-  });
-
-  // Two-stage trigger detection:
-  // Stage 1 (regex, sub-ms): does the message mention the assistant name?
-  // Stage 2 (NLP, ~300ms): is it directed AT the assistant, or just mentioning them?
+  // Other users: mention check → NLP intent
   const candidates = messages.filter(
     (m) =>
       !m.is_from_me &&
@@ -144,14 +140,8 @@ export async function checkEngagement(
       isTriggerAllowed(chatJid, m.sender, allowlistCfg),
   );
 
-  // Also accept is_from_me triggers via the stricter regex (owner can always trigger)
-  const ownerTriggers = messages.filter(
-    (m) => m.is_from_me && TRIGGER_PATTERN.test(m.content.trim()),
-  );
-
   const triggerMessages: NewMessage[] = [...ownerTriggers];
 
-  // Run NLP intent classification on candidates (parallel)
   if (candidates.length > 0) {
     const intents = await Promise.all(
       candidates.map(async (m) => {
@@ -163,37 +153,21 @@ export async function checkEngagement(
       if (intent === 'engage') {
         triggerMessages.push(message);
         logger.info(
-          { chatJid, user: message.sender, intent: 'engage' },
-          'NLP trigger: directed at assistant',
+          { chatJid, user: message.sender },
+          'Direct address detected (NLP)',
         );
-      } else if (intent === 'observe') {
-        logger.debug(
-          { chatJid, user: message.sender, intent: 'observe' },
-          'NLP trigger: mention only, not engaging',
-        );
-      } else {
-        // NLP failed/timed out — fall back to regex
+      } else if (intent === null) {
+        // NLP failed — fall back to regex
         if (TRIGGER_PATTERN.test(message.content.trim())) {
           triggerMessages.push(message);
           logger.info(
-            { chatJid, user: message.sender, intent: 'regex-fallback' },
-            'NLP timeout, regex fallback triggered',
+            { chatJid, user: message.sender },
+            'Direct address detected (regex fallback)',
           );
         }
       }
     }
   }
 
-  if (triggerMessages.length === 0 && engagedMessages.length === 0)
-    return false;
-
-  // Engage any new users who triggered
-  for (const m of triggerMessages) {
-    if (m.sender && !engaged.has(m.sender)) {
-      engaged.add(m.sender);
-      logger.info({ chatJid, user: m.sender }, 'Engaged mode: user on');
-    }
-  }
-
-  return true;
+  return triggerMessages.length > 0;
 }

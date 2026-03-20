@@ -662,17 +662,17 @@ const IMAGE_TOOL_TIMEOUT_MS = 120_000; // 2 min for image generation
 const VIDEO_TOOL_TIMEOUT_MS = 360_000; // 6 min for video generation (internal deadline is 5 min)
 const WEB_TOOL_TIMEOUT_MS = 20_000;    // 20 s for web requests
 const HISTORY_MAX_MSG_CHARS = 0;    // 0 = no truncation (local — no token cost)
-const HISTORY_MAX_MESSAGES = 200;   // generous storage — local, no cost
+const HISTORY_MAX_MESSAGES = 30;    // tight cap — prevents slow responses; user can ask for context
 // Default history config — fast tier (35b no-think)
-const HISTORY_COMPRESS_THRESHOLD = 25; // compress when history grows past 25 messages
-const HISTORY_KEEP_RECENT = 10;        // keep last 10 verbatim; compress the rest into a summary
-// Extended history config — thinking, reasoning, and coding tiers (larger context windows)
-const HISTORY_COMPRESS_THRESHOLD_EXT = 50; // compress when >50 messages
-const HISTORY_KEEP_RECENT_EXT = 25;        // keep last 25 verbatim
+const HISTORY_COMPRESS_THRESHOLD = 12; // compress early and often
+const HISTORY_KEEP_RECENT = 6;         // keep last 6 verbatim; compress the rest
+// Extended history config — thinking, reasoning, and coding tiers
+const HISTORY_COMPRESS_THRESHOLD_EXT = 20; // compress when >20 messages
+const HISTORY_KEEP_RECENT_EXT = 10;        // keep last 10 verbatim
 // Hard safety limits for what gets sent to Ollama (prevents inference hangs)
-const INFERENCE_MAX_MESSAGES = 40;     // never send more than 40 history messages to inference
-const INFERENCE_MAX_CHARS = 48_000;    // ~12K tokens — hard cap on total chars sent
-const MSG_CONTENT_MAX_CHARS = 4_000;   // truncate individual message content beyond this
+const INFERENCE_MAX_MESSAGES = 20;     // tight — fast responses over deep context
+const INFERENCE_MAX_CHARS = 24_000;    // ~6K tokens — keeps inference fast
+const MSG_CONTENT_MAX_CHARS = 2_000;   // truncate tool outputs and long messages
 const SECRETARY_FEEDBACK_MAX = 50; // rolling store; only non-correct grades kept
 const IPC_POLL_MS = 100;
 
