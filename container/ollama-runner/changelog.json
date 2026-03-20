@@ -1,4 +1,11 @@
 {
+  "0.2.60": {
+    "date": "2026-03-19",
+    "title": "fix: single status message (no doubles), restart as secretary-direct",
+    "notes": [
+      "fix: single status message (no doubles), restart as secretary-direct"
+    ]
+  },
   "0.2.59": {
     "date": "2026-03-19",
     "title": "fix: thinking clear sort order, version always secretary-direct",
