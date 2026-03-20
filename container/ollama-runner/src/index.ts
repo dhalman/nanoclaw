@@ -1245,6 +1245,91 @@ async function trySecretaryDirect(
   return null;
 }
 
+// --- Background Chat Translation ---
+// For chat-type messages, translate to all registered listener languages.
+// Runs in parallel with coordinator inference — fire-and-forget via IPC.
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  af: 'Afrikaans', ar: 'Arabic', bg: 'Bulgarian', bn: 'Bengali', ca: 'Catalan',
+  cs: 'Czech', da: 'Danish', de: 'German', el: 'Greek', en: 'English',
+  es: 'Spanish', et: 'Estonian', fa: 'Persian', fi: 'Finnish', fr: 'French',
+  he: 'Hebrew', hi: 'Hindi', hr: 'Croatian', hu: 'Hungarian', id: 'Indonesian',
+  it: 'Italian', ja: 'Japanese', ko: 'Korean', nl: 'Dutch', no: 'Norwegian',
+  pl: 'Polish', pt: 'Portuguese', ro: 'Romanian', ru: 'Russian', sv: 'Swedish',
+  th: 'Thai', tl: 'Tagalog', tr: 'Turkish', uk: 'Ukrainian', vi: 'Vietnamese',
+  zh: 'Chinese',
+};
+
+function getLanguageNameLocal(code: string): string {
+  return LANGUAGE_NAMES[code] || code;
+}
+
+/**
+ * Translate a chat message to all registered listener languages in parallel.
+ * Sends each translation as a separate IPC message. Fire-and-forget.
+ */
+async function translateForListeners(
+  userText: string,
+  senderName: string,
+  chatJid: string,
+): Promise<void> {
+  const langs = getPref('translator_languages') as string[] | undefined;
+  if (!langs || !Array.isArray(langs) || langs.length === 0) return;
+
+  // Short messages aren't worth translating
+  if (userText.length < 5) return;
+
+  const translationStart = Date.now();
+
+  const results = await Promise.allSettled(
+    langs.map(async (targetLang) => {
+      const targetName = getLanguageNameLocal(targetLang);
+      try {
+        const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: MODELS.SECRETARY,
+            messages: [
+              { role: 'system', content: `Translate to ${targetName}. Return ONLY the translation, nothing else.` },
+              { role: 'user', content: userText },
+            ],
+            keep_alive: KEEP_ALIVE_SPECIALIST,
+            options: { num_ctx: 1024, temperature: 0.1 },
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json() as OllamaResponse;
+        const translation = extractContent(data.message.content).trim();
+        if (!translation || translation.toLowerCase() === userText.trim().toLowerCase()) return null;
+        return { lang: targetLang, name: targetName, text: translation };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const translations = results
+    .filter((r): r is PromiseFulfilledResult<{ lang: string; name: string; text: string } | null> => r.status === 'fulfilled')
+    .map((r) => r.value)
+    .filter((t): t is { lang: string; name: string; text: string } => t !== null);
+
+  if (translations.length === 0) return;
+
+  // Format and send as a single IPC message
+  const lines = translations.map((t) => `🌐 *${t.name}:* ${t.text}`);
+  const translationMsg = `_${senderName}:_\n${lines.join('\n')}`;
+
+  try {
+    const ipcFile = path.join(IPC_MSG_DIR, `translate-${Date.now()}.json`);
+    fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
+    fs.writeFileSync(ipcFile, JSON.stringify({ type: 'message', chatJid, text: translationMsg }));
+    log(`[translate] ${translations.length} languages in ${Date.now() - translationStart}ms`);
+  } catch { /* best effort */ }
+}
+
 /** Extract a plain string from Ollama message content (handles string, array, or schema object). */
 export function extractContent(raw: unknown): string {
   if (typeof raw === 'string') return raw;
@@ -2798,6 +2883,18 @@ async function main(): Promise<void> {
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
+
+      // Background translation for chat messages — fire alongside coordinator
+      if (taskTypeRich === 'chat' && !currentImages?.length) {
+        // Extract sender name and raw text from XML prompt
+        const senderMatch = prompt.match(/<message\s+sender="([^"]*)"/);
+        const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
+        const sender = senderMatch?.[1] || 'User';
+        const rawText = textMatch?.[1]?.trim() || '';
+        if (rawText) {
+          translateForListeners(rawText, sender, chatJid).catch(() => {});
+        }
+      }
 
       // Secretary direct execution: simple queries bypass the coordinator
       const directResult = await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
