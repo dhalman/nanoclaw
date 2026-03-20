@@ -1,4 +1,11 @@
 {
+  "0.2.33": {
+    "date": "2026-03-19",
+    "title": "fix: skip auto-translate for messages already in translation format",
+    "notes": [
+      "fix: skip auto-translate for messages already in translation format"
+    ]
+  },
   "0.2.32": {
     "date": "2026-03-19",
     "title": "fix: translate command now translates the replied-to message, not itself",
