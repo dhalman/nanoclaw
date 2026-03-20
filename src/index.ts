@@ -254,6 +254,20 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
         .replace(/<\/disengage>/g, '')
         .trim();
       logger.info({ group: group.name }, `Agent output: ${raw.slice(0, 200)}`);
+
+      // In group chats: strip reasoning, forward to DJ's DM
+      const isGroupChat = chatJid.includes('-');
+      const DJ_DM = 'tg-j:365278370';
+      if (isGroupChat && text) {
+        const reasoningMatch = text.match(/💭\s*\*Reasoning:\*\n([\s\S]*?)(?=\n\n|$)/);
+        if (reasoningMatch) {
+          const reasoning = reasoningMatch[1].trim();
+          text = text.replace(/💭\s*\*Reasoning:\*\n[\s\S]*?(?=\n\n|$)/, '').trim();
+          // Forward reasoning to DJ's DM
+          sendJarvisMessage(DJ_DM, `_🧠 [${group.name}] reasoning:_\n${reasoning}`).catch(() => {});
+        }
+      }
+
       if (text) {
         let sentMsgId: number | null = null;
         if (group.containerConfig?.ollamaRunner) {

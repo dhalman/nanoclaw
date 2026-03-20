@@ -721,5 +721,13 @@
     "notes": [
       "4 secretary, 2 translator, 2 coordinator, 2 coder/image, 1 shared architect/vision. Coordinator was incorrectly capped at 1 slot (now 2). Translator model added to size tracking."
     ]
+  },
+  "0.3.36": {
+    "date": "2026-03-20",
+    "title": "Reasoning forwarded to DM in group chats",
+    "notes": [
+      "In group chats, reasoning blocks are stripped from the visible response and forwarded privately to DJ's DM. Keeps group chat clean while preserving full transparency for the owner.",
+      "Reasoning arrives as: 🧠 [GroupName] reasoning: ... in the Jarvis DM."
+    ]
   }
 }
