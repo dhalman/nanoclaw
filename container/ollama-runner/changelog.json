@@ -1,4 +1,9 @@
 {
+  "0.2.37": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.37",
+    "notes": []
+  },
   "0.2.36": {
     "date": "2026-03-19",
     "title": "feat: 35B re-translation on dissatisfaction with translation quality",
