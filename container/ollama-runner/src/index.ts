@@ -657,6 +657,83 @@ const MODELS_PINNED = new Set([MODELS.COORDINATOR, MODELS.SECRETARY]);
 // Specialists evict immediately after use — frees VRAM for larger models
 const KEEP_ALIVE_PINNED = -1;      // never evict — stays in VRAM permanently
 const KEEP_ALIVE_SPECIALIST = '0'; // evict immediately — frees VRAM for other models
+// --- Model thread pool with memory budget ---
+// Prevents Ollama from being overwhelmed and models from being evicted
+const TOTAL_MEMORY_BUDGET_GB = 125;
+const MODEL_SIZES_GB: Record<string, number> = {
+  [MODELS.SECRETARY]:   3,
+  [MODELS.COORDINATOR]: 26,
+  [MODELS.CODER]:       19,
+  [MODELS.ARCHITECT]:   43,
+  [MODELS.VISION]:      49,
+  [MODELS.IMAGE]:       12,
+};
+
+function getModelSize(model: string): number {
+  return MODEL_SIZES_GB[model] || 20; // default 20GB for unknown models
+}
+
+function getMaxConcurrency(model: string): number {
+  if (model === MODELS.SECRETARY) return 4;
+  const size = getModelSize(model);
+  if (size > 20) return 1;
+  return 2;
+}
+
+// Active inference tracking per model
+const activeInferences: Record<string, number> = {};
+const inferenceWaiters: Record<string, Array<() => void>> = {};
+
+function getActiveMemoryGB(): number {
+  let total = 0;
+  for (const [model, count] of Object.entries(activeInferences)) {
+    if (count > 0) total += getModelSize(model);
+  }
+  return total;
+}
+
+const SLOT_TIMEOUT_MS = 30_000; // 30s max wait for an inference slot
+
+async function acquireInferenceSlot(model: string): Promise<void> {
+  const maxConcurrency = getMaxConcurrency(model);
+  const modelSize = getModelSize(model);
+  const deadline = Date.now() + SLOT_TIMEOUT_MS;
+
+  while (true) {
+    const current = activeInferences[model] || 0;
+    const currentMemory = getActiveMemoryGB();
+    const wouldExceedMemory = currentMemory + modelSize > TOTAL_MEMORY_BUDGET_GB;
+    const wouldExceedConcurrency = current >= maxConcurrency;
+
+    if (!wouldExceedConcurrency && !wouldExceedMemory) {
+      activeInferences[model] = current + 1;
+      log(`[pool] acquired ${model} slot (${current + 1}/${maxConcurrency}, ${currentMemory + modelSize}GB used)`);
+      return;
+    }
+
+    if (Date.now() > deadline) {
+      log(`[pool] TIMEOUT waiting for ${model} slot (${current}/${maxConcurrency}, ${currentMemory}GB used)`);
+      throw new Error(`Inference pool full — ${model} slot unavailable after ${SLOT_TIMEOUT_MS / 1000}s (${currentMemory}GB/${TOTAL_MEMORY_BUDGET_GB}GB used)`);
+    }
+
+    // Wait for a slot to free up (with timeout)
+    await new Promise<void>((resolve) => {
+      if (!inferenceWaiters[model]) inferenceWaiters[model] = [];
+      inferenceWaiters[model].push(resolve);
+      setTimeout(resolve, 5000); // re-check every 5s
+    });
+  }
+}
+
+function releaseInferenceSlot(model: string): void {
+  activeInferences[model] = Math.max(0, (activeInferences[model] || 0) - 1);
+  // Wake up ALL waiters across all models (memory freed = any model might proceed)
+  for (const waiters of Object.values(inferenceWaiters)) {
+    const waiter = waiters.shift();
+    if (waiter) waiter();
+  }
+}
+
 const TOOL_TIMEOUT_MS = 600_000;       // 10 min — deepseek-r1 with thinking can run 2-5 min
 const IMAGE_TOOL_TIMEOUT_MS = 120_000; // 2 min for image generation
 const VIDEO_TOOL_TIMEOUT_MS = 360_000; // 6 min for video generation (internal deadline is 5 min)
@@ -2503,6 +2580,27 @@ export function getEscalationTier(model: string, think: boolean): { model: strin
 }
 
 export async function callOllama(
+  model: string,
+  messages: Message[],
+  chatJid: string,
+  groupFolder: string,
+  images?: string[],
+  temperature?: number,
+  setStatus?: (text: string) => void,
+  think?: boolean,
+  onToolStart?: (toolName: string) => void,
+  complexity?: 'low' | 'medium' | 'high',
+): Promise<string> {
+  // Acquire inference slot (respects per-model concurrency + memory budget)
+  await acquireInferenceSlot(model);
+  try {
+    return await _callOllamaInner(model, messages, chatJid, groupFolder, images, temperature, setStatus, think, onToolStart, complexity);
+  } finally {
+    releaseInferenceSlot(model);
+  }
+}
+
+async function _callOllamaInner(
   model: string,
   messages: Message[],
   chatJid: string,
