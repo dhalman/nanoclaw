@@ -1,4 +1,11 @@
 {
+  "0.3.26": {
+    "date": "2026-03-20",
+    "title": "fix: remove llama3.2-vision workaround, restart Ollama on every start",
+    "notes": [
+      "fix: remove llama3.2-vision workaround, restart Ollama on every start"
+    ]
+  },
   "0.3.25": {
     "date": "2026-03-20",
     "title": "feat: per-model inference pool with memory budget (125GB cap)",
