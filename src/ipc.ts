@@ -45,27 +45,93 @@ const thinkingMessages = new Map<
 // instead of sending a new one on restart. Persisted to DB to survive restarts.
 import { getRouterState, setRouterState } from './db.js';
 
-let _statusIds: Map<string, number> | null = null;
-function getStatusMessageIds(): Map<string, number> {
-  if (!_statusIds) {
+// Status message tracking: { messageId, lastWasStatus }
+// lastWasStatus = true means no user messages have arrived since the last status.
+// When true → edit the existing status. When false → send new (user activity in between).
+interface StatusEntry {
+  messageId: number;
+  lastWasStatus: boolean;
+}
+let _statusEntries: Map<string, StatusEntry> | null = null;
+
+function getStatusEntries(): Map<string, StatusEntry> {
+  if (!_statusEntries) {
     try {
       const raw = getRouterState('last_status_message_ids');
-      _statusIds = raw
-        ? new Map(
-            Object.entries(JSON.parse(raw)).map(([k, v]) => [k, Number(v)]),
-          )
-        : new Map();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        _statusEntries = new Map(
+          Object.entries(parsed).map(([k, v]) => [
+            k,
+            typeof v === 'object' &&
+            v !== null &&
+            'messageId' in (v as Record<string, unknown>)
+              ? (v as StatusEntry)
+              : { messageId: Number(v), lastWasStatus: true },
+          ]),
+        );
+      } else {
+        _statusEntries = new Map();
+      }
     } catch {
-      _statusIds = new Map();
+      _statusEntries = new Map();
     }
   }
-  return _statusIds;
+  return _statusEntries;
 }
-function saveStatusMessageIds(map: Map<string, number>): void {
+
+function saveStatusEntries(): void {
   setRouterState(
     'last_status_message_ids',
-    JSON.stringify(Object.fromEntries(map)),
+    JSON.stringify(Object.fromEntries(getStatusEntries())),
   );
+}
+
+/** Call when a user message is received for a chatJid — marks that status is no longer the last message. */
+export function markUserActivity(chatJid: string): void {
+  const entry = getStatusEntries().get(chatJid);
+  if (entry && entry.lastWasStatus) {
+    entry.lastWasStatus = false;
+    saveStatusEntries();
+  }
+}
+
+/** Send or edit a status message. Edit if last message was a status; send new otherwise. */
+async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
+  const entries = getStatusEntries();
+  const entry = entries.get(chatJid);
+
+  if (entry?.messageId && entry.lastWasStatus) {
+    // Last message in chat is a status — edit it
+    try {
+      await editJarvisMessage(chatJid, entry.messageId, text);
+      logger.info(
+        { chatJid, messageId: entry.messageId },
+        'Status message updated',
+      );
+      return;
+    } catch {
+      logger.debug({ chatJid }, 'Could not edit status, sending new');
+    }
+  }
+
+  // User activity since last status, or no previous status — send new
+  const sentId = await sendJarvisMessage(chatJid, text);
+  if (sentId) {
+    entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
+    saveStatusEntries();
+    logger.info({ chatJid }, 'Status message sent');
+  }
+}
+
+// Backward compat shims
+function getStatusMessageIds(): Map<string, number> {
+  const ids = new Map<string, number>();
+  for (const [k, v] of getStatusEntries()) ids.set(k, v.messageId);
+  return ids;
+}
+function saveStatusMessageIds(_map: Map<string, number>): void {
+  saveStatusEntries();
 }
 
 function readExpectedBuildId(): string | null {
@@ -92,26 +158,8 @@ export async function sendStoppedStatus(
   for (const [chatJid, group] of Object.entries(registeredGroups)) {
     if (!group.containerConfig?.ollamaRunner) continue;
     if (!chatJid.startsWith('tg:') && !chatJid.startsWith('tg-j:')) continue;
-    // Only send status to group chats, not DMs — DMs don't need system noise
-    if (group.isMain) continue;
     try {
-      const text = `_${assistantName} stopped._`;
-      const prevMsgId = getStatusMessageIds().get(chatJid);
-      let sentId: number | null = null;
-      if (prevMsgId) {
-        try {
-          await editJarvisMessage(chatJid, prevMsgId, text);
-          sentId = prevMsgId;
-        } catch {
-          sentId = await sendJarvisMessage(chatJid, text);
-        }
-      } else {
-        sentId = await sendJarvisMessage(chatJid, text);
-      }
-      if (sentId) {
-        getStatusMessageIds().set(chatJid, sentId);
-        saveStatusMessageIds(getStatusMessageIds());
-      }
+      await sendOrEditStatus(chatJid, `_${assistantName} stopped._`);
     } catch (err) {
       logger.debug({ chatJid, err }, 'Failed to send stopped status');
     }
@@ -212,44 +260,13 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   );
                 }
               } else if (data.type === 'status' && data.chatJid && data.text) {
-                // Status messages (stopped/online) — edit previous status if exists
+                // Status messages (stopped/online) — edit if last was status, new if user activity since
                 const targetGroup = registeredGroups[data.chatJid];
                 if (
                   isMain ||
                   (targetGroup && targetGroup.folder === sourceGroup)
                 ) {
-                  const prevMsgId = getStatusMessageIds().get(data.chatJid);
-                  let sentId: number | null = null;
-
-                  if (prevMsgId) {
-                    // Try to edit the previous status message
-                    try {
-                      await editJarvisMessage(
-                        data.chatJid,
-                        prevMsgId,
-                        data.text,
-                      );
-                      sentId = prevMsgId;
-                      logger.info(
-                        { chatJid: data.chatJid, messageId: prevMsgId },
-                        'Status message updated',
-                      );
-                    } catch {
-                      // Edit failed (message deleted/too old) — send new
-                      sentId = await sendJarvisMessage(data.chatJid, data.text);
-                    }
-                  } else {
-                    sentId = await sendJarvisMessage(data.chatJid, data.text);
-                  }
-
-                  if (sentId) {
-                    getStatusMessageIds().set(data.chatJid, sentId);
-                    saveStatusMessageIds(getStatusMessageIds());
-                  }
-                  logger.info(
-                    { chatJid: data.chatJid, sourceGroup },
-                    'IPC status sent',
-                  );
+                  await sendOrEditStatus(data.chatJid, data.text);
                 }
               } else if (
                 data.type === 'image' &&

@@ -190,10 +190,14 @@ export async function translateToMultiple(
     }),
   );
 
-  return results
-    .filter(
-      (r): r is PromiseFulfilledResult<TranslationResult> =>
-        r.status === 'fulfilled',
-    )
-    .map((r) => r.value);
+  return (
+    results
+      .filter(
+        (r): r is PromiseFulfilledResult<TranslationResult> =>
+          r.status === 'fulfilled',
+      )
+      .map((r) => r.value)
+      // Drop translations identical to source (same-language detection for 'auto' mode)
+      .filter((r) => r.text.trim().toLowerCase() !== text.trim().toLowerCase())
+  );
 }

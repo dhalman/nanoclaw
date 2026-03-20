@@ -16,7 +16,8 @@ vi.mock('../env.js', () => ({ readEnvFile: vi.fn(() => ({})) }));
 // Mock config
 vi.mock('../config.js', () => ({
   ASSISTANT_NAME: 'Andy',
-  TRIGGER_PATTERN: /\bAndy\b/i,
+  TRIGGER_PATTERN:
+    /(?:^|\b(?:hey|hi|ok|yo)\s+)Andy\b[,?!:]?\s|(?:^|\s)@Andy\b|^Andy[,?!:\s]/im,
 }));
 
 // Mock logger

@@ -130,25 +130,34 @@ describe('TRIGGER_PATTERN', () => {
   const lower = name.toLowerCase();
   const upper = name.toUpperCase();
 
-  it('matches @name at start of message', () => {
+  it('matches direct address at start: "Name, ..."', () => {
+    expect(TRIGGER_PATTERN.test(`${name}, can you help?`)).toBe(true);
+    expect(TRIGGER_PATTERN.test(`${name}? are you there`)).toBe(true);
+  });
+
+  it('matches @name', () => {
     expect(TRIGGER_PATTERN.test(`@${name} hello`)).toBe(true);
+    expect(TRIGGER_PATTERN.test(`hey @${name}`)).toBe(true);
+  });
+
+  it('matches "hey Name" / "hi Name"', () => {
+    expect(TRIGGER_PATTERN.test(`hey ${name} what's up`)).toBe(true);
+    expect(TRIGGER_PATTERN.test(`hi ${name}, help me`)).toBe(true);
   });
 
   it('matches case-insensitively', () => {
-    expect(TRIGGER_PATTERN.test(`@${lower} hello`)).toBe(true);
+    expect(TRIGGER_PATTERN.test(`${lower}, hello`)).toBe(true);
     expect(TRIGGER_PATTERN.test(`@${upper} hello`)).toBe(true);
   });
 
-  it('matches when name appears mid-message', () => {
-    expect(TRIGGER_PATTERN.test(`hello ${name}`)).toBe(true);
+  it('does NOT match when talking ABOUT name (not TO)', () => {
+    expect(TRIGGER_PATTERN.test(`I asked ${name} yesterday`)).toBe(false);
+    expect(TRIGGER_PATTERN.test(`did you see what ${name} said?`)).toBe(false);
+    expect(TRIGGER_PATTERN.test(`tell ${name} later`)).toBe(false);
   });
 
-  it('does not match partial name like @NameExtra (word boundary)', () => {
+  it('does not match partial name', () => {
     expect(TRIGGER_PATTERN.test(`@${name}extra hello`)).toBe(false);
-  });
-
-  it('matches with word boundary before apostrophe', () => {
-    expect(TRIGGER_PATTERN.test(`@${name}'s thing`)).toBe(true);
   });
 
   it('matches @name alone (end of string is a word boundary)', () => {

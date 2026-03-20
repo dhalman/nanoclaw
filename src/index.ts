@@ -52,7 +52,7 @@ import {
 } from './db.js';
 import { GroupQueue } from './group-queue.js';
 import { resolveGroupFolderPath } from './group-folder.js';
-import { sendStoppedStatus, startIpcWatcher } from './ipc.js';
+import { markUserActivity, sendStoppedStatus, startIpcWatcher } from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
   restoreRemoteControl,
@@ -603,6 +603,25 @@ async function startMessageLoop(): Promise<void> {
               return true;
             });
 
+            // Host-side dismissal: if an engaged user sends a clear dismissal,
+            // disengage them immediately (don't wait for Jarvis to include the marker)
+            // Explicit dismissal OR negative sentiment after a Jarvis response
+            const DISMISS_PATTERN =
+              /^\s*(?:bye|goodbye|go away|stop|leave|dismiss|shut up|quiet|enough|done|no thanks?|nah|nope|not now|i'?m good|we'?re good|that'?s (?:all|enough|it)|never\s?mind|whatever|ok bye|k bye|👋)\s*[.!]?\s*$/i;
+            for (const m of groupMessages) {
+              if (
+                !m.is_from_me &&
+                engaged.has(m.sender) &&
+                DISMISS_PATTERN.test(m.content.trim())
+              ) {
+                engaged.delete(m.sender);
+                logger.info(
+                  { chatJid, user: m.sender },
+                  'Engaged mode: user dismissed (host-side)',
+                );
+              }
+            }
+
             if (triggerMessages.length === 0 && engagedMessages.length === 0)
               continue;
 
@@ -723,8 +742,11 @@ async function main(): Promise<void> {
     logger.info({ signal }, 'Shutdown signal received');
     shuttingDown = true;
 
-    // Stopped status disabled — was causing spam during restart cycles.
-    // The "online" status on startup is sufficient; "stopped" adds noise.
+    // Send stopped status — edits the previous online message in place.
+    // Only runs if process has been up >10s (prevents spam during crash loops).
+    if (Date.now() - startedAt > 10_000) {
+      await sendStoppedStatus(registeredGroups, ASSISTANT_NAME);
+    }
 
     proxyServer.close();
     await queue.shutdown(10000);
@@ -805,6 +827,9 @@ async function main(): Promise<void> {
         }
       }
       storeMessage(msg);
+
+      // Mark user activity so status messages send new instead of editing
+      if (!msg.is_from_me) markUserActivity(chatJid);
 
       // Collect images from photo messages into a per-chat buffer
       if (msg.images && msg.images.length > 0) {
@@ -937,7 +962,24 @@ async function main(): Promise<void> {
     }
   }
 
-  recoverPendingMessages();
+  // Skip recovery — don't auto-respond to messages that arrived while offline.
+  // Advance cursors to now so only new messages trigger responses.
+  for (const [chatJid] of Object.entries(registeredGroups)) {
+    const pending = getMessagesSince(
+      chatJid,
+      lastAgentTimestamp[chatJid] || '',
+      ASSISTANT_NAME,
+    );
+    if (pending.length > 0) {
+      lastAgentTimestamp[chatJid] = pending[pending.length - 1].timestamp;
+      logger.info(
+        { chatJid, skipped: pending.length },
+        'Skipped pending messages from before restart',
+      );
+    }
+  }
+  saveState();
+
   startMessageLoop().catch((err) => {
     logger.fatal({ err }, 'Message loop crashed unexpectedly');
     process.exit(1);
