@@ -1,4 +1,11 @@
 {
+  "0.2.22": {
+    "date": "2026-03-19",
+    "title": "fix: ollama-runner follow-up fetch timeout, IPC race condition, add 113 tests",
+    "notes": [
+      "fix: ollama-runner follow-up fetch timeout, IPC race condition, add 113 tests"
+    ]
+  },
   "0.2.21": {
     "date": "2026-03-19",
     "title": "Build 0.2.21",
