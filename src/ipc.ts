@@ -145,7 +145,8 @@ export async function sendStoppedStatus(
     if (!group.containerConfig?.ollamaRunner) continue;
     if (!chatJid.startsWith('tg:') && !chatJid.startsWith('tg-j:')) continue;
     try {
-      await sendOrEditStatus(chatJid, `_${assistantName} stopped._`);
+      const stopTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      await sendOrEditStatus(chatJid, `_${assistantName} stopped — ${stopTime}_`);
     } catch (err) {
       logger.debug({ chatJid, err }, 'Failed to send stopped status');
     }
