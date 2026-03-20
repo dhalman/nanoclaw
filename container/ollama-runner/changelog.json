@@ -1,4 +1,11 @@
 {
+  "0.2.30": {
+    "date": "2026-03-19",
+    "title": "feat: auto-translate Jarvis chat responses, skip command responses",
+    "notes": [
+      "feat: auto-translate Jarvis chat responses, skip command responses"
+    ]
+  },
   "0.2.29": {
     "date": "2026-03-19",
     "title": "fix: clean translation UX \u2014 reply-to, no sender duplication, on-demand",
