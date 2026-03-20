@@ -1,4 +1,11 @@
 {
+  "0.2.59": {
+    "date": "2026-03-19",
+    "title": "fix: thinking clear sort order, version always secretary-direct",
+    "notes": [
+      "fix: thinking clear sort order, version always secretary-direct"
+    ]
+  },
   "0.2.58": {
     "date": "2026-03-19",
     "title": "fix: log host online status success/failure",
