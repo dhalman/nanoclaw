@@ -1,4 +1,13 @@
 {
+  "0.3.2": {
+    "date": "2026-03-19",
+    "title": "feat: v0.3.0 \u2014 Translation pipeline, NLP router, optimized routines",
+    "notes": [
+      "feat: v0.3.0 \u2014 Translation pipeline, NLP router, optimized routines",
+      "fix: classify by action verb + recipient, not modal verbs",
+      "fix: voice replies to other users don't trigger Jarvis"
+    ]
+  },
   "0.3.1": {
     "date": "2026-03-19",
     "title": "Build 0.3.1",
