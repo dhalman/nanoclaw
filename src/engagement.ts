@@ -36,7 +36,7 @@ async function classifyIntent(
         messages: [
           {
             role: 'system',
-            content: `Is this message directed AT ${ASSISTANT_NAME} (asking/telling them something), or just MENTIONING ${ASSISTANT_NAME} in passing? Reply with exactly one word: "directed" or "mention"`,
+            content: `Is "${ASSISTANT_NAME}" being SPOKEN TO (greetings, questions, requests, commands) or just MENTIONED in passing (talking about them to someone else)? Reply: "directed" or "mention"`,
           },
           { role: 'user', content: text },
         ],
@@ -123,9 +123,8 @@ export async function checkEngagement(
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
   if (!needsTrigger) return true;
 
-  // Direct address only — no persistent engagement mode.
-  // Every message must mention the assistant by name to get a response.
-  // NLP intent detection distinguishes "Jarvis, help" from "Jarvis said..."
+  // Direct address only — every message must mention the assistant by name.
+  logger.info({ chatJid, messageCount: messages.length }, 'Checking engagement');
 
   // Owner triggers (is_from_me) always work via regex
   const ownerTriggers = messages.filter(
@@ -169,5 +168,9 @@ export async function checkEngagement(
     }
   }
 
-  return triggerMessages.length > 0;
+  const triggered = triggerMessages.length > 0;
+  if (!triggered) {
+    logger.info({ chatJid, candidates: candidates.length }, 'No trigger detected');
+  }
+  return triggered;
 }
