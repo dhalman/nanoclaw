@@ -1,4 +1,9 @@
 {
+  "0.3.7": {
+    "date": "2026-03-19",
+    "title": "Build 0.3.7",
+    "notes": []
+  },
   "0.3.6": {
     "date": "2026-03-19",
     "title": "fix: cancel pipes to container IPC + removes is_from_me gate",
