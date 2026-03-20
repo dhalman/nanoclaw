@@ -1286,37 +1286,46 @@ async function translateForListeners(
 
   const translationStart = Date.now();
 
-  // Run translations sequentially through the coordinator (35B) for quality.
-  // Sequential because Ollama processes one request at a time per model anyway.
+  // All languages in a single secretary call — fast (separate model, no coordinator blocking)
+  const langList = langs.map((l) => getLanguageNameLocal(l)).join(', ');
   const translations: Array<{ lang: string; name: string; text: string }> = [];
-  for (const targetLang of langs) {
-    const targetName = getLanguageNameLocal(targetLang);
-    try {
-      const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: MODELS.COORDINATOR,
-          messages: [
-            { role: 'system', content: `Translate the following text to ${targetName}. VERBATIM word-for-word translation — preserve tone, slang, and intent. Return ONLY the translated text. No explanations, no quotes, no preamble.` },
-            { role: 'user', content: userText },
-          ],
-          keep_alive: -1,
-          options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
-          think: false,
-          stream: false,
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!resp.ok) continue;
+  try {
+    const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODELS.SECRETARY,
+        messages: [
+          { role: 'system', content: `Translate the text to each language listed. Return one translation per line, format: LANG: translation\nNo other text.` },
+          { role: 'user', content: `Languages: ${langList}\n\nText: ${userText}` },
+        ],
+        keep_alive: KEEP_ALIVE_SPECIALIST,
+        options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (resp.ok) {
       const data = await resp.json() as OllamaResponse;
-      const translation = extractContent(data.message.content).trim();
-      if (translation && translation.toLowerCase() !== userText.trim().toLowerCase()) {
-        translations.push({ lang: targetLang, name: targetName, text: translation });
+      const output = extractContent(data.message.content).trim();
+      // Parse "Language: translation" lines
+      for (const line of output.split('\n')) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx === -1) continue;
+        const langName = line.slice(0, colonIdx).trim();
+        const text = line.slice(colonIdx + 1).trim();
+        if (!text) continue;
+        // Match back to language code
+        const matchedLang = langs.find(
+          (l) => getLanguageNameLocal(l).toLowerCase() === langName.toLowerCase(),
+        );
+        if (matchedLang && text.toLowerCase() !== userText.trim().toLowerCase()) {
+          translations.push({ lang: matchedLang, name: getLanguageNameLocal(matchedLang), text });
+        }
       }
-    } catch {
-      // Skip failed translations
     }
+  } catch {
+    // Translation failed — no output
   }
 
   if (translations.length === 0) return;
