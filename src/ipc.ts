@@ -106,13 +106,20 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
       );
       return;
     } catch (err) {
-      logger.warn({ chatJid, messageId: entry.messageId, err }, 'Could not edit/pin status, replacing');
+      logger.warn(
+        { chatJid, messageId: entry.messageId, err },
+        'Could not edit/pin status, replacing',
+      );
       await deleteJarvisMessage(chatJid, entry.messageId);
     }
   }
 
-  // Send new status message, pin it, delete the old one if it existed
-  const sentId = await sendJarvisMessage(chatJid, text);
+  // Send new status message, pin it — retry once after 3s if bot isn't ready
+  let sentId = await sendJarvisMessage(chatJid, text);
+  if (!sentId) {
+    await new Promise((r) => setTimeout(r, 3000));
+    sentId = await sendJarvisMessage(chatJid, text);
+  }
   if (sentId) {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
     saveStatusEntries();
@@ -278,7 +285,14 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   );
                 }
               } else if (data.type === 'status' && data.chatJid && data.text) {
-                logger.info({ chatJid: data.chatJid, sourceGroup, text: data.text.slice(0, 60) }, 'Processing status IPC');
+                logger.info(
+                  {
+                    chatJid: data.chatJid,
+                    sourceGroup,
+                    text: data.text.slice(0, 60),
+                  },
+                  'Processing status IPC',
+                );
                 const targetGroup = registeredGroups[data.chatJid];
                 if (
                   isMain ||
@@ -296,9 +310,15 @@ export function startIpcWatcher(deps: IpcDeps): void {
                     }
                   }
                   await sendOrEditStatus(data.chatJid, data.text);
-                  logger.info({ chatJid: data.chatJid }, 'Status IPC processed');
+                  logger.info(
+                    { chatJid: data.chatJid },
+                    'Status IPC processed',
+                  );
                 } else {
-                  logger.warn({ chatJid: data.chatJid, sourceGroup }, 'Status IPC unauthorized');
+                  logger.warn(
+                    { chatJid: data.chatJid, sourceGroup },
+                    'Status IPC unauthorized',
+                  );
                 }
               } else if (
                 data.type === 'image' &&
