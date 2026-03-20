@@ -668,6 +668,10 @@ const HISTORY_KEEP_RECENT = 10;        // keep last 10 verbatim; compress the re
 // Extended history config — thinking, reasoning, and coding tiers (larger context windows)
 const HISTORY_COMPRESS_THRESHOLD_EXT = 50; // compress when >50 messages
 const HISTORY_KEEP_RECENT_EXT = 25;        // keep last 25 verbatim
+// Hard safety limits for what gets sent to Ollama (prevents inference hangs)
+const INFERENCE_MAX_MESSAGES = 40;     // never send more than 40 history messages to inference
+const INFERENCE_MAX_CHARS = 48_000;    // ~12K tokens — hard cap on total chars sent
+const MSG_CONTENT_MAX_CHARS = 4_000;   // truncate individual message content beyond this
 const SECRETARY_FEEDBACK_MAX = 50; // rolling store; only non-correct grades kept
 const IPC_POLL_MS = 100;
 
@@ -1054,6 +1058,40 @@ async function compressHistory(history: Message[], compressThreshold = HISTORY_C
     log('History compression failed, trimming instead');
     return recent;
   }
+}
+
+/**
+ * Hard-cap history for inference to prevent Ollama hangs.
+ * 1. Truncates individual message content beyond MSG_CONTENT_MAX_CHARS
+ * 2. Keeps only the most recent INFERENCE_MAX_MESSAGES
+ * 3. Enforces total character budget of INFERENCE_MAX_CHARS
+ * Applied just before sending to Ollama — does NOT modify persisted history.
+ */
+function trimHistoryForInference(history: Message[]): Message[] {
+  // Truncate oversized individual messages (tool outputs, long responses)
+  let trimmed = history.map((m) => {
+    const content = typeof m.content === 'string' ? m.content : '';
+    if (content.length > MSG_CONTENT_MAX_CHARS) {
+      return { ...m, content: content.slice(0, MSG_CONTENT_MAX_CHARS) + '\n[...truncated]' };
+    }
+    return m;
+  });
+
+  // Keep only most recent messages
+  if (trimmed.length > INFERENCE_MAX_MESSAGES) {
+    const dropped = trimmed.length - INFERENCE_MAX_MESSAGES;
+    trimmed = trimmed.slice(-INFERENCE_MAX_MESSAGES);
+    log(`History trimmed for inference: dropped ${dropped} oldest messages`);
+  }
+
+  // Enforce total character budget — drop oldest until under budget
+  let totalChars = trimmed.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0);
+  while (totalChars > INFERENCE_MAX_CHARS && trimmed.length > 2) {
+    const removed = trimmed.shift()!;
+    totalChars -= typeof removed.content === 'string' ? removed.content.length : 0;
+  }
+
+  return trimmed;
 }
 
 /** Extract a plain string from Ollama message content (handles string, array, or schema object). */
@@ -2601,7 +2639,9 @@ async function main(): Promise<void> {
       // to delegate, search, or enable thinking before starting inference
       const routeHint = buildRouteHint(prompt, !!currentImages?.length);
       const routeMsg: Message = { role: 'system', content: routeHint };
-      const messages = [systemMsg, ...history, userMsg, routeMsg];
+      // Hard-cap history to prevent Ollama inference hangs on large contexts
+      const safeHistory = trimHistoryForInference(history);
+      const messages = [systemMsg, ...safeHistory, userMsg, routeMsg];
 
       // Status indicator: always send an immediate base message, append status labels to it.
       // Uses thinking_start / thinking_update IPC types so the host edits the same Telegram
@@ -2732,9 +2772,16 @@ async function main(): Promise<void> {
       }
       saveHistory(history);
 
-      // Schedule background compression — runs during waitForIpcMessage, not during inference
+      // Compress history — synchronous if critically large, background otherwise
       const { compressThreshold, keepRecent } = getHistoryConfig(model, thinking);
-      if (history.length > compressThreshold) {
+      if (history.length > INFERENCE_MAX_MESSAGES) {
+        // Critical: history exceeds inference safety limit — compress NOW before next turn
+        try {
+          history = await compressHistory(history, compressThreshold, keepRecent);
+          log(`History force-compressed (was ${history.length + compressThreshold} msgs, now ${history.length})`);
+          saveHistory(history);
+        } catch { /* trimHistoryForInference will catch it at inference time */ }
+      } else if (history.length > compressThreshold) {
         compressHistory(history, compressThreshold, keepRecent).then((h) => { compressedHistory = h; }).catch(() => {});
       }
 
