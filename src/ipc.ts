@@ -100,12 +100,10 @@ export async function sendOrEditStatus(
 
   if (entry?.messageId) {
     try {
-      await unpinJarvisMessage(chatJid, entry.messageId);
       await editJarvisMessage(chatJid, entry.messageId, text);
-      await pinJarvisMessage(chatJid, entry.messageId);
       logger.info(
         { chatJid, messageId: entry.messageId },
-        'Status message updated and re-pinned',
+        'Status message updated',
       );
       return;
     } catch (err) {
