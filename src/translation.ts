@@ -94,6 +94,7 @@ export async function translateText(
   text: string,
   sourceLanguage: string,
   targetLanguage: string,
+  modelOverride?: string,
 ): Promise<string | null> {
   if (sourceLanguage === targetLanguage) return null;
 
@@ -108,7 +109,7 @@ export async function translateText(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: TRANSLATE_MODEL,
+        model: modelOverride || TRANSLATE_MODEL,
         messages: [
           {
             role: 'system',
@@ -175,6 +176,7 @@ export async function translateToMultiple(
   text: string,
   sourceLanguage: string,
   targetLanguages: string[],
+  modelOverride?: string,
 ): Promise<TranslationResult[]> {
   // Dedupe and skip source language
   const targets = [...new Set(targetLanguages)].filter(
@@ -184,7 +186,7 @@ export async function translateToMultiple(
 
   const results = await Promise.allSettled(
     targets.map(async (targetLang) => {
-      const translated = await translateText(text, sourceLanguage, targetLang);
+      const translated = await translateText(text, sourceLanguage, targetLang, modelOverride);
       if (!translated) throw new Error(`Translation to ${targetLang} failed`);
       return {
         targetLanguage: targetLang,
