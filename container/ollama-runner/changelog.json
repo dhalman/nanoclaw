@@ -1,4 +1,11 @@
 {
+  "0.2.70": {
+    "date": "2026-03-19",
+    "title": "fix: classify by action verb + recipient, not modal verbs",
+    "notes": [
+      "fix: classify by action verb + recipient, not modal verbs"
+    ]
+  },
   "0.2.69": {
     "date": "2026-03-19",
     "title": "fix: voice replies to other users don't trigger Jarvis",
