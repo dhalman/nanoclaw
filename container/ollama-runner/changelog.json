@@ -1,4 +1,11 @@
 {
+  "0.2.63": {
+    "date": "2026-03-19",
+    "title": "feat: secretary-direct language registration for translations",
+    "notes": [
+      "feat: secretary-direct language registration for translations"
+    ]
+  },
   "0.2.62": {
     "date": "2026-03-19",
     "title": "feat: tight history caps, direct-address-only mode",
