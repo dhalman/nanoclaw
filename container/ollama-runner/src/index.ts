@@ -1286,7 +1286,7 @@ async function translateForListeners(
 
   const translationStart = Date.now();
 
-  // All languages in a single secretary call — fast (separate model, no coordinator blocking)
+  // All languages in a single coordinator call — high quality translations
   const langList = langs.map((l) => getLanguageNameLocal(l)).join(', ');
   const translations: Array<{ lang: string; name: string; text: string }> = [];
   try {
@@ -1294,16 +1294,17 @@ async function translateForListeners(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: MODELS.SECRETARY,
+        model: MODELS.COORDINATOR,
         messages: [
-          { role: 'system', content: `Translate the text to each language listed. Return one translation per line, format: LANG: translation\nNo other text.` },
+          { role: 'system', content: `Translate the text to each language listed. Verbatim — preserve tone, slang, intent. Return one translation per line, format: LANG: translation\nNo other text.` },
           { role: 'user', content: `Languages: ${langList}\n\nText: ${userText}` },
         ],
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: -1,
         options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
+        think: false,
         stream: false,
       }),
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(30000),
     });
     if (resp.ok) {
       const data = await resp.json() as OllamaResponse;
