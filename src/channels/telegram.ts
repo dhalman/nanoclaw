@@ -246,7 +246,10 @@ export async function initJarvisBot(
           // No reply — translate the command itself? No, just skip.
           // User needs to reply to a message to translate it.
           if (isTranslateRequest) {
-            sendJarvisMessage(chatJid, '_Reply to a message with "translate" to translate it._').catch(() => {});
+            sendJarvisMessage(
+              chatJid,
+              '_Reply to a message with "translate" to translate it._',
+            ).catch(() => {});
             return;
           }
         }
@@ -280,10 +283,17 @@ export async function initJarvisBot(
 
         if (sourceText) {
           const targetLangs = getTranslatorLanguages(group.folder);
+          if (targetLangs.length === 0) {
+            sendJarvisMessage(
+              chatJid,
+              '_No languages registered. Tell me which language to translate to, e.g. "Jarvis, translate this to Spanish"_',
+            ).catch(() => {});
+            return;
+          }
           // Use 35B for complaints/re-translations, 3B for standard requests
           const useHighQuality = isTranslateComplaint;
           const model = useHighQuality ? 'qwen3.5:35b' : undefined;
-          if (targetLangs.length > 0) {
+          {
             translateToMultiple(sourceText, 'auto', targetLangs, model)
               .then((translations) => {
                 if (translations.length > 0) {
