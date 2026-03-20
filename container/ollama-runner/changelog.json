@@ -1,4 +1,11 @@
 {
+  "0.2.31": {
+    "date": "2026-03-19",
+    "title": "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call",
+    "notes": [
+      "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call"
+    ]
+  },
   "0.2.30": {
     "date": "2026-03-19",
     "title": "feat: auto-translate Jarvis chat responses, skip command responses",
