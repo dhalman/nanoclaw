@@ -1,4 +1,11 @@
 {
+  "0.2.65": {
+    "date": "2026-03-19",
+    "title": "feat: secretary-direct disable/remove translation languages",
+    "notes": [
+      "feat: secretary-direct disable/remove translation languages"
+    ]
+  },
   "0.2.64": {
     "date": "2026-03-19",
     "title": "fix: kill all nanoclaw containers on deploy",
