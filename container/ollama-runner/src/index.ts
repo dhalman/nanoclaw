@@ -1331,9 +1331,10 @@ async function translateForListeners(
 
   if (translations.length === 0) return;
 
-  // Format and send as a single IPC message
-  const lines = translations.map((t) => `🌐 *${t.name}:* ${t.text}`);
-  const translationMsg = `_${senderName}:_\n${lines.join('\n')}`;
+  // Format matching host-side UX: italic lines with [Language] prefix
+  const translationMsg = translations
+    .map((t) => `_🌐 [${t.name}] ${t.text}_`)
+    .join('\n');
 
   try {
     const ipcFile = path.join(IPC_MSG_DIR, `translate-${Date.now()}.json`);
