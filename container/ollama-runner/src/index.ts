@@ -1183,8 +1183,8 @@ const DIRECT_PATTERNS: Array<{
     format: (r) => r,
   },
   {
-    // "version", "what version", "build", "build id"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what (?:version|build))\b/i,
+    // "version", "what version", "build", "what's new", "changelog", "release notes", "version notes"
+    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|updates?|what changed)\b/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
