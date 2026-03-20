@@ -495,23 +495,42 @@ async function startMessageLoop(): Promise<void> {
             continue;
           }
 
-          // Unified engagement check: trigger detection, per-user prefs, dismissal
+          // Track message ID and react BEFORE engagement check (instant feedback)
+          const lastUserMsg = [...groupMessages]
+            .reverse()
+            .find((m) => !m.is_from_me);
+          if (lastUserMsg?.id) {
+            const numId = parseInt(lastUserMsg.id, 10);
+            if (!isNaN(numId)) {
+              lastTriggerMessageId[chatJid] = numId;
+              // Instant 🧐 reaction — user sees acknowledgment immediately
+              reactToMessage(chatJid, numId, '🧐').catch(() => {});
+            }
+          }
+
+          // Engagement check (may call NLP for ambiguous mentions)
           const engResult = await checkEngagement(
             chatJid,
             group,
             groupMessages,
             allowlistCfg,
           );
-          // React to trivial dismissals with emoji
+          // React to trivial dismissals with mood-appropriate emoji
           for (const d of engResult.dismissals) {
             const msgId = parseInt(d.message.id, 10);
             if (!isNaN(msgId))
               reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
           }
-          if (!engResult.shouldProcess) continue;
+          if (!engResult.shouldProcess) {
+            // Remove 🧐 if not processing (wasn't directed at Jarvis)
+            if (lastUserMsg?.id) {
+              const numId = parseInt(lastUserMsg.id, 10);
+              if (!isNaN(numId)) removeReaction(chatJid, numId).catch(() => {});
+            }
+            continue;
+          }
 
-          // Pull all messages since lastAgentTimestamp so non-trigger
-          // context that accumulated between triggers is included.
+          // Pull all messages since lastAgentTimestamp
           const allPending = getMessagesSince(
             chatJid,
             lastAgentTimestamp[chatJid] || '',
@@ -520,19 +539,6 @@ async function startMessageLoop(): Promise<void> {
           const messagesToSend =
             allPending.length > 0 ? allPending : groupMessages;
           const formatted = formatMessages(messagesToSend, TIMEZONE);
-
-          // Track the last user message ID for reply-to in groups
-          const lastUserMsg = [...groupMessages]
-            .reverse()
-            .find((m) => !m.is_from_me);
-          if (lastUserMsg?.id) {
-            const numId = parseInt(lastUserMsg.id, 10);
-            if (!isNaN(numId)) {
-              lastTriggerMessageId[chatJid] = numId;
-              // Instant acknowledgment reaction
-              reactToMessage(chatJid, numId, '🧐').catch(() => {});
-            }
-          }
 
           // Cancel command: pipe to container for immediate IPC cancel, then kill as backup
           const isCancelCommand = groupMessages.some((m) =>
