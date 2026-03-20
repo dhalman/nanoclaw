@@ -103,11 +103,13 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
       );
       return;
     } catch {
-      logger.debug({ chatJid }, 'Could not edit status, sending new');
+      // Edit failed (message deleted?) — delete the old one and send new
+      logger.debug({ chatJid }, 'Could not edit status, replacing');
+      await deleteJarvisMessage(chatJid, entry.messageId);
     }
   }
 
-  // No existing status message or edit failed — send new and pin it
+  // Send new status message, pin it, delete the old one if it existed
   const sentId = await sendJarvisMessage(chatJid, text);
   if (sentId) {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
