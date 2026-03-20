@@ -91,29 +91,36 @@ export function markUserActivity(_chatJid: string): void {
  * message if one exists. Only sends new when there's no prior message ID
  * or the edit fails (message deleted by user).
  */
-async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
+export async function sendOrEditStatus(
+  chatJid: string,
+  text: string,
+): Promise<void> {
   const entries = getStatusEntries();
   const entry = entries.get(chatJid);
 
   if (entry?.messageId) {
     try {
-      await unpinJarvisMessage(chatJid, entry.messageId);
       await editJarvisMessage(chatJid, entry.messageId, text);
-      await pinJarvisMessage(chatJid, entry.messageId);
       logger.info(
         { chatJid, messageId: entry.messageId },
-        'Status message updated and re-pinned',
+        'Status message updated',
       );
       return;
-    } catch {
-      // Edit failed (message deleted?) — delete the old one and send new
-      logger.debug({ chatJid }, 'Could not edit status, replacing');
+    } catch (err) {
+      logger.warn(
+        { chatJid, messageId: entry.messageId, err },
+        'Could not edit/pin status, replacing',
+      );
       await deleteJarvisMessage(chatJid, entry.messageId);
     }
   }
 
-  // Send new status message, pin it, delete the old one if it existed
-  const sentId = await sendJarvisMessage(chatJid, text);
+  // Send new status message, pin it — retry once after 3s if bot isn't ready
+  let sentId = await sendJarvisMessage(chatJid, text);
+  if (!sentId) {
+    await new Promise((r) => setTimeout(r, 3000));
+    sentId = await sendJarvisMessage(chatJid, text);
+  }
   if (sentId) {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
     saveStatusEntries();
@@ -279,7 +286,14 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   );
                 }
               } else if (data.type === 'status' && data.chatJid && data.text) {
-                // Status messages (stopped/online) — edit if last was status, new if user activity since
+                logger.info(
+                  {
+                    chatJid: data.chatJid,
+                    sourceGroup,
+                    text: data.text.slice(0, 60),
+                  },
+                  'Processing status IPC',
+                );
                 const targetGroup = registeredGroups[data.chatJid];
                 if (
                   isMain ||
@@ -297,6 +311,15 @@ export function startIpcWatcher(deps: IpcDeps): void {
                     }
                   }
                   await sendOrEditStatus(data.chatJid, data.text);
+                  logger.info(
+                    { chatJid: data.chatJid },
+                    'Status IPC processed',
+                  );
+                } else {
+                  logger.warn(
+                    { chatJid: data.chatJid, sourceGroup },
+                    'Status IPC unauthorized',
+                  );
                 }
               } else if (
                 data.type === 'image' &&

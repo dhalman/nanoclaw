@@ -14,6 +14,8 @@ import {
 import {
   initBotPool,
   initJarvisBot,
+  reactToMessage,
+  removeReaction,
   sendJarvisMessage,
 } from './channels/telegram.js';
 import { startCredentialProxy } from './credential-proxy.js';
@@ -21,8 +23,8 @@ import {
   checkEngagement,
   disengageAll,
   disengageUser,
-  getUserPref,
   isEngaged,
+  learnUserEmoji,
 } from './engagement.js';
 import './channels/index.js';
 import {
@@ -51,7 +53,12 @@ import {
 } from './db.js';
 import { GroupQueue } from './group-queue.js';
 import { resolveGroupFolderPath } from './group-folder.js';
-import { markUserActivity, sendStoppedStatus, startIpcWatcher } from './ipc.js';
+import {
+  markUserActivity,
+  sendOrEditStatus,
+  sendStoppedStatus,
+  startIpcWatcher,
+} from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
   getAvailableGroups as getAvailableGroupsFromSnapshots,
@@ -70,7 +77,6 @@ import {
 } from './sender-allowlist.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
-import { translateToMultiple } from './translation.js';
 import { cancelVideoBackends } from './video-cancel.js';
 import { logger } from './logger.js';
 
@@ -176,15 +182,18 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   if (missedMessages.length === 0) return true;
 
   // Unified engagement check: trigger detection, per-user prefs, dismissal
-  if (
-    !(await checkEngagement(
-      chatJid,
-      group,
-      missedMessages,
-      loadSenderAllowlist(),
-    ))
-  )
-    return true;
+  const engagement = await checkEngagement(
+    chatJid,
+    group,
+    missedMessages,
+    loadSenderAllowlist(),
+  );
+  // React to trivial dismissals with emoji
+  for (const d of engagement.dismissals) {
+    const msgId = parseInt(d.message.id, 10);
+    if (!isNaN(msgId)) reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
+  }
+  if (!engagement.shouldProcess) return true;
 
   const prompt = formatMessages(missedMessages, TIMEZONE);
 
@@ -253,35 +262,12 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
             ? lastTriggerMessageId[chatJid]
             : undefined;
           sentMsgId = await sendJarvisMessage(chatJid, text, replyTo);
+          // Remove 👀 reaction now that response is sent
+          if (replyTo) removeReaction(chatJid, replyTo).catch(() => {});
         } else {
           await channel.sendMessage(chatJid, text);
         }
         outputSentToUser = true;
-
-        // Auto-translate Jarvis's response (reply-to the response message)
-        if (sentMsgId && text.length > 4) {
-          const prefs = getUserPref(group.folder, '', 'translator_languages');
-          let langs = prefs;
-          if (typeof langs === 'string') {
-            try {
-              langs = JSON.parse(langs);
-            } catch {
-              langs = null;
-            }
-          }
-          if (Array.isArray(langs) && langs.length > 0) {
-            translateToMultiple(text, 'auto', langs)
-              .then((translations) => {
-                if (translations.length > 0) {
-                  const echo = translations
-                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                    .join('\n\n');
-                  sendJarvisMessage(chatJid, echo, sentMsgId!).catch(() => {});
-                }
-              })
-              .catch(() => {});
-          }
-        }
       }
       // Only reset idle timer on actual results, not session-update markers (result: null)
       resetIdleTimer();
@@ -510,15 +496,19 @@ async function startMessageLoop(): Promise<void> {
           }
 
           // Unified engagement check: trigger detection, per-user prefs, dismissal
-          if (
-            !(await checkEngagement(
-              chatJid,
-              group,
-              groupMessages,
-              allowlistCfg,
-            ))
-          )
-            continue;
+          const engResult = await checkEngagement(
+            chatJid,
+            group,
+            groupMessages,
+            allowlistCfg,
+          );
+          // React to trivial dismissals with emoji
+          for (const d of engResult.dismissals) {
+            const msgId = parseInt(d.message.id, 10);
+            if (!isNaN(msgId))
+              reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
+          }
+          if (!engResult.shouldProcess) continue;
 
           // Pull all messages since lastAgentTimestamp so non-trigger
           // context that accumulated between triggers is included.
@@ -537,23 +527,30 @@ async function startMessageLoop(): Promise<void> {
             .find((m) => !m.is_from_me);
           if (lastUserMsg?.id) {
             const numId = parseInt(lastUserMsg.id, 10);
-            if (!isNaN(numId)) lastTriggerMessageId[chatJid] = numId;
+            if (!isNaN(numId)) {
+              lastTriggerMessageId[chatJid] = numId;
+              // Instant acknowledgment reaction
+              reactToMessage(chatJid, numId, '🧐').catch(() => {});
+            }
           }
 
-          // Cancel command: kill the active container immediately
-          const isCancelCommand = groupMessages.some(
-            (m) => m.is_from_me && CANCEL_PATTERN.test(m.content.trim()),
+          // Cancel command: pipe to container for immediate IPC cancel, then kill as backup
+          const isCancelCommand = groupMessages.some((m) =>
+            CANCEL_PATTERN.test(m.content.trim()),
           );
-          if (isCancelCommand && queue.killActive(chatJid)) {
-            logger.info(
-              { chatJid },
-              'Active container killed by cancel command',
-            );
+          if (isCancelCommand) {
+            // Pipe cancel to container so IPC poll loop catches it (~100ms)
+            queue.sendMessage(chatJid, 'cancel');
+            // Backup: kill container after 2s if IPC cancel didn't exit
+            setTimeout(() => {
+              if (queue.killActive(chatJid)) {
+                logger.info({ chatJid }, 'Container killed by cancel backup');
+              }
+            }, 2000);
             lastAgentTimestamp[chatJid] =
               groupMessages[groupMessages.length - 1].timestamp;
             saveState();
             cancelVideoBackends().catch(() => {});
-            channel.sendMessage?.(chatJid, '_Stopped._')?.catch(() => {});
           } else if (queue.sendMessage(chatJid, formatted)) {
             logger.debug(
               { chatJid, count: messagesToSend.length },
@@ -707,7 +704,13 @@ async function main(): Promise<void> {
           return;
         }
       }
+      // (nojar) — completely invisible to Jarvis: don't store, don't learn, don't process
+      if (/\(nojar\)/i.test(msg.content)) return;
+
       storeMessage(msg);
+
+      // Learn user's emoji style from every message
+      if (!msg.is_from_me) learnUserEmoji(chatJid, msg.sender, msg.content);
 
       // Mark user activity so status messages send new instead of editing
       if (!msg.is_from_me) markUserActivity(chatJid);
@@ -844,6 +847,42 @@ async function main(): Promise<void> {
     writeGroupsSnapshot,
   });
   queue.setProcessMessagesFn(processGroupMessages);
+
+  // Send online status from host (bot is initialized, can pin)
+  {
+    const buildId = (() => {
+      try {
+        return fs
+          .readFileSync(
+            path.join(process.cwd(), 'container/ollama-runner/build-id.txt'),
+            'utf-8',
+          )
+          .trim();
+      } catch {
+        return '?';
+      }
+    })();
+    const onlineTime = new Date().toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    for (const [chatJid, group] of Object.entries(registeredGroups)) {
+      if (!group.containerConfig?.ollamaRunner) continue;
+      if (!chatJid.startsWith('tg:') && !chatJid.startsWith('tg-j:')) continue;
+      const name = group.containerConfig.assistantName || ASSISTANT_NAME;
+      sendOrEditStatus(
+        chatJid,
+        `_${name} v${buildId} online — ${onlineTime}_ 😎`,
+      )
+        .then(() => logger.info({ chatJid }, 'Host online status sent'))
+        .catch((err) =>
+          logger.warn({ chatJid, err }, 'Host online status failed'),
+        );
+    }
+  }
 
   // Pre-spawn persistent containers for all ollama-runner groups
   for (const [chatJid, group] of Object.entries(registeredGroups)) {

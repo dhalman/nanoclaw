@@ -36,6 +36,13 @@ done
 if [ "${NANOCLAW_MANAGED}" != "1" ]; then
   echo "Stopping nanoclaw..."
   launchctl stop gui/$(id -u)/com.nanoclaw 2>/dev/null || true
+  sleep 2
+  # Kill all nanoclaw containers — shutdown only detaches, doesn't kill
+  LEFTOVER=$(docker ps -q --filter 'name=nanoclaw-' 2>/dev/null)
+  if [ -n "$LEFTOVER" ]; then
+    echo "Stopping leftover containers: $(docker ps --filter 'name=nanoclaw-' --format '{{.Names}}' | tr '\n' ' ')"
+    echo "$LEFTOVER" | xargs docker stop -t 2 2>/dev/null || true
+  fi
 fi
 
 # ---------------------------------------------------------------------------

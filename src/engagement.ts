@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { ASSISTANT_NAME, DISMISS_PATTERN, GROUPS_DIR, TRIGGER_PATTERN } from './config.js';
+import { ASSISTANT_NAME, GROUPS_DIR, TRIGGER_PATTERN } from './config.js';
 import { logger } from './logger.js';
 import { SenderAllowlistConfig, isTriggerAllowed } from './sender-allowlist.js';
 import { NewMessage, RegisteredGroup } from './types.js';
@@ -10,13 +10,17 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
 const INTENT_MODEL = process.env.OLLAMA_MODEL_SECRETARY || 'qwen2.5:3b';
 
 // Fast regex: does the message mention the assistant name at all?
-const MENTION_PATTERN = new RegExp(`\\b${ASSISTANT_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+const MENTION_PATTERN = new RegExp(
+  `\\b${ASSISTANT_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+  'i',
+);
 
 /**
  * NLP intent check: is this message directed at the assistant, or just mentioning them?
- * Returns 'engage' (directed at assistant), 'observe' (mentioned but not directed), or null (error/timeout).
  */
-async function classifyIntent(text: string): Promise<'engage' | 'observe' | null> {
+async function classifyIntent(
+  text: string,
+): Promise<'engage' | 'observe' | null> {
   try {
     const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
       method: 'POST',
@@ -24,7 +28,10 @@ async function classifyIntent(text: string): Promise<'engage' | 'observe' | null
       body: JSON.stringify({
         model: INTENT_MODEL,
         messages: [
-          { role: 'system', content: `Is this message directed AT ${ASSISTANT_NAME} (asking/telling them something), or just MENTIONING ${ASSISTANT_NAME} in passing? Reply with exactly one word: "directed" or "mention"` },
+          {
+            role: 'system',
+            content: `Is "${ASSISTANT_NAME}" being SPOKEN TO (greetings, questions, requests, commands) or just MENTIONED in passing (talking about them to someone else)? Reply: "directed" or "mention"`,
+          },
           { role: 'user', content: text },
         ],
         keep_alive: -1,
@@ -34,9 +41,10 @@ async function classifyIntent(text: string): Promise<'engage' | 'observe' | null
       signal: AbortSignal.timeout(3000),
     });
     if (!resp.ok) return null;
-    const data = await resp.json() as { message: { content: string } };
+    const data = (await resp.json()) as { message: { content: string } };
     const answer = data.message.content.trim().toLowerCase();
-    if (answer.includes('directed') || answer.includes('direct')) return 'engage';
+    if (answer.includes('directed') || answer.includes('direct'))
+      return 'engage';
     if (answer.includes('mention')) return 'observe';
     return null;
   } catch {
@@ -45,9 +53,70 @@ async function classifyIntent(text: string): Promise<'engage' | 'observe' | null
 }
 
 // Per-group set of user IDs the assistant is currently engaged with.
-// A user becomes engaged when they trigger by name.
-// Disengaged via <disengage:userId/> tag or host-side dismissal pattern.
 const engagedUsers: Record<string, Set<string>> = {};
+
+// Track emoji usage per user — learn their style to mirror back
+const userEmojiHistory: Record<string, Record<string, number>> = {};
+const TELEGRAM_EMOJI = [
+  '👍',
+  '👎',
+  '❤',
+  '🔥',
+  '🥰',
+  '👏',
+  '😁',
+  '🤔',
+  '🤯',
+  '😱',
+  '😢',
+  '🎉',
+  '🤩',
+  '🙏',
+  '👌',
+  '🤡',
+  '🥱',
+  '😍',
+  '🐳',
+  '🌚',
+  '💯',
+  '🫡',
+  '👋',
+];
+
+/** Record emojis a user sends so we can mirror their style. */
+export function learnUserEmoji(
+  chatJid: string,
+  userId: string,
+  text: string,
+): void {
+  const key = `${chatJid}:${userId}`;
+  if (!userEmojiHistory[key]) userEmojiHistory[key] = {};
+  // Extract emojis from text
+  const emojiRegex =
+    /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu;
+  const emojis = text.match(emojiRegex) || [];
+  for (const e of emojis) {
+    userEmojiHistory[key][e] = (userEmojiHistory[key][e] || 0) + 1;
+  }
+}
+
+/** Pick an emoji that mirrors the user's style for a given mood. */
+function pickUserEmoji(
+  chatJid: string,
+  userId: string,
+  fallback: string,
+): string {
+  const key = `${chatJid}:${userId}`;
+  const history = userEmojiHistory[key];
+  if (!history || Object.keys(history).length === 0) return fallback;
+
+  // Find user's most-used emoji that's in Telegram's reaction set
+  const sorted = Object.entries(history)
+    .filter(([e]) => TELEGRAM_EMOJI.includes(e))
+    .sort((a, b) => b[1] - a[1]);
+
+  return sorted.length > 0 ? sorted[0][0] : fallback;
+}
 
 function getEngaged(chatJid: string): Set<string> {
   if (!engagedUsers[chatJid]) engagedUsers[chatJid] = new Set();
@@ -78,80 +147,120 @@ export function isEngaged(chatJid: string, userId: string): boolean {
 
 export function engageUser(chatJid: string, userId: string): void {
   getEngaged(chatJid).add(userId);
-  logger.info({ chatJid, user: userId }, 'Engaged mode: user on');
+  logger.info({ chatJid, user: userId }, 'Engaged');
 }
 
 export function disengageUser(chatJid: string, userId: string): void {
   engagedUsers[chatJid]?.delete(userId);
-  logger.info({ chatJid, user: userId }, 'Engaged mode: user disengaged');
+  logger.info({ chatJid, user: userId }, 'Disengaged');
 }
 
 export function disengageAll(chatJid: string): void {
   engagedUsers[chatJid]?.clear();
-  logger.info({ chatJid }, 'Engaged mode: all users disengaged');
+  logger.info({ chatJid }, 'All disengaged');
 }
 
 /**
- * Check engagement state for a group's messages and return whether the
- * assistant should process them. Handles trigger detection, per-user
- * engagement mode preferences, and host-side dismissal — all in one place.
- *
- * Returns true if messages should be processed, false to skip.
- * Side effect: updates engaged user state (engage new triggers, dismiss).
+ * Engagement model:
+ * - Direct address (name mention + NLP "directed") → engage, respond
+ * - Already engaged → passively listen, respond without name requirement
+ * - Dismissal ("bye", "thanks", "done") → disengage, go quiet
+ * - After dismissal → only re-engage on direct address or skill-related trigger
  */
 export async function checkEngagement(
   chatJid: string,
   group: RegisteredGroup,
   messages: NewMessage[],
   allowlistCfg: SenderAllowlistConfig,
-): Promise<boolean> {
+): Promise<{
+  shouldProcess: boolean;
+  dismissals: Array<{ message: NewMessage; emoji: string }>;
+}> {
   const isMainGroup = group.isMain === true;
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
-  if (!needsTrigger) return true;
+  if (!needsTrigger) {
+    // (nojar) tag forces ignore even for main groups
+    if (messages.every((m) => /\(nojar\)/i.test(m.content))) {
+      return { shouldProcess: false, dismissals: [] };
+    }
+    return { shouldProcess: true, dismissals: [] };
+  }
+
+  // (nojar) tag — force Jarvis to completely ignore the message
+  const filtered = messages.filter((m) => !/\(nojar\)/i.test(m.content));
+  if (filtered.length === 0) return { shouldProcess: false, dismissals: [] };
 
   const engaged = getEngaged(chatJid);
 
-  // Host-side dismissal: disengage users who send clear farewell messages
+  // Trivial/dismissal responses: disengage and react with an emoji instead of responding.
+  // Returns the emoji to react with, or null if the message is not trivial.
+  const TRIVIAL_REACTIONS: Array<{ pattern: RegExp; emoji: string }> = [
+    { pattern: /^\s*(?:thanks?|thank\s*you|thx|ty)\s*[!.]?\s*$/i, emoji: '🙏' },
+    {
+      pattern:
+        /^\s*(?:ok|okay|k|kk|got\s*it|understood|roger|copy)\s*[!.]?\s*$/i,
+      emoji: '👍',
+    },
+    {
+      pattern:
+        /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit)\s*[!.]?\s*$/i,
+      emoji: '🔥',
+    },
+    {
+      pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i,
+      emoji: '🫡',
+    },
+    { pattern: /^\s*(?:lol|lmao|haha|😂|🤣|😆)\s*$/i, emoji: '😁' },
+    {
+      pattern:
+        /^\s*(?:bye|goodbye|go away|later|peace|cya|see\s*ya)\s*[!.]?\s*$/i,
+      emoji: '👋',
+    },
+    {
+      pattern:
+        /^\s*(?:stop|cancel|nevermind|nah|nope|no\s*thanks?|enough|done|that'?s\s*(?:all|enough|it)|i'?m\s*good|we'?re\s*good|whatever|quiet|shut\s*up|leave)\s*[!.]?\s*$/i,
+      emoji: '👍',
+    },
+    { pattern: /^\s*(?:👋|👍|👌|🙏|🫡|💯|✅|🤙)\s*$/i, emoji: '👍' },
+  ];
+  const dismissedMessages: Array<{ message: NewMessage; emoji: string }> = [];
   for (const m of messages) {
-    if (
-      !m.is_from_me &&
-      engaged.has(m.sender) &&
-      DISMISS_PATTERN.test(m.content.trim())
-    ) {
-      engaged.delete(m.sender);
-      logger.info(
-        { chatJid, user: m.sender },
-        'Engaged mode: user dismissed (host-side)',
+    if (!m.is_from_me && engaged.has(m.sender)) {
+      const trivial = TRIVIAL_REACTIONS.find((r) =>
+        r.pattern.test(m.content.trim()),
       );
+      if (trivial) {
+        engaged.delete(m.sender);
+        const emoji = pickUserEmoji(chatJid, m.sender, trivial.emoji);
+        dismissedMessages.push({ message: m, emoji });
+        logger.info({ chatJid, user: m.sender, emoji }, 'Disengaged (trivial)');
+      }
     }
+    // Learn emoji from all messages (not just trivial) to build user profile
+    if (!m.is_from_me) learnUserEmoji(chatJid, m.sender, m.content);
   }
 
-  // Detect messages from already-engaged users, respecting per-user mode
-  const engagedMessages = messages.filter((m) => {
-    if (m.is_from_me || !engaged.has(m.sender)) return false;
-    const userEngMode = getUserPref(group.folder, m.sender, 'engagement_mode');
-    if (userEngMode === 'per_message') return false;
-    return true;
-  });
-
-  // Two-stage trigger detection:
-  // Stage 1 (regex, sub-ms): does the message mention the assistant name?
-  // Stage 2 (NLP, ~300ms): is it directed AT the assistant, or just mentioning them?
-  const candidates = messages.filter(
-    (m) =>
-      !m.is_from_me &&
-      MENTION_PATTERN.test(m.content.trim()) &&
-      isTriggerAllowed(chatJid, m.sender, allowlistCfg),
+  // Already-engaged users: respond to questions/commands, ignore casual chatter
+  const engagedMessages = messages.filter(
+    (m) => !m.is_from_me && engaged.has(m.sender),
   );
 
-  // Also accept is_from_me triggers via the stricter regex (owner can always trigger)
+  // Owner triggers (is_from_me) always work via regex
   const ownerTriggers = messages.filter(
     (m) => m.is_from_me && TRIGGER_PATTERN.test(m.content.trim()),
   );
 
+  // New triggers: mention check → NLP intent (only for non-engaged users)
+  const candidates = messages.filter(
+    (m) =>
+      !m.is_from_me &&
+      !engaged.has(m.sender) &&
+      MENTION_PATTERN.test(m.content.trim()) &&
+      isTriggerAllowed(chatJid, m.sender, allowlistCfg),
+  );
+
   const triggerMessages: NewMessage[] = [...ownerTriggers];
 
-  // Run NLP intent classification on candidates (parallel)
   if (candidates.length > 0) {
     const intents = await Promise.all(
       candidates.map(async (m) => {
@@ -162,38 +271,25 @@ export async function checkEngagement(
     for (const { message, intent } of intents) {
       if (intent === 'engage') {
         triggerMessages.push(message);
-        logger.info(
-          { chatJid, user: message.sender, intent: 'engage' },
-          'NLP trigger: directed at assistant',
-        );
-      } else if (intent === 'observe') {
-        logger.debug(
-          { chatJid, user: message.sender, intent: 'observe' },
-          'NLP trigger: mention only, not engaging',
-        );
-      } else {
-        // NLP failed/timed out — fall back to regex
+      } else if (intent === null) {
+        // NLP failed — fall back to regex
         if (TRIGGER_PATTERN.test(message.content.trim())) {
           triggerMessages.push(message);
-          logger.info(
-            { chatJid, user: message.sender, intent: 'regex-fallback' },
-            'NLP timeout, regex fallback triggered',
-          );
         }
       }
     }
   }
 
-  if (triggerMessages.length === 0 && engagedMessages.length === 0)
-    return false;
-
-  // Engage any new users who triggered
+  // Engage new users
   for (const m of triggerMessages) {
     if (m.sender && !engaged.has(m.sender)) {
       engaged.add(m.sender);
-      logger.info({ chatJid, user: m.sender }, 'Engaged mode: user on');
+      logger.info({ chatJid, user: m.sender }, 'Engaged');
     }
   }
 
-  return true;
+  if (triggerMessages.length === 0 && engagedMessages.length === 0)
+    return { shouldProcess: false, dismissals: dismissedMessages };
+
+  return { shouldProcess: true, dismissals: dismissedMessages };
 }

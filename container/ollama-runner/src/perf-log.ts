@@ -14,9 +14,12 @@ const PERF_LOG_FILE = path.join(WORKSPACE_GROUP, '.perf-log.jsonl');
 const MAX_LOG_LINES = 1000; // rotate after 1000 entries
 
 export interface PerfMetric {
-  type: 'startup' | 'classify' | 'response' | 'tool' | 'escalation';
+  type: 'startup' | 'classify' | 'response' | 'tool' | 'escalation' | 'error';
   buildId: string;
   timestamp: string;
+  category?: string;
+  error?: string;
+  dissatisfied?: boolean;
   // Startup metrics
   startupMs?: number;
   ollamaWarmMs?: number;

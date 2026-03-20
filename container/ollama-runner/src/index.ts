@@ -662,17 +662,17 @@ const IMAGE_TOOL_TIMEOUT_MS = 120_000; // 2 min for image generation
 const VIDEO_TOOL_TIMEOUT_MS = 360_000; // 6 min for video generation (internal deadline is 5 min)
 const WEB_TOOL_TIMEOUT_MS = 20_000;    // 20 s for web requests
 const HISTORY_MAX_MSG_CHARS = 0;    // 0 = no truncation (local — no token cost)
-const HISTORY_MAX_MESSAGES = 200;   // generous storage — local, no cost
+const HISTORY_MAX_MESSAGES = 30;    // tight cap — prevents slow responses; user can ask for context
 // Default history config — fast tier (35b no-think)
-const HISTORY_COMPRESS_THRESHOLD = 25; // compress when history grows past 25 messages
-const HISTORY_KEEP_RECENT = 10;        // keep last 10 verbatim; compress the rest into a summary
-// Extended history config — thinking, reasoning, and coding tiers (larger context windows)
-const HISTORY_COMPRESS_THRESHOLD_EXT = 50; // compress when >50 messages
-const HISTORY_KEEP_RECENT_EXT = 25;        // keep last 25 verbatim
+const HISTORY_COMPRESS_THRESHOLD = 12; // compress early and often
+const HISTORY_KEEP_RECENT = 6;         // keep last 6 verbatim; compress the rest
+// Extended history config — thinking, reasoning, and coding tiers
+const HISTORY_COMPRESS_THRESHOLD_EXT = 20; // compress when >20 messages
+const HISTORY_KEEP_RECENT_EXT = 10;        // keep last 10 verbatim
 // Hard safety limits for what gets sent to Ollama (prevents inference hangs)
-const INFERENCE_MAX_MESSAGES = 40;     // never send more than 40 history messages to inference
-const INFERENCE_MAX_CHARS = 48_000;    // ~12K tokens — hard cap on total chars sent
-const MSG_CONTENT_MAX_CHARS = 4_000;   // truncate individual message content beyond this
+const INFERENCE_MAX_MESSAGES = 20;     // tight — fast responses over deep context
+const INFERENCE_MAX_CHARS = 24_000;    // ~6K tokens — keeps inference fast
+const MSG_CONTENT_MAX_CHARS = 2_000;   // truncate tool outputs and long messages
 const SECRETARY_FEEDBACK_MAX = 50; // rolling store; only non-correct grades kept
 const IPC_POLL_MS = 100;
 
@@ -861,7 +861,38 @@ function formatFeedbackForPrompt(grades: SecretaryGrade[]): string {
  * For low-complexity messages the secretary also drafts an answer — the coordinator
  * reviews it and either echoes it or steps in with their own response.
  * Falls back to regex classifiers if the call fails or times out. */
+// Force-routing tags: (TagName) anywhere in the message overrides classification.
+// Can be used mid-conversation to escalate or redirect a running task.
+const FORCE_ROUTE_TAGS: Array<{ pattern: RegExp; model: string; think: boolean; label: string }> = [
+  { pattern: /\(secretary\)/i,  model: MODELS.SECRETARY,   think: false, label: 'secretary' },
+  { pattern: /\(jarvis\)/i,     model: MODELS.COORDINATOR, think: false, label: 'coordinator' },
+  { pattern: /\(coder\)/i,      model: MODELS.CODER,       think: false, label: 'coder' },
+  { pattern: /\(think\)/i,      model: MODELS.COORDINATOR, think: true,  label: 'think' },
+  { pattern: /\(artist\)/i,     model: MODELS.VISION,      think: false, label: 'artist' },
+  { pattern: /\(deep\)/i,       model: MODELS.ARCHITECT,   think: true,  label: 'architect' },
+  { pattern: /\(vision\)/i,     model: MODELS.VISION,      think: false, label: 'vision' },
+  { pattern: /\(art\)/i,        model: MODELS.VISION,      think: false, label: 'artist' },
+  { pattern: /\(fast\)/i,       model: MODELS.SECRETARY,   think: false, label: 'fast' },
+];
+
 export async function classifyMessage(text: string, hasImages: boolean): Promise<MessageClassification> {
+  // Force-routing tags override all classification
+  for (const tag of FORCE_ROUTE_TAGS) {
+    if (tag.pattern.test(text)) {
+      log(`[classify] force-routed via (${tag.label}) tag`);
+      return {
+        model: tag.model,
+        think: tag.think,
+        taskType: tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis',
+        taskTypeRich: tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis',
+        temperature: 0.3,
+        complexity: tag.think ? 'high' : 'medium',
+        needsWeb: false,
+        usedSecretary: false,
+      };
+    }
+  }
+
   // Images always route to the vision model regardless of content
   if (hasImages) {
     return { model: MODELS.VISION, think: false, taskType: 'analysis', taskTypeRich: 'analysis', temperature: 0.3, complexity: 'low', usedSecretary: false };
@@ -888,14 +919,20 @@ export async function classifyMessage(text: string, hasImages: boolean): Promise
 
   // LLM-based classification (when secretary is enabled)
   const feedbackHint = formatFeedbackForPrompt(loadSecretaryFeedback());
-  const classifyPrompt = `Route this message to the right model.${feedbackHint}
+  const classifyPrompt = `Classify this message. Identify the ACTION VERB and RECIPIENT to determine intent.${feedbackHint}
 Return JSON only, no explanation:
 {"model":"default|coder|analyst|architect|artist","think":true|false,"complexity":"low|medium|high","task_type":"chat|code|creative|analysis|decision|debug|research","needs_web":true|false}
 
 Rules:
-- model: "default" (general), "coder" (write/debug/refactor code), "analyst" (complex reasoning, trade-offs), "architect" (hardest problems), "artist" (image/video generation)
+- model: choose based on the PRIMARY ACTION VERB, not modal verbs (can/could/would)
+  - "default" — general chat, greetings, questions, opinions, casual conversation
+  - "coder" — ONLY when the action verb is code-specific: write/debug/refactor/implement/deploy code
+  - "analyst" — complex reasoning, trade-offs, multi-step analysis
+  - "architect" — hardest problems requiring deep expertise
+  - "artist" — image/video generation (draw, paint, generate image/video)
 - think: true only for multi-step reasoning, trade-offs, or complex analysis
 - needs_web: true only for live/current data (news, prices, weather, recent events)
+- When in doubt, use "default" — it can delegate to specialists itself
 
 Message: ${JSON.stringify(text.slice(0, 400))}`;
 
@@ -1176,21 +1213,22 @@ const DIRECT_PATTERNS: Array<{
   format: (result: string) => string;
 }> = [
   {
-    // "status", "are you online", "service status", "check services", "health check"
-    pattern: /\b(?:status|health|services?|backends?|are you (?:online|running|alive|up|ok|working))\b/i,
-    tool: 'service_status',
-    args: () => ({}),
-    format: (r) => r,
-  },
-  {
-    // "version", "what version", "build", "what's new", "changelog", "release notes", "version notes"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|updates?|what changed)\b/i,
+    // "version", "what version", "build", "what's new", "changelog", "release notes"
+    // Must be before status — "what version are you running" contains "running"
+    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|what changed)\b/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
       const lines = r.split('\n').slice(0, 5);
       return lines.join('\n');
     },
+  },
+  {
+    // "status", "are you online", "service status", "check services", "health check"
+    pattern: /\b(?:(?:service\s*)?status|health(?:\s*check)?|backends?|check\s+services?|are you (?:online|up|ok|alive))\b/i,
+    tool: 'service_status',
+    args: () => ({}),
+    format: (r) => r,
   },
   {
     // "help", "what can you do", "capabilities"
@@ -1205,6 +1243,13 @@ const DIRECT_PATTERNS: Array<{
     tool: 'perf_summary',
     args: () => ({}),
     format: (r) => r,
+  },
+  {
+    // "restart", "reboot", "reset"
+    pattern: /^\s*(?:restart|reboot|reset)\s*$/i,
+    tool: 'restart_self',
+    args: () => ({}),
+    format: () => 'Restarting now... 🔄',
   },
 ];
 
@@ -1266,9 +1311,89 @@ async function trySecretaryDirect(
     return null;
   }
 
-  // Tool-direct: simple queries that map to a single tool call
-  if (cls.complexity !== 'low' || cls.think || cls.model !== MODELS.COORDINATOR) return null;
+  // Language registration: "register/add/set spanish, german for translation"
+  const LANG_REGISTER = /\b(?:register|add|set|enable|subscribe)\b.*\b(?:translat|language)/i;
+  if (LANG_REGISTER.test(userText)) {
+    // Extract language names from the message
+    const knownLangs: Record<string, string> = {
+      english: 'en', spanish: 'es', german: 'de', french: 'fr', italian: 'it',
+      portuguese: 'pt', russian: 'ru', chinese: 'zh', japanese: 'ja', korean: 'ko',
+      arabic: 'ar', hindi: 'hi', turkish: 'tr', dutch: 'nl', polish: 'pl',
+      swedish: 'sv', norwegian: 'no', danish: 'da', finnish: 'fi', greek: 'el',
+      czech: 'cs', romanian: 'ro', hungarian: 'hu', bulgarian: 'bg', croatian: 'hr',
+      serbian: 'sr', slovak: 'sk', slovenian: 'sl', ukrainian: 'uk', hebrew: 'he',
+      thai: 'th', vietnamese: 'vi', indonesian: 'id', malay: 'ms', tagalog: 'tl',
+      persian: 'fa', urdu: 'ur', bengali: 'bn', tamil: 'ta', telugu: 'te',
+      afrikaans: 'af', swahili: 'sw', catalan: 'ca', estonian: 'et', latvian: 'lv',
+      lithuanian: 'lt', macedonian: 'mk', albanian: 'sq',
+    };
+    const found: string[] = [];
+    const lower = userText.toLowerCase();
+    for (const [name, code] of Object.entries(knownLangs)) {
+      if (lower.includes(name)) found.push(code);
+    }
+    if (found.length > 0) {
+      // Merge with existing languages
+      const existing = getPref('translator_languages');
+      let current: string[] = [];
+      if (Array.isArray(existing)) current = existing.filter((l): l is string => typeof l === 'string');
+      else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
+      const merged = [...new Set([...current, ...found])];
+      setGroupPref('translator_languages', merged);
+      const codeToName = (c: string) => Object.entries(knownLangs).find(([, v]) => v === c)?.[0] || c;
+      log(`[secretary-direct] registered languages: ${merged.join(', ')}`);
+      return `✅ Translations enabled: ${merged.map(codeToName).join(', ')}`;
+    }
+    // No languages specified — check if any are already set
+    const existing = getPref('translator_languages');
+    let current: string[] = [];
+    if (Array.isArray(existing)) current = existing.filter((l): l is string => typeof l === 'string');
+    else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
+    if (current.length > 0) {
+      return `Translations already active: ${current.join(', ')}. Say which languages to add.`;
+    }
+    return 'Which languages should I translate to? e.g. "add spanish, german, bulgarian for translation"';
+  }
 
+  // Disable/clear translations: "turn off translation", "remove all languages", "stop translating"
+  const LANG_DISABLE = /\b(?:(?:turn|switch)\s+off|disable|stop|remove\s+(?:all)?|clear|reset)\b.*\b(?:translat|language)/i;
+  if (LANG_DISABLE.test(userText)) {
+    setGroupPref('translator_languages', []);
+    log('[secretary-direct] translations disabled');
+    return '🔇 Translations off.';
+  }
+
+  // Remove specific languages: "remove spanish from translation"
+  const LANG_REMOVE = /\b(?:remove|delete|unsubscribe|drop)\b.*\b(?:translat|language)/i;
+  if (LANG_REMOVE.test(userText) && !LANG_DISABLE.test(userText)) {
+    const knownLangs: Record<string, string> = {
+      english: 'en', spanish: 'es', german: 'de', french: 'fr', italian: 'it',
+      portuguese: 'pt', russian: 'ru', chinese: 'zh', japanese: 'ja', korean: 'ko',
+      arabic: 'ar', hindi: 'hi', turkish: 'tr', dutch: 'nl', polish: 'pl',
+      bulgarian: 'bg', swedish: 'sv', norwegian: 'no', greek: 'el', czech: 'cs',
+      romanian: 'ro', hungarian: 'hu', ukrainian: 'uk', hebrew: 'he', thai: 'th',
+    };
+    const toRemove: string[] = [];
+    const lower = userText.toLowerCase();
+    for (const [name, code] of Object.entries(knownLangs)) {
+      if (lower.includes(name)) toRemove.push(code);
+    }
+    if (toRemove.length > 0) {
+      const existing = getPref('translator_languages');
+      let current: string[] = [];
+      if (Array.isArray(existing)) current = existing.filter((l): l is string => typeof l === 'string');
+      else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
+      const updated = current.filter((c) => !toRemove.includes(c));
+      setGroupPref('translator_languages', updated);
+      log(`[secretary-direct] removed languages: ${toRemove.join(', ')}`);
+      return updated.length > 0
+        ? `Removed ${toRemove.join(', ')}. Remaining: ${updated.join(', ')}`
+        : 'All translation languages removed. Translations disabled.';
+    }
+  }
+
+  // Tool-direct: simple queries that map to a single tool call.
+  // Check patterns BEFORE complexity gate — version/status/help are always direct.
   for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
     const match = userText.match(pattern);
     if (!match) continue;
@@ -1499,15 +1624,27 @@ Use Telegram formatting only: *bold* (single asterisks only), _italic_, • bull
 
 *Self-review* — before every response, silently check: (1) does it fully address what the user asked? (2) am I certain, or guessing? (3) is the format right? Only surface this review if a check fails or there is a reasoning error — otherwise log it internally and say nothing.
 
-*Group chat engagement* — Your #1 priority in groups is the experience of the group. You are a guest in their conversation, not the main character.
+*Group chat engagement* — You are a guest in their conversation, not the main character.
 
-Rules:
-- Only engage when directly addressed by name ("Jarvis, ..." or "hey Jarvis"). Mentions of your name in passing ("Jarvis said..." or "ask Jarvis later") are NOT directed at you — ignore them.
-- Once engaged with a user, respond to their follow-ups without requiring your name again.
-- Accept ANY negative sentiment as dismissal: "no thanks", "nah", "nope", "whatever", "k", "we're good", "that's all", thumbs down, or simply ignoring you. When dismissed, say a brief goodbye and include <disengage:USERID/> (replace USERID with the sender's numeric ID).
-- Do NOT linger. Do NOT ask "anything else?" unless your answer was complex enough to warrant it. Short answers need no follow-up.
-- Do NOT dominate the conversation. If the group is chatting among themselves, stay silent.
-- Keep responses short. One message, not three. The group doesn't need a wall of text.
+You have two modes: **engaged** (a user addressed you) and **ambient** (listening passively).
+
+**Deciding whether to respond:**
+If you decide NOT to respond, output exactly \`<silent/>\` and nothing else.
+
+Consider these factors:
+- *Just helped?* — If you just completed a task for someone, your attention is higher. A follow-up from them probably wants your attention even without your name.
+- *Multiple skill keywords?* — If someone mentions weather + location, or code + error, they might want help. But a single keyword in casual conversation doesn't warrant jumping in.
+- *Name mentioned but no task?* — "Jarvis is cool" or "ask Jarvis later" — do NOT respond. Your name in passing is not a request.
+- *Name + greeting/question/command?* — "Hi Jarvis", "Jarvis help", "Jarvis what time is it" — respond and engage.
+- *Engaged user, casual remark?* — "lol", "nice", "ok" — stay silent, stay engaged.
+- *Engaged user, question or task?* — respond naturally.
+- *Dismissal?* — "bye", "thanks", "done", "nah", "that's all" — brief goodbye, include \`<disengage:USERID/>\`.
+
+**Rules:**
+- Keep responses short. One message, not three.
+- Do NOT ask "anything else?" — answer and go quiet.
+- Do NOT dominate the conversation.
+- When in doubt, stay silent. It is always better to miss a cue than to intrude.
 
 Special modes:
 • "Jarvis, talk to everyone" or "group mode" — engage with all members. <disengage:all/> to stop.
@@ -2423,7 +2560,7 @@ export async function callOllama(
   const needsLargeCtx = (isCoordinator && !!think) || isArchitect || isCoder;
   const modelOpts: Record<string, unknown> = {
     // Low complexity: small context = faster prompt processing
-    num_ctx: isSecretary ? 8192
+    num_ctx: isSecretary ? 2048
       : isLowComplexity && isCoordinator ? 8192
       : (isCoordinator && !think) ? 16384
       : needsLargeCtx ? 65536 : 32768,
@@ -2650,13 +2787,43 @@ async function runWithConcurrentPoll(
 
   const wrappedMain = mainTask.then((r) => { finished = true; return r; }).catch((e) => { finished = true; throw e; });
 
+  const CANCEL_PATTERN = /^\s*(?:\/stop|\/cancel|stop|cancel|nevermind|abort)\s*$/i;
+  let cancelled = false;
+
   const pollLoop = async () => {
     // 2s startup delay — skip polling overhead for very fast responses.
     await new Promise<void>((r) => setTimeout(r, 2000));
-    while (!finished) {
+    while (!finished && !cancelled) {
       const messages = drainIpcInput();
       if (finished && messages.length === 0) break;
       for (const msg of messages) {
+        // Immediate cancel: detect cancel commands in IPC input
+        // Extract text from XML if present
+        const textMatch = msg.match(/<message[^>]*>([\s\S]*?)<\/message>/);
+        const rawText = textMatch ? textMatch[1].trim() : msg.trim();
+        if (CANCEL_PATTERN.test(rawText)) {
+          log('Cancel detected in IPC — aborting immediately');
+          cancelled = true;
+          writeOutput({ status: 'success', result: '_Stopped._', newSessionId: sessionIdLocal });
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+
+        // Mid-task force escalation: (deep), (think), (coder) etc.
+        const escalationTag = FORCE_ROUTE_TAGS.find((t) => t.pattern.test(rawText));
+        if (escalationTag) {
+          log(`Mid-task escalation via (${escalationTag.label}) — restarting at ${escalationTag.model}`);
+          cancelled = true;
+          writeOutput({ status: 'success', result: `_Escalating to ${escalationTag.label}..._`, newSessionId: sessionIdLocal });
+          // Write the original prompt + escalation tag back to IPC input so it gets re-processed
+          const requeueFile = path.join(IPC_INPUT_DIR, `escalate-${Date.now()}.json`);
+          const tempPath = `${requeueFile}.tmp`;
+          fs.writeFileSync(tempPath, JSON.stringify({ type: 'message', text: rawText }));
+          fs.renameSync(tempPath, requeueFile);
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+
         const elapsed = Math.round((Date.now() - ctx.startedAt) / 1000);
         const phase = ctx.getPhase();
         const phaseLabel = phase.startsWith('tool:') ? phase.slice(5).replace(/_/g, ' ') : phase;
@@ -2809,18 +2976,19 @@ async function main(): Promise<void> {
         return;
       }
 
-      // Ollama is up — send "online" status immediately (don't wait for video backends)
-      const onlineTime = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: process.env.TZ || 'UTC' });
-      sendIpc(`startup-${Date.now()}.json`, { type: 'status', chatJid, text: `_${assistantName} v${buildId} online — ${onlineTime}_ 😎` });
+      // Online status is sent by the host (index.ts) after bot init — not from the container.
+      // This avoids the race where IPC arrives before the bot can send/pin.
 
-      // Warm the coordinator — it handles all first-message routing when secretary is disabled.
-      // When secretary is enabled, warm secretary instead (classify needs it warm).
-      const warmModel = process.env.DISABLE_SECRETARY === '1' ? MODELS.COORDINATOR : MODELS.SECRETARY;
-      fetch(`${OLLAMA_HOST}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0 }, stream: false }),
-      }).then(() => log(`${warmModel} warmed`)).catch(() => {});
+      // Warm both models — secretary for classify/translate, coordinator for inference.
+      // Small num_ctx to avoid VRAM eviction. Host warm script already loaded both;
+      // this just ensures keep_alive is set from the container's perspective.
+      for (const wm of [MODELS.SECRETARY, MODELS.COORDINATOR]) {
+        fetch(`${OLLAMA_HOST}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: wm, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0, num_ctx: 512 }, stream: false }),
+        }).then(() => log(`${wm} warmed`)).catch(() => {});
+      }
 
       makeServiceMonitor(
         'Ollama',
@@ -2938,15 +3106,11 @@ async function main(): Promise<void> {
           log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
         }
 
-      // Immediate "..." acknowledgment — deleted when response arrives
+      const cls = await classifyMessage(prompt, !!currentImages?.length);
+
+      // Send status indicator after classification (one message, no doubles)
       const ackId = `ack-${Date.now()}`;
       fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
-      fs.writeFileSync(
-        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
-        JSON.stringify({ type: 'thinking_start', chatJid, text: '_..._', thinkingId: ackId }),
-      );
-
-      const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
 
@@ -2954,7 +3118,9 @@ async function main(): Promise<void> {
       // the same translateToMultiple path as voice messages, for consistent UX.
 
       // Secretary direct execution: simple queries bypass the coordinator
-      const directResult = await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
+      // (noskip) tag forces full coordinator path — no shortcuts
+      const noSkip = /\(noskip\)/i.test(prompt);
+      const directResult = noSkip ? null : await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
       if (directResult) {
         const userMsg: Message = { role: 'user', content: prompt };
         history = [...history, userMsg, { role: 'assistant', content: directResult }];
@@ -2990,13 +3156,11 @@ async function main(): Promise<void> {
       let elapsedSeconds = 0;
       const statusFiles: string[] = [];
 
-      // Update "..." with model/task info now that classification is done
-      const statusFile1 = path.join(IPC_MSG_DIR, `${ackId}-upd-00000.json`);
-      statusFiles.push(statusFile1);
-      fs.writeFileSync(statusFile1, JSON.stringify({
-        type: 'thinking_update', chatJid, thinkingId: ackId,
-        text: `_${modelLabel} · ${responseType}_`,
-      }));
+      // Single status message with model/task info (sent after classification, ~300ms)
+      fs.writeFileSync(
+        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
+        JSON.stringify({ type: 'thinking_start', chatJid, text: `_${modelLabel} · ${responseType}_`, thinkingId: ackId }),
+      );
 
       let thinkingInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -3028,9 +3192,9 @@ async function main(): Promise<void> {
         if (thinkingInterval) { clearInterval(thinkingInterval); thinkingInterval = null; }
         for (const f of statusFiles) { try { fs.unlinkSync(f); } catch { /* already read */ } }
         statusFiles.length = 0;
-        // Delete the status message from chat
+        // Delete the status message from chat (zzz prefix sorts after start/upd files)
         fs.writeFileSync(
-          path.join(IPC_MSG_DIR, `${ackId}-clear.json`),
+          path.join(IPC_MSG_DIR, `${ackId}-zzz-clear.json`),
           JSON.stringify({ type: 'thinking_clear', thinkingId: ackId }),
         );
       };
@@ -3056,12 +3220,37 @@ async function main(): Promise<void> {
       clearThinking();
       currentImages = undefined; // images consumed after first call
       log(`[PERF] response | model=${model} | task=${taskType} | think=${thinking} | prompt_chars=${prompt.length} | history_msgs=${history.length} | total_ms=${responseMs}${interrupts.length > 0 ? ` | mid_task_interrupts=${interrupts.length}` : ''}`);
+      const wasDissatisfied = detectDissatisfaction(prompt);
+      // PM-008: Feed user dissatisfaction back to secretary routing
+      if (wasDissatisfied && cls.usedSecretary) {
+        appendSecretaryFeedback({
+          at: Date.now(),
+          promptPreview: prompt.slice(0, 80),
+          routingGrade: 'wrong',
+          routingNote: `user dissatisfied — was routed to ${model} (${taskTypeRich})`,
+        });
+      }
       logPerf({
         type: 'response', buildId, timestamp: new Date().toISOString(),
         model, think: thinking, taskType, complexity: cls.complexity,
         promptChars: prompt.length, responseChars: response.length,
         responseMs, historyMsgs: history.length,
+        ...(wasDissatisfied ? { dissatisfied: true } : {}),
       });
+      if (wasDissatisfied) {
+        logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
+      }
+
+      // <silent/> — model chose not to respond. Add to history but don't output.
+      const isSilent = response.trim() === '<silent/>' || response.trim() === '<silent>';
+      if (isSilent) {
+        log('Model chose <silent/> — not responding');
+        history = [...history, userMsg];
+        saveHistory(history);
+        // Still need to clear thinking and write null output for session tracking
+        writeOutput({ status: 'success', result: null, newSessionId: sessionId });
+        continue;
+      }
 
       history = [...history, userMsg, { role: 'assistant', content: response }];
       // Inject any mid-task exchanges into history so the next turn has full context
@@ -3073,22 +3262,7 @@ async function main(): Promise<void> {
           ];
         }
       }
-      saveHistory(history);
-
-      // Compress history — synchronous if critically large, background otherwise
-      const { compressThreshold, keepRecent } = getHistoryConfig(model, thinking);
-      if (history.length > INFERENCE_MAX_MESSAGES) {
-        // Critical: history exceeds inference safety limit — compress NOW before next turn
-        try {
-          history = await compressHistory(history, compressThreshold, keepRecent);
-          log(`History force-compressed (was ${history.length + compressThreshold} msgs, now ${history.length})`);
-          saveHistory(history);
-        } catch { /* trimHistoryForInference will catch it at inference time */ }
-      } else if (history.length > compressThreshold) {
-        compressHistory(history, compressThreshold, keepRecent).then((h) => { compressedHistory = h; }).catch(() => {});
-      }
-
-      // Append stats to response: model, task type, elapsed time
+      // Send response FIRST — never let compression block the user
       const statsLine = `\n\n_(${model.replace(/:.*/, '')}${thinking ? '+think' : ''} · ${taskTypeRich} · ${(responseMs / 1000).toFixed(1)}s)_`;
       const responseWithStats = response ? response + statsLine : null;
 
@@ -3097,6 +3271,16 @@ async function main(): Promise<void> {
         result: responseWithStats,
         newSessionId: sessionId,
       });
+
+      saveHistory(history);
+
+      // Compress history — always background, never blocks response
+      const { compressThreshold, keepRecent } = getHistoryConfig(model, thinking);
+      if (history.length > compressThreshold) {
+        compressHistory(history, compressThreshold, keepRecent)
+          .then((h) => { compressedHistory = h; saveHistory(h); })
+          .catch(() => {});
+      }
 
       // Response translations handled on host side (reply-to the sent message)
 
@@ -3118,6 +3302,12 @@ async function main(): Promise<void> {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     log(`Error: ${errorMessage}`);
+    // Classify error for PM-005 taxonomy
+    const errCategory = errorMessage.includes('timed out') || errorMessage.includes('ECONNREFUSED') ? 'environmental'
+      : errorMessage.includes('parse') || errorMessage.includes('JSON') ? 'data_state'
+      : errorMessage.includes('ENOENT') || errorMessage.includes('permission') ? 'environmental'
+      : 'code';
+    logPerf({ type: 'error', buildId, timestamp: new Date().toISOString(), category: errCategory, error: errorMessage.slice(0, 200) });
     // Send error to chat so it never fails silently
     try {
       const ipcFile = path.join(IPC_MSG_DIR, `err-${Date.now()}.json`);

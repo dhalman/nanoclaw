@@ -6,7 +6,7 @@
  *   - selectModelFallback  — regex-based model selection (used when Secretary is unavailable)
  *   - shouldThinkFallback  — regex-based think-mode detection (used as fallback)
  *   - getEscalationTier    — pure escalation ladder logic
- *   - classifyMessage      — Secretary (qwen3:4b) semantic classifier
+ *   - classifyMessage      — Secretary (qwen2.5:3b) semantic classifier
  *   - callOllama           — auto-escalation and secretary review-hint injection
  *
  * Adding a new test for each new model, task type, or routing rule keeps this file
@@ -386,11 +386,11 @@ describe('classifyMessage', () => {
     expect(cls.usedSecretary).toBe(true);
   });
 
-  it('uses qwen3:4b as the classifier model', async () => {
+  it('uses qwen2.5:3b as the classifier model', async () => {
     mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
     await classifyMessage('hello world', false);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.model).toBe('qwen3:4b');
+    expect(body.model).toBe('qwen2.5:3b');
   });
 
   it('sends classify call with low temperature and small context', async () => {

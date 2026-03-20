@@ -13,8 +13,8 @@ import {
 describe('getLanguageName', () => {
   it('returns display name for known code', () => {
     expect(getLanguageName('en')).toBe('English');
-    expect(getLanguageName('es')).toBe('Spanish');
-    expect(getLanguageName('ja')).toBe('Japanese');
+    expect(getLanguageName('es')).toBe('Español');
+    expect(getLanguageName('ja')).toBe('日本語');
   });
 
   it('returns code itself for unknown code', () => {
@@ -27,8 +27,8 @@ describe('getLanguageName', () => {
 describe('getLanguageCode', () => {
   it('returns code for known name (case insensitive)', () => {
     expect(getLanguageCode('English')).toBe('en');
-    expect(getLanguageCode('SPANISH')).toBe('es');
-    expect(getLanguageCode('japanese')).toBe('ja');
+    expect(getLanguageCode('ESPAÑOL')).toBe('es');
+    expect(getLanguageCode('en')).toBe('en');
   });
 
   it('returns code when already given a code', () => {

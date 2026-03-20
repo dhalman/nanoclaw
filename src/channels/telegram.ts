@@ -240,8 +240,21 @@ export async function initJarvisBot(
       const isTranslateComplaint =
         TRANSLATE_DISSATISFIED.test(text) &&
         ctx.message.reply_to_message?.text?.includes('🌐');
+      if (isTranslateRequest || isTranslateComplaint) {
+        // Works in groups and DMs, with or without a reply
+        if (!ctx.message.reply_to_message) {
+          // No reply — translate the command itself? No, just skip.
+          // User needs to reply to a message to translate it.
+          if (isTranslateRequest) {
+            sendJarvisMessage(
+              chatJid,
+              '_Reply to a message with "translate" to translate it._',
+            ).catch(() => {});
+            return;
+          }
+        }
+      }
       if (
-        isGroup &&
         ctx.message.reply_to_message &&
         (isTranslateRequest || isTranslateComplaint)
       ) {
@@ -270,10 +283,17 @@ export async function initJarvisBot(
 
         if (sourceText) {
           const targetLangs = getTranslatorLanguages(group.folder);
+          if (targetLangs.length === 0) {
+            sendJarvisMessage(
+              chatJid,
+              '_No languages registered. Tell me which language to translate to, e.g. "Jarvis, translate this to Spanish"_',
+            ).catch(() => {});
+            return;
+          }
           // Use 35B for complaints/re-translations, 3B for standard requests
           const useHighQuality = isTranslateComplaint;
           const model = useHighQuality ? 'qwen3.5:35b' : undefined;
-          if (targetLangs.length > 0) {
+          {
             translateToMultiple(sourceText, 'auto', targetLangs, model)
               .then((translations) => {
                 if (translations.length > 0) {
@@ -293,12 +313,21 @@ export async function initJarvisBot(
         return;
       }
 
+      // Replying to Jarvis = direct interaction — prepend name so engagement triggers
+      const isReplyToJarvis =
+        ctx.message.reply_to_message &&
+        ctx.message.reply_to_message.from?.id === jarvisBot?.botInfo?.id;
+      const messageContent =
+        isReplyToJarvis && !text.includes(ASSISTANT_NAME)
+          ? `${ASSISTANT_NAME}, ${text}`
+          : text;
+
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
         sender,
         sender_name: senderName,
-        content: text,
+        content: messageContent,
         timestamp,
         is_from_me: false,
       });
@@ -523,12 +552,21 @@ export async function initJarvisBot(
         );
       }
 
+      // Voice messages directed at Jarvis: prepend name so engagement triggers.
+      // Skip if replying to another user's message (that's member-to-member).
+      const isReplyToOther =
+        ctx.message.reply_to_message &&
+        ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
+      const triggerContent =
+        isReplyToOther || content.includes(ASSISTANT_NAME)
+          ? content
+          : `${ASSISTANT_NAME}, ${content}`;
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
         sender,
         sender_name: senderName,
-        content,
+        content: triggerContent,
         timestamp,
         is_from_me: false,
       });
@@ -707,11 +745,38 @@ export async function pinJarvisMessage(
     await jarvisApi.pinChatMessage(numericId, messageId, {
       disable_notification: true,
     });
+    logger.info({ chatId, messageId }, 'Message pinned');
   } catch (err) {
-    logger.debug(
-      { chatId, messageId, err },
-      'pinJarvisMessage failed (ignored)',
-    );
+    logger.warn({ chatId, messageId, err }, 'pinJarvisMessage failed');
+  }
+}
+
+export async function reactToMessage(
+  chatId: string,
+  messageId: number,
+  emoji: string = '👀',
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.setMessageReaction(numericId, messageId, [
+      { type: 'emoji', emoji: emoji as any },
+    ]);
+  } catch {
+    /* ignore — reactions may not be available in all chats */
+  }
+}
+
+export async function removeReaction(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.setMessageReaction(numericId, messageId, []);
+  } catch {
+    /* ignore */
   }
 }
 

@@ -126,4 +126,46 @@ describe('task scheduler', () => {
       (new Date(nextRun!).getTime() - new Date(scheduledTime).getTime()) % ms;
     expect(offset).toBe(0);
   });
+
+  it('computeNextRun handles invalid interval gracefully', () => {
+    const task = {
+      id: 'bad-interval',
+      group_folder: 'test',
+      chat_jid: 'test@g.us',
+      prompt: 'test',
+      schedule_type: 'interval' as const,
+      schedule_value: '0',
+      context_mode: 'isolated' as const,
+      next_run: new Date(Date.now() - 1000).toISOString(),
+      last_run: null,
+      last_result: null,
+      status: 'active' as const,
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    const nextRun = computeNextRun(task);
+    expect(nextRun).not.toBeNull();
+    expect(new Date(nextRun!).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('computeNextRun returns future time for cron tasks', () => {
+    const task = {
+      id: 'cron-test',
+      group_folder: 'test',
+      chat_jid: 'test@g.us',
+      prompt: 'test',
+      schedule_type: 'cron' as const,
+      schedule_value: '0 9 * * *',
+      context_mode: 'isolated' as const,
+      next_run: new Date(Date.now() - 1000).toISOString(),
+      last_run: null,
+      last_result: null,
+      status: 'active' as const,
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    const nextRun = computeNextRun(task);
+    expect(nextRun).not.toBeNull();
+    expect(new Date(nextRun!).getTime()).toBeGreaterThan(Date.now());
+  });
 });
