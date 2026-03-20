@@ -709,10 +709,7 @@ export async function pinJarvisMessage(
     });
     logger.info({ chatId, messageId }, 'Message pinned');
   } catch (err) {
-    logger.warn(
-      { chatId, messageId, err },
-      'pinJarvisMessage failed',
-    );
+    logger.warn({ chatId, messageId, err }, 'pinJarvisMessage failed');
   }
 }
 

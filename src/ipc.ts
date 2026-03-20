@@ -105,9 +105,8 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
         'Status message updated and re-pinned',
       );
       return;
-    } catch {
-      // Edit failed (message deleted?) — delete the old one and send new
-      logger.debug({ chatJid }, 'Could not edit status, replacing');
+    } catch (err) {
+      logger.warn({ chatJid, messageId: entry.messageId, err }, 'Could not edit/pin status, replacing');
       await deleteJarvisMessage(chatJid, entry.messageId);
     }
   }
@@ -279,7 +278,7 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   );
                 }
               } else if (data.type === 'status' && data.chatJid && data.text) {
-                // Status messages (stopped/online) — edit if last was status, new if user activity since
+                logger.info({ chatJid: data.chatJid, sourceGroup, text: data.text.slice(0, 60) }, 'Processing status IPC');
                 const targetGroup = registeredGroups[data.chatJid];
                 if (
                   isMain ||
@@ -297,6 +296,9 @@ export function startIpcWatcher(deps: IpcDeps): void {
                     }
                   }
                   await sendOrEditStatus(data.chatJid, data.text);
+                  logger.info({ chatJid: data.chatJid }, 'Status IPC processed');
+                } else {
+                  logger.warn({ chatJid: data.chatJid, sourceGroup }, 'Status IPC unauthorized');
                 }
               } else if (
                 data.type === 'image' &&
