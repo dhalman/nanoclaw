@@ -1,4 +1,11 @@
 {
+  "0.2.68": {
+    "date": "2026-03-19",
+    "title": "feat: OLLAMA_NUM_PARALLEL=2, fix voice messages not triggering",
+    "notes": [
+      "feat: OLLAMA_NUM_PARALLEL=2, fix voice messages not triggering"
+    ]
+  },
   "0.2.67": {
     "date": "2026-03-19",
     "title": "fix: send response before compression \u2014 was blocking on sync compress",
