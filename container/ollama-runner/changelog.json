@@ -1,4 +1,17 @@
 {
+  "0.3.23": {
+    "date": "2026-03-20",
+    "title": "feat: Jarvis personality \u2014 trusted friend who knows everyone",
+    "notes": [
+      "feat: Jarvis personality \u2014 trusted friend who knows everyone",
+      "feat: refined tone \u2014 warm not eager, concise, knows his place",
+      "feat: (noskip) tag forces full coordinator path, no secretary shortcuts",
+      "feat: force-routing tags and mid-task escalation",
+      "feat: (nojar) tag forces Jarvis to completely ignore a message",
+      "feat: learn and mirror user emoji style for reactions",
+      "feat: emoji reactions for trivial dismissals + \ud83e\uddd0 instant acknowledgment"
+    ]
+  },
   "0.3.22": {
     "date": "2026-03-20",
     "title": "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt",
