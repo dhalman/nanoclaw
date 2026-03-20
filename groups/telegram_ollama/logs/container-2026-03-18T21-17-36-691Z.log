@@ -1,0 +1,51 @@
+=== Container Run Log ===
+Timestamp: 2026-03-18T21:17:36.691Z
+Group: Jarvis
+IsMain: false
+Duration: 220178ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "<context timezone=\"America/Los_Angeles\" />\n<messages>\n<message sender=\"DJ\" time=\"Mar 18, 2026, 2:13 PM\">Hello</message>\n</messages>",
+  "sessionId": "ollama-1773741579811",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773868436515 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Model: qwen3:32b, prompt length: 131
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Ollama state changed: online
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=0 | timings=[31970]ms | total=31971ms | response_chars=153
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=131 | history_msgs=11 | total_ms=31972
+[ollama-runner] Waiting for next message...
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] ComfyUI not ready after 60s — skipping
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Hello! 😊 How can I assist you today? If you're ready to generate a video, need help with system checks, or have any other requests—just let me know! 🎬✨","newSessionId":"ollama-1773741579811"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773741579811"}
+---NANOCLAW_OUTPUT_END---

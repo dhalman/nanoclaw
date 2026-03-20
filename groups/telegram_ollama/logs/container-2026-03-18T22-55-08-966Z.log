@@ -1,0 +1,57 @@
+=== Container Run Log ===
+Timestamp: 2026-03-18T22:55:08.966Z
+Group: Jarvis
+IsMain: false
+Duration: 211868ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773871251048",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773874297097 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Model: qwen3-coder:30b, prompt length: 153
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] ComfyUI not ready after 60s — skipping
+[ollama-runner] History compressed: 7 messages → summary
+[ollama-runner] Temperature: 0.2 (task: code)
+[ollama-runner] [PERF] tool=ollama_list_models 9ms
+[ollama-runner] Tool call failed: Tool error (ollama_generate): Sub-model error: 404
+[ollama-runner] [PERF] tool=ollama_generate 5ms
+[ollama-runner] [PERF] tool=ollama_list_models 5ms
+[ollama-runner] [PERF] inference | model=qwen3-coder:30b | think=false | rounds=3 | timings=[8587,1678,1354,2587]ms | total=14226ms | response_chars=525
+[ollama-runner] [PERF] response | model=qwen3-coder:30b | task=code | think=false | prompt_chars=153 | history_msgs=7 | total_ms=14226
+[ollama-runner] Waiting for next message...
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"It looks like only the `latest` version of `llama3.2-vision` is installed. Quantized versions (like `q4`, `q5`) may not be available for this model.\n\nLet's try optimizing the current setup:\n\n1. **Ensure Ollama is updated** to the latest version (0.19.0+).\n2. **Use `llama3.2-vision:latest` with optimized settings**:\n   - Set `num_ctx` to 2048 or lower.\n   - Reduce `num_gpu_layers` to 30 or fewer.\n   - Use `temperature` around 0.5 for faster responses.\n\nWould you like me to generate a sample prompt to test these settings?","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---

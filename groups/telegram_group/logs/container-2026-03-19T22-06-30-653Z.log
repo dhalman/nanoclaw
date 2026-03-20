@@ -1,0 +1,81 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T22:06:30.654Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 203636ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773956204832",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-5141678471",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773957787018 -e TZ=America/Los_Angeles -e DISABLE_SECRETARY=1 -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.2.7 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=256
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] qwen3.5:35b warmed
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[62391]ms | total=62391ms | response_chars=146
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=256 | history_msgs=19 | total_ms=62446
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 247 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=247
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[8900]ms | total=8901ms | response_chars=269
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=247 | history_msgs=21 | total_ms=8967
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 152 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=152
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[7001]ms | total=7001ms | response_chars=139
+[ollama-runner] [PERF] inference | model=qwen3:4b | think=false | rounds=0 | timings=[44808]ms | total=44809ms | response_chars=100
+[ollama-runner] Quick response sent for mid-task message (4s elapsed, phase: thinking)
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=152 | history_msgs=23 | total_ms=48902 | mid_task_interrupts=1
+[ollama-runner] Waiting for next message...
+[ollama-runner] History compressed: 17 messages → summary
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Haha, I'm so glad you had fun! 😄 That's what I'm here for - to keep things interesting and maybe make you laugh a bit. Thanks for the kind words!","newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Haha, I'll take that as a huge compliment! 😄 But I think I'll stick to being your helpful assistant - marriage might be a bit too complicated for an AI! 😅\n\nThanks for the kind words though - I'm just doing my best to save you time and effort while keeping things fun!","newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"_[secretary]_ Thanks for the kind words! I'll get back to you after I finish this task — happy to help anytime! 😊","newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Haha, I'll take that as a compliment! 😄 Sometimes the best advice is just knowing when to keep things simple and fun. Thanks for the chat!","newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773956204832"}
+---NANOCLAW_OUTPUT_END---

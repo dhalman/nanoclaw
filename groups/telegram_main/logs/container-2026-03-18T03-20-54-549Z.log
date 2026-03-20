@@ -1,0 +1,20 @@
+=== Container Run Log ===
+Timestamp: 2026-03-18T03:20:54.549Z
+Group: DJ
+IsMain: true
+Duration: 17231ms
+Exit Code: 0
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input Summary ===
+Prompt length: 432 chars
+Session ID: new
+
+=== Mounts ===
+/workspace/project (ro)
+/workspace/project/.env (ro)
+/workspace/group
+/home/node/.claude
+/workspace/ipc
+/app/src

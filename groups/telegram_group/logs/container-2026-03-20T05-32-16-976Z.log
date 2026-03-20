@@ -1,0 +1,53 @@
+=== Container Run Log ===
+Timestamp: 2026-03-20T05:32:16.976Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 220698ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773983714541",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-1003897457831",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773984516277 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.2.59 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=210
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[17178]ms | total=17179ms | response_chars=20
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=210 | history_msgs=22 | total_ms=17197
+[ollama-runner] Waiting for next message...
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Restarting now... 🔄\n\n_(qwen3.5 · chat · 17.2s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---

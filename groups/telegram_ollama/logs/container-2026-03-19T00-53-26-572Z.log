@@ -1,0 +1,79 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T00:53:26.572Z
+Group: Jarvis
+IsMain: false
+Duration: 388679ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773871251048",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773881217895 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Model: qwen3:4b, prompt length: 136
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] tool=get_changelog 2ms
+[ollama-runner] [PERF] inference | model=qwen3:4b | think=false | rounds=1 | timings=[14052,16707]ms | total=30762ms | response_chars=210
+[ollama-runner] [PERF] response | model=qwen3:4b | task=analysis | think=false | prompt_chars=136 | history_msgs=10 | total_ms=30813
+[ollama-runner] Waiting for next message...
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] ComfyUI not ready after 60s — skipping
+[ollama-runner] Next message: 135 chars
+[ollama-runner] Model: qwen3:4b, prompt length: 135
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] inference | model=qwen3:4b | think=false | rounds=0 | timings=[7641]ms | total=7642ms | response_chars=93
+[ollama-runner] [PERF] response | model=qwen3:4b | task=analysis | think=false | prompt_chars=135 | history_msgs=12 | total_ms=7672
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 196 chars
+[ollama-runner] Model: qwen3:4b, prompt length: 196
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] inference | model=qwen3:4b | think=false | rounds=0 | timings=[11423]ms | total=11424ms | response_chars=274
+[ollama-runner] [PERF] response | model=qwen3:4b | task=analysis | think=false | prompt_chars=196 | history_msgs=14 | total_ms=11513
+[ollama-runner] Waiting for next message...
+[ollama-runner] History compressed: 8 messages → summary
+[ollama-runner] History compressed: 10 messages → summary
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**v0.0.37 (current) — 100ms IPC polling**  \n_2026-03-18_  \n\n• IPC poll interval reduced to 100ms on both container and host — thinking updates, responses, and mid-task replies all reach Telegram **~10x faster**","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**Hello!**  \nHow can I help you today?  \n• Benchmarks  \n• Model comparisons  \n• Anything else","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**Current models and routing:**\n\n• **Primary model**: `qwen3.5:35b` (23.9GB) — optimized for complex tasks  \n• **Routing**:  \n  - *Conversations*: no thinking, 16K context  \n  - *Tasks*: thinking enabled, 32K context  \n\nLet me know if you'd like to test specific benchmarks!","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---

@@ -1,0 +1,113 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T23:12:52.895Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 989444ms
+Exit Code: 1
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773958841440",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-5141678471",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773960983451 -e TZ=America/Los_Angeles -e DISABLE_SECRETARY=1 -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.2.16 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=158
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[8858]ms | total=8858ms | response_chars=95
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=158 | history_msgs=8 | total_ms=8884
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 154 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=154
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[3469]ms | total=3469ms | response_chars=48
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=154 | history_msgs=10 | total_ms=3554
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 173 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=173
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[3922]ms | total=3922ms | response_chars=139
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=173 | history_msgs=12 | total_ms=3984
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 153 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=153
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[4040]ms | total=4040ms | response_chars=64
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=153 | history_msgs=14 | total_ms=4085
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 183 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=183
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[3817]ms | total=3817ms | response_chars=113
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=183 | history_msgs=16 | total_ms=3866
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 167 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=167
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[4334]ms | total=4334ms | response_chars=201
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=167 | history_msgs=18 | total_ms=4391
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 203 chars
+[ollama-runner] Model: qwen3.5:35b think=true task=analysis complexity=medium prompt_len=203
+[ollama-runner] Error: fetch failed
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Hey DJ! I'm doing well, thanks for asking. Ready to help with whatever you need. How about you?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"We're running v0.2.12 from today (Mar 19, 2026).","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Got it — what did you find? Are you seeing the engagement mode not persisting per-user, or is it applying group settings when it shouldn't?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"No worries at all, DJ! Happens to the best of us. We're good. 😊","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Sounds good! What would you like to focus on for the tune-up? Any specific areas you want to improve or optimize?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Sounds like a plan! What specific areas would you like to focus on for the tune-up? Any particular features or performance aspects you want to optimize before we move on to testing more advanced tasks?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"error","result":null,"newSessionId":"ollama-1773958841440","error":"fetch failed"}
+---NANOCLAW_OUTPUT_END---

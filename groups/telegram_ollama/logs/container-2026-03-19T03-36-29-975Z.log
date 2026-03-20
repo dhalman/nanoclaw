@@ -1,0 +1,61 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T03:36:29.975Z
+Group: Jarvis
+IsMain: false
+Duration: 78701ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773871251048",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773891311276 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] Model: qwen3:4b, prompt length: 131
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] [PERF] inference | model=qwen3:4b | think=false | rounds=0 | timings=[16868]ms | total=16869ms | response_chars=172
+[ollama-runner] [PERF] response | model=qwen3:4b | task=analysis | think=false | prompt_chars=131 | history_msgs=27 | total_ms=16950
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 129 chars
+[ollama-runner] Model: qwen3:4b, prompt length: 129
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] Video generation requested — backend: comfyui, useRef: true, prompt: 5-second anime battle preview: Sun Wukong vs Nisara, golden flames vs purple cos
+[video] Using LTX-Video 2B (T2V)
+[video] ComfyUI failed: ComfyUI: ComfyUI queue error: 400 {"error": {"type": "prompt_outputs_failed_validation", "message": "Prompt outputs failed validation", "details": "Required input is missing: codec", "extra_info": {}}, "node_errors": {"14": {"errors": [{"type": "required_input_missing", "message": "Required input is missing", "details": "codec", "extra_info": {"input_name": "codec"}}], "dependent_outputs": ["14"], "class_type": "SaveVideo"}}}
+[ollama-runner] Tool call failed: Tool error (generate_video): Video generation failed:
+ComfyUI: ComfyUI queue error: 400 {"error": {"type": "prompt_outputs_failed_validation", "message": "Prompt outputs failed validation", "details": "Required input is missing: codec", "extra_info": {}}, "node_errors": {"14": {"errors": [{"type": "required_input_missing", "message": "Required input is missing", "details": "codec", "extra_info": {"input_name": "codec"}}], "dependent_outputs": ["14"], "class_type": "SaveVideo"}}}
+[ollama-runner] [PERF] tool=generate_video 20ms
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**Hello!** 👋  \n\nDid you set the codec to `h264` in ComfyUI settings?  \n✅ *If yes*, I'll generate your **5-second preview** right away!  \n\nLet me know when you're ready! 🎬","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---

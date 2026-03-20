@@ -1,0 +1,39 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T19:13:42.106Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 1006ms
+Exit Code: 2
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773923444312",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-5141678471",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773947621100 -e TZ=America/Los_Angeles -e DISABLE_SECRETARY=1 -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.1.78 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+
+
+=== Stdout ===
+src/index.ts(2047,27): error TS2304: Cannot find name 'complexity'.

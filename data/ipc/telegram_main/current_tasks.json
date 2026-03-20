@@ -1,0 +1,56 @@
+[
+  {
+    "id": "task-1773998909152-cw2g",
+    "groupFolder": "telegram_group",
+    "prompt": "Record the conversation from this session and send a summary to your manager. Include key decisions, action items, and any important discussion points.",
+    "schedule_type": "once",
+    "schedule_value": "2026-03-20T09:00:00Z",
+    "status": "completed",
+    "next_run": null
+  },
+  {
+    "id": "task-1773995131846-6a5x",
+    "groupFolder": "telegram_group",
+    "prompt": "be aware of the timezone and set a task to remind me in 6 hours",
+    "schedule_type": "interval",
+    "schedule_value": "21600000",
+    "status": "active",
+    "next_run": "2026-03-20T20:25:31.910Z"
+  },
+  {
+    "id": "task-1773994604727-6oih",
+    "groupFolder": "telegram_group",
+    "prompt": "remind me to send a message to DJ in 2 hours reminding them to chill",
+    "schedule_type": "interval",
+    "schedule_value": "7200000",
+    "status": "active",
+    "next_run": "2026-03-20T20:16:44.792Z"
+  },
+  {
+    "id": "task-1773994559644-9q43",
+    "groupFolder": "telegram_group",
+    "prompt": "Change the secretary of the organization from Jarvais to Donna.",
+    "schedule_type": "interval",
+    "schedule_value": "86400",
+    "status": "active",
+    "next_run": "2026-03-20T19:08:18.908Z"
+  },
+  {
+    "id": "task-1773994512385-c01w",
+    "groupFolder": "telegram_group",
+    "prompt": "record the conversation and send a summary to your manager in the morning",
+    "schedule_type": "interval",
+    "schedule_value": "86400",
+    "status": "active",
+    "next_run": "2026-03-20T19:04:38.850Z"
+  },
+  {
+    "id": "task-1773994485822-9nwa",
+    "groupFolder": "telegram_group",
+    "prompt": "Don't mention any specific keywords in your responses.",
+    "schedule_type": "interval",
+    "schedule_value": "1800000",
+    "status": "active",
+    "next_run": "2026-03-20T19:14:45.887Z"
+  }
+]

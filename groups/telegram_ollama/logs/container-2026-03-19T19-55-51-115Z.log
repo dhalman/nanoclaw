@@ -1,0 +1,66 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T19:55:51.115Z
+Group: Jarvis
+IsMain: false
+Duration: 325555ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773911755559",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773949825562 -e TZ=America/Los_Angeles -e DISABLE_SECRETARY=1 -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.1.90 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] qwen3.5:35b warmed
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=129
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[20431]ms | total=20431ms | response_chars=14
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=129 | history_msgs=19 | total_ms=20449
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 147 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=147
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[2853]ms | total=2853ms | response_chars=125
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=147 | history_msgs=21 | total_ms=2929
+[ollama-runner] Waiting for next message...
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Yo! What's up?","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"I'm running **v0.1.72** (Build 0.1.72), deployed on March 19, 2026.\n\nThis is the latest version with the most recent updates.","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---

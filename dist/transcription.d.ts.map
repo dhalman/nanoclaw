@@ -1,0 +1,1 @@
+{"version":3,"file":"transcription.d.ts","sourceRoot":"","sources":["../src/transcription.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;GAUG;AAqBH,MAAM,WAAW,mBAAmB;IAClC,IAAI,EAAE,MAAM,CAAC;IACb,QAAQ,EAAE,MAAM,CAAC;IACjB,mBAAmB,EAAE,MAAM,CAAC;CAC7B;AAED;;;GAGG;AACH,wBAAsB,eAAe,CACnC,WAAW,EAAE,MAAM,EACnB,GAAG,SAAQ,GACV,OAAO,CAAC,mBAAmB,GAAG,IAAI,CAAC,CA4ErC"}

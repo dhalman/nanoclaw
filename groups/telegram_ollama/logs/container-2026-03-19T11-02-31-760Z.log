@@ -1,0 +1,95 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T11:02:31.760Z
+Group: Jarvis
+IsMain: false
+Duration: 788130ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773911755559",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773917363635 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] qwen3:4b warmed (secretary)
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] qwen3.5:35b warmed and pinned
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=136
+[ollama-runner] [PERF] tool=get_changelog 4ms
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=1 | timings=[15513,5002]ms | total=20519ms | response_chars=373
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=136 | history_msgs=23 | total_ms=20609
+[ollama-runner] Waiting for next message...
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] Next message: 135 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=135
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[4664]ms | total=4665ms | response_chars=373
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=135 | history_msgs=25 | total_ms=4729
+[ollama-runner] Waiting for next message...
+[ollama-runner] History compressed: 17 messages → summary
+[ollama-runner] Next message: 147 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=147
+[ollama-runner] [PERF] tool=get_changelog 1ms
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=1 | timings=[3329,5317]ms | total=8647ms | response_chars=323
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=147 | history_msgs=11 | total_ms=8711
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 172 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=172
+[ollama-runner] [PERF] tool=restart_self 2ms
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=1 | timings=[4673,3536]ms | total=8212ms | response_chars=61
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=172 | history_msgs=13 | total_ms=8271
+[ollama-runner] Waiting for next message...
+[ollama-runner] Close sentinel received, exiting
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**Latest update (v0.0.45 — Mar 18, 2026):**\n\n*Thinking mode now triggers more broadly*\n\nThe `think` pattern now activates on these standalone words:\n- `think`\n- `thinking`\n- `sure`\n- `determine`\n- `compare`\n\nExamples that now trigger thinking mode:\n- \"Are you sure?\"\n- \"compare X and Y\"\n- \"determine which\"\n\nThis means deeper reasoning kicks in for more types of questions.","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**Latest update (v0.0.45 — Mar 18, 2026):**\n\n*Thinking mode now triggers more broadly*\n\nThe `think` pattern now activates on these standalone words:\n- `think`\n- `thinking`\n- `sure`\n- `determine`\n- `compare`\n\nExamples that now trigger thinking mode:\n- \"Are you sure?\"\n- \"compare X and Y\"\n- \"determine which\"\n\nThis means deeper reasoning kicks in for more types of questions.","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"I'm running **v0.1.5** (2026-03-19).\n\nThis version added the `needsWeb` flag system — the secretary now automatically detects when a question requires live/current data (like prices, weather, news, scores) and signals the coordinator to search the web before answering. This prevents stale answers on time-sensitive topics.","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"**v0.1.9** (2026-03-19)\n\nFresh start complete. Ready to help!","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---

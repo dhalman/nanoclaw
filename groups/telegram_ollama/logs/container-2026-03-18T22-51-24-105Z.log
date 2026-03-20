@@ -1,0 +1,95 @@
+=== Container Run Log ===
+Timestamp: 2026-03-18T22:51:24.106Z
+Group: Jarvis
+IsMain: false
+Duration: 451728ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773871251048",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773873832379 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Model: qwen3:32b, prompt length: 136
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=0 | timings=[6565]ms | total=6566ms | response_chars=40
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=136 | history_msgs=11 | total_ms=6566
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 180 chars
+[ollama-runner] Model: qwen3:32b, prompt length: 180
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] ComfyUI not ready after 60s — skipping
+[ollama-runner] History compressed: 7 messages → summary
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] tool=ollama_list_models 10ms
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=1 | timings=[101281,50328]ms | total=151619ms | response_chars=304
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=180 | history_msgs=7 | total_ms=151619
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 171 chars
+[ollama-runner] Model: qwen3:32b, prompt length: 171
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] tool=set_status 2ms
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=1 | timings=[23254,32394]ms | total=55650ms | response_chars=503
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=171 | history_msgs=9 | total_ms=55650
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 150 chars
+[ollama-runner] Model: qwen3:32b, prompt length: 150
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=0 | timings=[41050]ms | total=41050ms | response_chars=867
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=150 | history_msgs=11 | total_ms=41050
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 171 chars
+[ollama-runner] Model: qwen3:32b, prompt length: 171
+[ollama-runner] History compressed: 7 messages → summary
+[ollama-runner] Temperature: 0.3 (task: analysis)
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Hi again! How can I assist you today? 😊","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"The **llama3.2-vision** model (7.8GB) is the smallest and fastest available for conversation. If it still feels slow, the bottleneck may be hardware limitations (e.g., CPU/GPU resources). Would you like to try a different model for testing, or should I investigate optimization strategies for your setup?","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"To optimize performance, let's first gather your current setup details:\n\n1. **Hardware**: What's your CPU/GPU (e.g., Intel i7, AMD Ryzen 5, NVIDIA GPU model)?\n2. **Ollama**: What version are you running? (`ollama --version`)\n3. **Running models**: Are any other models/services active in the background?\n4. **Usage pattern**: Are you using Jarvis for text-only, image generation, or both?\n\nThis will help me suggest targeted optimizations (e.g., quantized models, backend settings, resource allocation).","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Let's start with a few optimizations for your Ollama 0.18.0 setup:\n\n1. **Upgrade Ollama**  \n   Version 0.18.0 is outdated – consider upgrading to the latest stable version (0.19.0+). Newer versions include performance improvements and better resource management.\n\n2. **Quantized Models**  \n   Check if you're using the quantized versions of models (e.g., `llama3.2-vision:q4` or `llama3.2-vision:q5`). Quantized models trade slight accuracy for significant speed gains.\n\n3. **Resource Allocation**  \n   Ensure Ollama has exclusive access to CPU cores/GPU. Run:  \n   ```bash\n   ollama serve --cpus=ALL --gpu=ALL\n   ```  \n   (Adjust based on your hardware capabilities.)\n\n4. **Background Processes**  \n   Close other Ollama models/services (e.g., `ollama stop <model>` for unused models).\n\nWould you like me to check your hardware specs next, or test a quantized model?","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---

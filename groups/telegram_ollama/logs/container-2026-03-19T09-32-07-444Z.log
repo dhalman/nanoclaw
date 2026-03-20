@@ -1,0 +1,100 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T09:32:07.444Z
+Group: Jarvis
+IsMain: false
+Duration: 972072ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773911755374 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] qwen3.5:35b warmed and pinned
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=158
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[14305]ms | total=14305ms | response_chars=202
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=158 | history_msgs=4 | total_ms=14354
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 180 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=180
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[8123]ms | total=8123ms | response_chars=782
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=180 | history_msgs=6 | total_ms=8206
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 176 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=176
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[8799]ms | total=8799ms | response_chars=820
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=176 | history_msgs=8 | total_ms=8800
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 189 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=true task=analysis complexity=medium prompt_len=189
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=true | rounds=0 | timings=[18909]ms | total=18909ms | thinking_chars=164 | response_chars=849
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=true | prompt_chars=189 | history_msgs=10 | total_ms=18948
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 200 chars
+[ollama-runner] [classify] fallback to regex: The operation was aborted due to timeout
+[ollama-runner] Model: qwen3.5:35b think=true task=analysis complexity=medium prompt_len=200
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=true | rounds=0 | timings=[3564]ms | total=3564ms | thinking_chars=148 | response_chars=64
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=true | prompt_chars=200 | history_msgs=12 | total_ms=3580
+[ollama-runner] Waiting for next message...
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Hey! Yeah, I did get a bit of an upgrade — web access, scheduling, and a memory system to remember what I learn. But I'm still the same Jarvis, just with more tools in the toolbox.\n\nWhat's on your mind?","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Good question! Here's the honest take:\n\n**Speed**: About the same — I'm still running qwen3.5:35b locally, so response times feel familiar. The new features (web, scheduling, memory) don't add noticeable latency since they're just tool calls.\n\n**Smarter**: Not fundamentally — same model, same reasoning capacity. But I do have *more capabilities* now: I can look things up live, schedule tasks for later, and remember what I learn. That makes me more *useful*, even if the core intelligence is unchanged.\n\n**What's different**: I'm more *proactive* now. I'll notice patterns in how you work, log what I learn, and suggest improvements. That's the real upgrade — I'm getting better at serving you over time.\n\nHow does it feel from your end? Anything you'd like me to do differently?","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Exactly! I've got a whole team now:\n\n• *Secretary (qwen3:4b)* — handles quick background tasks, summaries, and async work while I'm busy\n\n• *Coder (qwen3-coder:30b)* — software development expert for any coding tasks\n\n• *Artist/Cinematographer (qwen2.5vl:72b)* — visual expert who sees reference images and crafts expert prompts for images and videos\n\n• *Analyst (qwen3.5:35b+think)* — deep analysis mode for multi-step reasoning and trade-off evaluation\n\n• *Architect (deepseek-r1:70b)* — maximum capability for the hardest problems\n\nThe key is I know when to call them. I handle most things myself, but when there's a specialist who's the clear right fit, I bring them in. It's like having experts on speed dial — I'm still the point of contact, but I can get better answers when needed.\n\nWant to test any of them out?","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"💭 *Reasoning:*\nDJ is right - the Secretary is pretty invisible in action since it handles background tasks. I should explain when it actually shows up and offer to demonstrate it.\n\nGood point — the Secretary is pretty invisible in action since it handles background tasks. Here's when you'd notice it:\n\n**When it shows up:**\n• When you send a message while I'm busy with something longer (like generating an image or video)\n• For quick \"btw\" responses while I'm focused on something else\n• For summarizing long conversation history on request\n• For polling or status reporting tasks\n\n**When I'd use it:**\n• \"Hey, can you summarize what we talked about earlier?\"\n• \"What's the status of that task we started?\"\n• Quick background checks while I'm working on something else\n\n**To demonstrate:** I could ask the Secretary to summarize our conversation so far, or I could delegate a quick background task while I focus on something else.\n\nWant me to show it in action? Or is there something specific you'd like me to try with the team?","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"💭 *Reasoning:*\nDJ mentioned there's another update I haven't started using yet and is stepping away briefly. I should acknowledge this and wait for them to return.\n\nGot it — I'll wait! There's always something new to discover. 👋","newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773911755559"}
+---NANOCLAW_OUTPUT_END---

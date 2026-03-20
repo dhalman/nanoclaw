@@ -1,0 +1,23 @@
+=== Container Run Log ===
+Timestamp: 2026-03-20T08:12:20.790Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 172784ms
+Exit Code: 0
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input Summary ===
+Prompt length: 0 chars
+Session ID: ollama-1773986028496
+
+=== Mounts ===
+/workspace/group
+/workspace/global (ro)
+/home/node/.claude
+/workspace/ipc
+/app/src
+/app/ollama-runner/src (ro)
+/app/ollama-runner/build-id.txt (ro)
+/app/ollama-runner/changelog.json (ro)
+/app/ollama-runner/tsconfig.json (ro)

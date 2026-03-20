@@ -1,0 +1,65 @@
+=== Container Run Log ===
+Timestamp: 2026-03-20T00:13:07.805Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 345979ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773958841440",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-5141678471",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773965241826 -e TZ=America/Los_Angeles -e DISABLE_SECRETARY=1 -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.2.23 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=high prompt_len=286
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[7853]ms | total=7854ms | response_chars=442
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=286 | history_msgs=30 | total_ms=7958
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 179 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=179
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[2736]ms | total=2736ms | response_chars=143
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=179 | history_msgs=32 | total_ms=2830
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 214 chars
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=214
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"If I don't know the answer to something, I should:\n\n1. **Say so honestly** - Never guess or make things up\n2. **Figure it out together** - Help find the right answer or expert\n3. **Use the right tools** - Search the web, check documentation, or consult a specialist\n4. **Be trustworthy** - Accuracy matters more than speed\n\nBasically, I'm not supposed to pretend I know something I don't! 😊\n\nIs there something specific you'd like to ask me?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Thanks, Glam! I appreciate that! 😊\n\nIt's important to be honest about what I know and don't know. That's how I can be a trustworthy assistant!","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---

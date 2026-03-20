@@ -1,0 +1,66 @@
+=== Container Run Log ===
+Timestamp: 2026-03-18T22:35:39.871Z
+Group: Jarvis
+IsMain: false
+Duration: 304177ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773871251048",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773873035695 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Model: qwen3:32b, prompt length: 152
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] tool=ollama_list_models 5ms
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] ComfyUI not ready after 60s — skipping
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=1 | timings=[11163,22196]ms | total=33365ms | response_chars=436
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=152 | history_msgs=12 | total_ms=33366
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 192 chars
+[ollama-runner] Model: qwen3:32b, prompt length: 192
+[ollama-runner] History compressed: 8 messages → summary
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] inference | model=qwen3:32b | think=false | rounds=0 | timings=[63898]ms | total=63898ms | response_chars=299
+[ollama-runner] [PERF] response | model=qwen3:32b | task=analysis | think=false | prompt_chars=192 | history_msgs=7 | total_ms=63898
+[ollama-runner] Waiting for next message...
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Here are the available models with their sizes:\n\n• **qwen3:32b** (20.2GB) - Large language model for general tasks  \n• **llama3.2-vision** (7.8GB) - Vision-capable model for image analysis  \n• **x/flux2-klein:9b** (12.0GB) - Fast image/video generation model  \n• **qwen3-coder:30b** (18.6GB) - Specialized for coding tasks  \n\nFor image/video work, `x/flux2-klein:9b` is recommended for speed. Would you like to test any of these models?","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"For fast and accurate conversation, the **llama3.2-vision** model (7.8GB) is ideal. It balances speed and quality well for general dialogue. The **qwen3:32b** (20.2GB) offers higher accuracy but will be slower due to its larger size. \n\nWould you like to test either model with a sample conversation?","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---

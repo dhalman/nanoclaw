@@ -1,0 +1,52 @@
+=== Container Run Log ===
+Timestamp: 2026-03-19T13:26:43.765Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 96597ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773923444312",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-5141678471",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773926707167 -e TZ=America/Los_Angeles -e DISABLE_SECRETARY=1 -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.1.23 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+
+=== Stderr ===
+[nanoclaw] Build ID mismatch: running 0.1.22, host expects 0.1.23 — requesting rebuild
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] qwen3.5:35b warmed (coordinator)
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] Model: qwen3.5:35b think=false task=analysis complexity=medium prompt_len=235
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[16965]ms | total=16965ms | response_chars=135
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=235 | history_msgs=25 | total_ms=16995
+[ollama-runner] Waiting for next message...
+[ollama-runner] History compressed: 17 messages → summary
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Got it! I'll have the Secretary look up some example images for reference and share them with you. 📸\n\nLet me get that started for you!","newSessionId":"ollama-1773923444312"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773923444312"}
+---NANOCLAW_OUTPUT_END---

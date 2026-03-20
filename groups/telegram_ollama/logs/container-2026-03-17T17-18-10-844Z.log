@@ -1,0 +1,19 @@
+=== Container Run Log ===
+Timestamp: 2026-03-17T17:18:10.844Z
+Group: Jarvis
+IsMain: false
+Duration: 2652809ms
+Exit Code: 0
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input Summary ===
+Prompt length: 206 chars
+Session ID: ollama-1773741579811
+
+=== Mounts ===
+/workspace/group
+/workspace/global (ro)
+/home/node/.claude
+/workspace/ipc
+/app/src

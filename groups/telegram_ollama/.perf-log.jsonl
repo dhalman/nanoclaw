@@ -1,0 +1,7 @@
+{"type":"classify","buildId":"0.2.16","timestamp":"2026-03-19T23:04:35.998Z","classifyMs":5,"classifyMethod":"keyword"}
+{"type":"response","buildId":"0.2.16","timestamp":"2026-03-19T23:04:44.277Z","model":"qwen3.5:35b","think":false,"taskType":"analysis","complexity":"medium","promptChars":133,"responseChars":49,"responseMs":8270,"historyMsgs":0}
+{"type":"response","buildId":"0.2.28","timestamp":"2026-03-20T01:45:36.650Z","model":"qwen3.5:35b","think":false,"taskType":"analysis","complexity":"low","promptChars":131,"responseChars":21,"responseMs":10802,"historyMsgs":2}
+{"type":"response","buildId":"0.2.54","timestamp":"2026-03-20T04:23:21.862Z","model":"qwen3.5:35b","think":false,"taskType":"analysis","complexity":"low","promptChars":131,"responseChars":32,"responseMs":10734,"historyMsgs":0}
+{"type":"response","buildId":"0.2.55","timestamp":"2026-03-20T04:53:56.373Z","model":"qwen3.5:35b","think":false,"taskType":"analysis","complexity":"low","promptChars":131,"responseChars":31,"responseMs":2318,"historyMsgs":2}
+{"type":"response","buildId":"0.2.55","timestamp":"2026-03-20T04:54:12.358Z","model":"qwen3.5:35b","think":false,"taskType":"analysis","complexity":"low","promptChars":141,"responseChars":50,"responseMs":2844,"historyMsgs":4}
+{"type":"response","buildId":"0.2.60","timestamp":"2026-03-20T05:47:07.791Z","model":"qwen3.5:35b","think":false,"taskType":"analysis","complexity":"low","promptChars":134,"responseChars":172,"responseMs":12673,"historyMsgs":6}

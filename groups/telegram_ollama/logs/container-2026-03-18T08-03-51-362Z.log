@@ -1,0 +1,7 @@
+=== Container Run Log (TIMEOUT) ===
+Timestamp: 2026-03-18T08:03:51.362Z
+Group: Jarvis
+Container: nanoclaw-telegram-ollama-1773819096696
+Duration: 1934668ms
+Exit Code: 137
+Had Streaming Output: true

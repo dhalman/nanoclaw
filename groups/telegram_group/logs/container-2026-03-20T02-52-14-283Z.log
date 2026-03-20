@@ -1,0 +1,82 @@
+=== Container Run Log ===
+Timestamp: 2026-03-20T02:52:14.283Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 215925ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773958841440",
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-5141678471",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773974918358 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.2.33 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] qwen2.5:3b warmed
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Multi-sender batch: DJ, Michelle — processing sequentially
+[ollama-runner] Processing messages from: DJ (239 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=239
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[14036]ms | total=14037ms | response_chars=72
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=239 | history_msgs=15 | total_ms=14110
+[ollama-runner] Processing messages from: Michelle (157 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat [needs_web]
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=157
+[ollama-runner] [translate] 3 languages in 5894ms
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[23918]ms | total=23918ms | response_chars=65
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=157 | history_msgs=17 | total_ms=23923
+[ollama-runner] Waiting for next message...
+[ollama-runner] [translate] 3 languages in 5056ms
+[ollama-runner] Next message: 161 chars
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=161
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[22161]ms | total=22161ms | response_chars=378
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=161 | history_msgs=19 | total_ms=22175
+[ollama-runner] Waiting for next message...
+[ollama-runner] [translate] 4 languages in 13260ms
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Glad you're happy with the speed! What would you like to translate next?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Добре, ще се опитам да преведа по-точно. Какво искате да преведа?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Черният хумор е тема, която предизвиква различни реакции у хората. Някои го смятат за начин да се справят с трудни ситуации или да разглеждат чувствителни теми по по-лек начин. Други обаче го намират за обидно или неподходящо.\n\nВажно е да се има предвид контекстът и аудиторията. Черният хумор може да бъде забавен за някои, но може да засегне и други.\n\nКакво мислиш ти за него?","newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773958841440"}
+---NANOCLAW_OUTPUT_END---

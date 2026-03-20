@@ -1,0 +1,53 @@
+=== Container Run Log ===
+Timestamp: 2026-03-18T23:24:29.502Z
+Group: Jarvis
+IsMain: false
+Duration: 565331ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "sessionId": "ollama-1773871251048",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773875704173 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw:/workspace/extra/nanoclaw -v /Users/lytic/.gitconfig:/workspace/extra/gitconfig:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw -> /workspace/extra/nanoclaw
+/Users/lytic/.gitconfig -> /workspace/extra/gitconfig (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] ComfyUI not ready after 60s — skipping
+[ollama-runner] OllamaDiffuser not ready after 60s — skipping
+[ollama-runner] Model: qwen3.5:27b, prompt length: 156
+[ollama-runner] Temperature: 0.3 (task: analysis)
+[ollama-runner] [PERF] tool=ollama_list_models 6ms
+[ollama-runner] [PERF] inference | model=qwen3.5:27b | think=false | rounds=1 | timings=[27820,27056]ms | total=54883ms | response_chars=583
+[ollama-runner] [PERF] response | model=qwen3.5:27b | task=analysis | think=false | prompt_chars=156 | history_msgs=9 | total_ms=54884
+[ollama-runner] Waiting for next message...
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Here are your currently installed models:\n\n• **qwen3.5:27b** (17.4GB)\n• **qwen3.5:35b** (23.9GB)\n• **qwen3:32b** (20.2GB)\n• **llama3.2-vision:latest** (7.8GB) ← *smallest & fastest*\n• **x/flux2-klein:9b** (12.0GB)\n• **qwen3-coder:30b** (18.6GB)\n\n**Recommendation**: `llama3.2-vision:latest` is your fastest option for conversation. If it still feels slow, we can:\n\n1. **Pull a smaller model** like `llama3.2:latest` (no vision, ~2-3GB)\n2. **Adjust Ollama settings** to reduce context window or GPU layers\n3. **Check system resources** (RAM/CPU/GPU usage)\n\nWhat would you like to try?","newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773871251048"}
+---NANOCLAW_OUTPUT_END---

@@ -1,0 +1,48 @@
+=== Container Run Log ===
+Timestamp: 2026-03-17T19:58:47.445Z
+Group: Jarvis
+IsMain: false
+Duration: 48404ms
+Exit Code: 1
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "<context timezone=\"America/Los_Angeles\" />\n<messages>\n<message sender=\"DJ\" time=\"Mar 17, 2026, 12:57 PM\">How are you feeling now?</message>\n</messages>",
+  "sessionId": "ollama-1773741579811",
+  "groupFolder": "telegram_ollama",
+  "chatJid": "tg-j:365278370",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-ollama-1773777479044 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_ollama:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src:/app/src -e OLLAMA_HOST=http://host.docker.internal:11434 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_ollama -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_ollama -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_ollama/agent-runner-src -> /app/src
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_ollama
+[ollama-runner] Model: llama3.2, prompt length: 151
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 154 chars
+[ollama-runner] Model: llama3.2, prompt length: 154
+[ollama-runner] Error: Sub-model error: 400
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"I'm functioning within normal parameters now.\n\n• System status: Normal\n• Performance: Within expected limits\n• Functionality: Intact\n\nPlease note that this is a basic example, and you may need to modify the system configuration to fit your specific requirements.\n\nHow would you like to proceed with using my current state?","newSessionId":"ollama-1773741579811"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773741579811"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"error","result":null,"newSessionId":"ollama-1773741579811","error":"Sub-model error: 400"}
+---NANOCLAW_OUTPUT_END---

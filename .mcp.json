@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "ollama": {
+      "command": "npx",
+      "args": ["-y", "@iflow-mcp/ollama-mcp"],
+      "env": {
+        "OLLAMA_HOST": "http://localhost:11434"
+      }
+    }
+  }
+}

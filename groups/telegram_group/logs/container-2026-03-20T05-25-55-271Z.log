@@ -1,0 +1,157 @@
+=== Container Run Log ===
+Timestamp: 2026-03-20T05:25:55.272Z
+Group: DJ & Michelle
+IsMain: false
+Duration: 641807ms
+Exit Code: 137
+Stdout Truncated: false
+Stderr Truncated: false
+
+=== Input ===
+{
+  "prompt": "",
+  "prespin": true,
+  "groupFolder": "telegram_group",
+  "chatJid": "tg-j:-1003897457831",
+  "isMain": false,
+  "assistantName": "Jarvis"
+}
+
+=== Container Args ===
+run -i --rm --name nanoclaw-telegram-group-1773983713465 -e TZ=America/Los_Angeles -e ANTHROPIC_BASE_URL=http://host.docker.internal:3001 -e CLAUDE_CODE_OAUTH_TOKEN=placeholder --user 501:20 -e HOME=/home/node -v /Users/lytic/software/ai/nanoclaw/groups/telegram_group:/workspace/group -v /Users/lytic/software/ai/nanoclaw/groups/global:/workspace/global:ro -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude:/home/node/.claude -v /Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group:/workspace/ipc -v /Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src:/app/src -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/src:/app/ollama-runner/src:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt:/app/ollama-runner/build-id.txt:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json:/app/ollama-runner/changelog.json:ro -v /Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json:/app/ollama-runner/tsconfig.json:ro -e OLLAMA_HOST=http://host.docker.internal:11434 -e OLLAMADIFFUSER_HOST=http://host.docker.internal:8001 -e COMFYUI_HOST=http://host.docker.internal:8000 -e SEARXNG_HOST=http://host.docker.internal:8888 -e EXPECTED_BUILD_ID=0.2.58 --entrypoint /app/ollama-entrypoint.sh nanoclaw-agent:latest
+
+=== Mounts ===
+/Users/lytic/software/ai/nanoclaw/groups/telegram_group -> /workspace/group
+/Users/lytic/software/ai/nanoclaw/groups/global -> /workspace/global (ro)
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/.claude -> /home/node/.claude
+/Users/lytic/software/ai/nanoclaw/data/ipc/telegram_group -> /workspace/ipc
+/Users/lytic/software/ai/nanoclaw/data/sessions/telegram_group/agent-runner-src -> /app/src
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/src -> /app/ollama-runner/src (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/build-id.txt -> /app/ollama-runner/build-id.txt (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/changelog.json -> /app/ollama-runner/changelog.json (ro)
+/Users/lytic/software/ai/nanoclaw/container/ollama-runner/tsconfig.json -> /app/ollama-runner/tsconfig.json (ro)
+
+=== Stderr ===
+[ollama-runner] Input received for group: telegram_group
+[ollama-runner] Pre-spawned and ready, waiting for first message...
+[ollama-runner] qwen2.5:3b warmed
+[ollama-runner] ComfyUI state changed: online
+[ollama-runner] OllamaDiffuser state changed: online
+[ollama-runner] Multi-sender batch: DJ, Denn, Glam — processing sequentially
+[ollama-runner] Processing messages from: DJ (494 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=494
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[8302]ms | total=8302ms | response_chars=86
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=494 | history_msgs=0 | total_ms=8395
+[ollama-runner] Processing messages from: Denn (148 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=148
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[2618]ms | total=2618ms | response_chars=54
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=148 | history_msgs=2 | total_ms=2620
+[ollama-runner] Processing messages from: Glam (185 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=185
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[2766]ms | total=2766ms | response_chars=54
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=185 | history_msgs=4 | total_ms=2836
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 270 chars
+[ollama-runner] Multi-sender batch: Michelle, DJ — processing sequentially
+[ollama-runner] Processing messages from: Michelle (175 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=175
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[3199]ms | total=3199ms | response_chars=95
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=175 | history_msgs=6 | total_ms=3264
+[ollama-runner] Processing messages from: DJ (160 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=160
+[ollama-runner] [PERF] tool=preferences 3ms
+[ollama-runner] [PERF] inference | model=qwen2.5:3b | think=false | rounds=0 | timings=[6573]ms | total=6573ms | response_chars=34
+[ollama-runner] Quick response sent for mid-task message (16s elapsed, phase: preferences)
+[ollama-runner] [PERF] inference | model=qwen2.5:3b | think=false | rounds=0 | timings=[7619]ms | total=7619ms | response_chars=250
+[ollama-runner] Quick response sent for mid-task message (23s elapsed, phase: preferences)
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=1 | timings=[3716,27239]ms | total=30959ms | response_chars=219
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=160 | history_msgs=8 | total_ms=31043 | mid_task_interrupts=2
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 273 chars
+[ollama-runner] Multi-sender batch: Glam, DJ — processing sequentially
+[ollama-runner] Processing messages from: Glam (164 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=164
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[12208]ms | total=12208ms | response_chars=68
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=164 | history_msgs=14 | total_ms=12251
+[ollama-runner] Processing messages from: DJ (174 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=174
+[ollama-runner] [PERF] tool=preferences 2ms
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=1 | timings=[10749,17196]ms | total=27947ms | response_chars=88
+[ollama-runner] Quick response failed: fetch failed
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=174 | history_msgs=16 | total_ms=325437 | mid_task_interrupts=1
+[ollama-runner] Waiting for next message...
+[ollama-runner] Next message: 2152 chars
+[ollama-runner] Multi-sender batch: Glam, DJ, Michelle, Denn — processing sequentially
+[ollama-runner] Processing messages from: Glam (491 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=491
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[12897]ms | total=12897ms | response_chars=121
+[ollama-runner] [PERF] response | model=qwen3.5:35b | task=analysis | think=false | prompt_chars=491 | history_msgs=18 | total_ms=12983
+[ollama-runner] Processing messages from: DJ (682 chars)
+[ollama-runner] [classify] default→qwen3.5:35b think=false complexity=low task=chat
+[ollama-runner] Model: qwen3.5:35b think=false task=chat complexity=low prompt_len=682
+[ollama-runner] [PERF] inference | model=qwen3.5:35b | think=false | rounds=0 | timings=[9595]ms | total=9595ms | response_chars=149
+
+
+=== Stdout ===
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Got it — group mode activated. I'm here to engage with everyone. What's on your minds?\n\n_(qwen3.5 · chat · 8.4s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Thanks Denn! Good to be back. What's up with everyone?\n\n_(qwen3.5 · chat · 2.6s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Sounds like someone's taking their time to wake up! 😄\n\n_(qwen3.5 · chat · 2.8s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"That's a good idea, Michelle. Do you want to pick one language for now, or rotate through them?\n\n_(qwen3.5 · chat · 3.3s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"_[secretary]_ Hello! How can I assist you today?","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"_[secretary]_ I'm currently managing my preferences. Right now, I don't have any deletions happening. If you're seeing anything unusual being deleted frequently, let me know and I'll investigate. Is there a specific preference or setting you noticed being removed?","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Got it — the group translator is set to English, Bulgarian, German, and Spanish.\n\nI'm ready to help with anything: group management, scheduling tasks, image/video generation, code, or just chatting. What's on your mind?\n\n_(qwen3.5 · chat · 31.0s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Haha, I don't sleep, but I appreciate the thought! 😄 How about you?\n\n_(qwen3.5 · chat · 12.3s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"Got it — translator_languages set to null. No more automatic translation for this group.\n\n_(qwen3.5 · chat · 325.4s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":"No worries at all! 😊 I'm just happy to chat with you all. And yes, babies are the best reason to enjoy conversations! 🥹\n\n_(qwen3.5 · chat · 13.0s)_","newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---
+---NANOCLAW_OUTPUT_START---
+{"status":"success","result":null,"newSessionId":"ollama-1773983714541"}
+---NANOCLAW_OUTPUT_END---

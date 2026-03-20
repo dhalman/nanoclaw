@@ -1,0 +1,7 @@
+=== Container Run Log (TIMEOUT) ===
+Timestamp: 2026-03-20T13:51:25.759Z
+Group: DJ & Michelle
+Container: nanoclaw-telegram-group-1774012287854
+Duration: 2397906ms
+Exit Code: 137
+Had Streaming Output: true

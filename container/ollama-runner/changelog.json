@@ -1,0 +1,81 @@
+{
+  "0.2.4": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.4",
+    "notes": []
+  },
+  "0.2.3": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.3",
+    "notes": []
+  },
+  "0.2.2": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.2",
+    "notes": []
+  },
+  "0.2.1": {
+    "date": "2026-03-19",
+    "title": "feat: NanoClaw v0.0.1 \u2014 Personal AI assistant via Telegram",
+    "notes": [
+      "feat: NanoClaw v0.0.1 \u2014 Personal AI assistant via Telegram"
+    ]
+  },
+  "0.2.0": {
+    "date": "2026-03-19",
+    "title": "Autonomous Operations & Self-Healing Infrastructure",
+    "notes": [
+      "feat: zero-inference keyword classifier with route hints replaces LLM-based secretary",
+      "feat: adaptive performance tiers \u2014 context windows and sampling scale with task complexity",
+      "feat: user dissatisfaction detection with automatic escalation to higher reasoning tiers",
+      "feat: artist/cinematographer feedback-first workflow \u2014 creative plan before generation",
+      "feat: runtime model management \u2014 pull, remove, search, install across all backends",
+      "feat: service self-healing \u2014 start/restart backends via IPC without manual intervention",
+      "feat: preferences system with per-group defaults and per-user overrides",
+      "feat: voice transcription with multi-language auto-translation subscriptions",
+      "feat: per-user engagement tracking in group chats with disengage protocol",
+      "feat: performance metrics logging with version-over-version comparison",
+      "feat: event-driven IPC via fs.watch replaces 100ms polling",
+      "feat: source bind-mount \u2014 code changes apply without container rebuild",
+      "feat: post-build image verification with automatic buildkit cache recovery",
+      "feat: container version gating \u2014 stale containers exit on startup",
+      "feat: stuck-loop detection replaces hard tool-round cap (local = no cost limits)",
+      "fix: SearXNG preserved across builds \u2014 only nanoclaw containers killed",
+      "fix: web_search returns clear 'do not retry' on backend failure",
+      "fix: mid-task replies use coordinator, not disabled secretary",
+      "fix: all backend catch blocks log errors \u2014 no silent failures",
+      "test: 468 tests covering routing, classification, escalation, tools, and preferences"
+    ]
+  },
+  "0.1.0": {
+    "date": "2026-03-19",
+    "title": "Intelligent Routing & Creative Pipeline",
+    "notes": [
+      "feat: semantic message classification via qwen3:4b secretary with coordinator review",
+      "feat: self-improving routing \u2014 coordinator grades decisions, corrections feed back into classifier",
+      "feat: 4-tier escalation ladder with auto-escalation on model failure detection",
+      "feat: web search via local SearXNG metasearch (privacy-first, no external tracking)",
+      "feat: task scheduling \u2014 once, interval, and cron expressions via IPC",
+      "feat: proactive memory \u2014 updates personal notes on corrections and preferences",
+      "feat: image generation \u2014 FLUX via ComfyUI and OllamaDiffuser with auto-backend selection",
+      "feat: video generation \u2014 LTX-Video and HunyuanVideo with I2V support",
+      "feat: artist and cinematographer creative directors powered by qwen2.5vl:72b",
+      "feat: mid-task chat \u2014 respond to users while processing long-running tasks",
+      "feat: background history compression \u2014 runs between turns, not during inference",
+      "feat: voice transcription via local faster-whisper (no API key required)",
+      "feat: Telegram integration with bot pool, typing indicators, and thinking status",
+      "perf: adaptive context windows \u2014 8k to 64k based on model and task complexity",
+      "perf: specialist models evict immediately after use \u2014 coordinator stays pinned"
+    ]
+  },
+  "0.0.1": {
+    "date": "2026-03-17",
+    "title": "Initial Setup",
+    "notes": [
+      "feat: NanoClaw fork with Telegram channel integration",
+      "feat: ollama runner container for local model inference on Apple Silicon",
+      "feat: Jarvis bot registration with per-group container isolation",
+      "feat: Docker-based sandboxing with credential proxy"
+    ]
+  }
+}
