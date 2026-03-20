@@ -2517,7 +2517,7 @@ export async function callOllama(
   const needsLargeCtx = (isCoordinator && !!think) || isArchitect || isCoder;
   const modelOpts: Record<string, unknown> = {
     // Low complexity: small context = faster prompt processing
-    num_ctx: isSecretary ? 8192
+    num_ctx: isSecretary ? 2048
       : isLowComplexity && isCoordinator ? 8192
       : (isCoordinator && !think) ? 16384
       : needsLargeCtx ? 65536 : 32768,
@@ -2928,7 +2928,7 @@ async function main(): Promise<void> {
       fetch(`${OLLAMA_HOST}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0 }, stream: false }),
+        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0, num_ctx: 1024 }, stream: false }),
       }).then(() => log(`${warmModel} warmed`)).catch(() => {});
 
       makeServiceMonitor(
