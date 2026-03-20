@@ -1,4 +1,11 @@
 {
+  "0.2.54": {
+    "date": "2026-03-19",
+    "title": "fix: delete old status message before sending new pinned one",
+    "notes": [
+      "fix: delete old status message before sending new pinned one"
+    ]
+  },
   "0.2.53": {
     "date": "2026-03-19",
     "title": "fix: add date to status timestamps",
