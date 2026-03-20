@@ -1309,6 +1309,43 @@ async function trySecretaryDirect(
     }
   }
 
+  // Disable/clear translations: "turn off translation", "remove all languages", "stop translating"
+  const LANG_DISABLE = /\b(?:(?:turn|switch)\s+off|disable|stop|remove\s+(?:all)?|clear|reset)\b.*\b(?:translat|language)/i;
+  if (LANG_DISABLE.test(userText)) {
+    setGroupPref('translator_languages', []);
+    log('[secretary-direct] translations disabled');
+    return 'Translations disabled. All languages removed.';
+  }
+
+  // Remove specific languages: "remove spanish from translation"
+  const LANG_REMOVE = /\b(?:remove|delete|unsubscribe|drop)\b.*\b(?:translat|language)/i;
+  if (LANG_REMOVE.test(userText) && !LANG_DISABLE.test(userText)) {
+    const knownLangs: Record<string, string> = {
+      english: 'en', spanish: 'es', german: 'de', french: 'fr', italian: 'it',
+      portuguese: 'pt', russian: 'ru', chinese: 'zh', japanese: 'ja', korean: 'ko',
+      arabic: 'ar', hindi: 'hi', turkish: 'tr', dutch: 'nl', polish: 'pl',
+      bulgarian: 'bg', swedish: 'sv', norwegian: 'no', greek: 'el', czech: 'cs',
+      romanian: 'ro', hungarian: 'hu', ukrainian: 'uk', hebrew: 'he', thai: 'th',
+    };
+    const toRemove: string[] = [];
+    const lower = userText.toLowerCase();
+    for (const [name, code] of Object.entries(knownLangs)) {
+      if (lower.includes(name)) toRemove.push(code);
+    }
+    if (toRemove.length > 0) {
+      const existing = getPref('translator_languages');
+      let current: string[] = [];
+      if (Array.isArray(existing)) current = existing.filter((l): l is string => typeof l === 'string');
+      else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
+      const updated = current.filter((c) => !toRemove.includes(c));
+      setGroupPref('translator_languages', updated);
+      log(`[secretary-direct] removed languages: ${toRemove.join(', ')}`);
+      return updated.length > 0
+        ? `Removed ${toRemove.join(', ')}. Remaining: ${updated.join(', ')}`
+        : 'All translation languages removed. Translations disabled.';
+    }
+  }
+
   // Tool-direct: simple queries that map to a single tool call.
   // Check patterns BEFORE complexity gate — version/status/help are always direct.
   for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
