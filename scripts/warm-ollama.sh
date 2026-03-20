@@ -1,6 +1,8 @@
 #!/bin/bash
 # Warms up Ollama models on startup so first Jarvis response is fast.
-# All models evict after 2 minutes of idle (matches OLLAMA_KEEP_ALIVE=2m server default).
+# Secretary (qwen2.5:3b) loads first — needed for classify + translations.
+# Coordinator (qwen3.5:35b) loads second — handles all inference.
+# Both pinned with keep_alive=-1 (never evict).
 
 # Use OLLAMA_HOST only if it's a full URL; 0.0.0.0 is a bind address, not a client URL
 _raw="${OLLAMA_HOST:-}"
@@ -10,19 +12,25 @@ else
   OLLAMA_HOST="http://localhost:11434"
 fi
 
-# Set server-level default eviction (takes effect on next Ollama restart)
-launchctl setenv OLLAMA_KEEP_ALIVE 2m 2>/dev/null || true
+# Wait for Ollama to be ready
+for i in $(seq 1 30); do
+  curl -sf "$OLLAMA_HOST/api/tags" > /dev/null 2>&1 && break
+  sleep 1
+done
 
-keep_warm(KEEP_ALIVE) {
+warm() {
   local MODEL="$1"
-  curl -sf -X POST "$OLLAMA_HOST/api/chat" \
-   -H 'Content-Type: application/json' \
-   -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"keep_alive\":\"$KEEP_ALIVE\",\"stream\":false}" \
-   > /dev/null && echo "$MODEL loaded" || echo "$MODEL failed (may not be installed)"
+  local KEEP_ALIVE="$2"
+  curl -s --max-time 120 -X POST "$OLLAMA_HOST/api/chat" \
+    -H 'Content-Type: application/json' \
+    -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"keep_alive\":\"$KEEP_ALIVE\",\"options\":{\"num_predict\":1},\"stream\":false}" \
+    > /dev/null 2>&1 && echo "$MODEL loaded (keep_alive=$KEEP_ALIVE)" || echo "$MODEL failed"
 }
 
-keep_warm(-1) "qwen3:4b" &         # first responder, efficiency model — always warm (this one needs to load before chat is active)
-keep_warm(-1) "qwen3.5:35b" &      # default model, coordinator — always warm, but don't block startup
+# Secretary first (small, fast) — needed for classify + translations
+warm "qwen2.5:3b" "-1"
 
-echo "Ready to chat!"
+# Coordinator second (large) — staggered so secretary is ready first
+warm "qwen3.5:35b" "-1"
 
+echo "All models warm."

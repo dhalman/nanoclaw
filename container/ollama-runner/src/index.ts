@@ -652,10 +652,11 @@ const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION]);
 // Only coordinator supports think: true — secretary is classification-only
 const MODELS_WITH_THINK = new Set([MODELS.COORDINATOR]);
 
-// Models that stay pinned in VRAM (keep_alive: -1)
-const MODELS_PINNED = new Set([MODELS.COORDINATOR]);
+// Models that stay pinned in VRAM (keep_alive: KEEP_ALIVE_PINNED)
+const MODELS_PINNED = new Set([MODELS.COORDINATOR, MODELS.SECRETARY]);
 // Specialists evict immediately after use — frees VRAM for larger models
-const KEEP_ALIVE_SPECIALIST = '0';
+const KEEP_ALIVE_PINNED = -1;      // never evict — stays in VRAM permanently
+const KEEP_ALIVE_SPECIALIST = '0'; // evict immediately — frees VRAM for other models
 const TOOL_TIMEOUT_MS = 600_000;       // 10 min — deepseek-r1 with thinking can run 2-5 min
 const IMAGE_TOOL_TIMEOUT_MS = 120_000; // 2 min for image generation
 const VIDEO_TOOL_TIMEOUT_MS = 360_000; // 6 min for video generation (internal deadline is 5 min)
@@ -905,7 +906,7 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
       body: JSON.stringify({
         model: MODELS.SECRETARY,
         messages: [{ role: 'user', content: classifyPrompt }],
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: KEEP_ALIVE_PINNED,
         options: { num_ctx: 1024, temperature: 0.1 },
         stream: false,
       }),
@@ -1072,7 +1073,7 @@ async function compressHistory(history: Message[], compressThreshold = HISTORY_C
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODELS.SECRETARY,  // background task
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: KEEP_ALIVE_PINNED,
         options: { num_ctx: 8192 },
         messages: [{ role: 'user', content: summaryPrompt }],
         stream: false,
@@ -1340,7 +1341,7 @@ async function translateForListeners(
           { role: 'system', content: `Translate the text to each language listed. Verbatim — preserve tone, slang, intent. Return one translation per line, format: LANG: translation\nNo other text.` },
           { role: 'user', content: `Languages: ${langList}\n\nText: ${userText}` },
         ],
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: KEEP_ALIVE_PINNED,
         options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
         stream: false,
       }),
@@ -2404,7 +2405,7 @@ export async function callOllama(
   // Only send think: true for models that support the flag; architect always reasons internally
   const useThinkFlag = MODELS_WITH_THINK.has(model) && !!think;
   // Coordinator and secretary stay pinned; specialists evict after 60s to free VRAM.
-  const keepAliveArgs = MODELS_PINNED.has(model) ? { keep_alive: -1 } : { keep_alive: KEEP_ALIVE_SPECIALIST };
+  const keepAliveArgs = MODELS_PINNED.has(model) ? { keep_alive: KEEP_ALIVE_PINNED } : { keep_alive: KEEP_ALIVE_SPECIALIST };
 
   // Per-model options — tuned per mode:
   //   coordinator non-think: 16k context + tight sampling for speed (halved KV cache ≈ 2x faster attention)
@@ -2815,7 +2816,7 @@ async function main(): Promise<void> {
       fetch(`${OLLAMA_HOST}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: -1, options: { num_predict: 0 }, stream: false }),
+        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0 }, stream: false }),
       }).then(() => log(`${warmModel} warmed`)).catch(() => {});
 
       makeServiceMonitor(
