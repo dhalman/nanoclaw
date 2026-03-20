@@ -1,4 +1,11 @@
 {
+  "0.2.47": {
+    "date": "2026-03-19",
+    "title": "fix: expand secretary-direct version pattern to match changelog queries",
+    "notes": [
+      "fix: expand secretary-direct version pattern to match changelog queries"
+    ]
+  },
   "0.2.46": {
     "date": "2026-03-19",
     "title": "feat: NLP intent detection for engagement, translate all messages",
