@@ -1,4 +1,11 @@
 {
+  "0.2.42": {
+    "date": "2026-03-19",
+    "title": "fix: pin secretary in VRAM, add KEEP_ALIVE_PINNED constant, fix warm script",
+    "notes": [
+      "fix: pin secretary in VRAM, add KEEP_ALIVE_PINNED constant, fix warm script"
+    ]
+  },
   "0.2.41": {
     "date": "2026-03-19",
     "title": "Build 0.2.41",
