@@ -2896,17 +2896,8 @@ async function main(): Promise<void> {
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
 
-      // Background translation for chat messages — fire alongside coordinator
-      if (taskTypeRich === 'chat' && !currentImages?.length) {
-        // Extract sender name and raw text from XML prompt
-        const senderMatch = prompt.match(/<message\s+sender="([^"]*)"/);
-        const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
-        const sender = senderMatch?.[1] || 'User';
-        const rawText = textMatch?.[1]?.trim() || '';
-        if (rawText) {
-          translateForListeners(rawText, sender, chatJid).catch(() => {});
-        }
-      }
+      // Text translations are handled on the host side (telegram.ts) using
+      // the same translateToMultiple path as voice messages, for consistent UX.
 
       // Secretary direct execution: simple queries bypass the coordinator
       const directResult = await trySecretaryDirect(prompt, cls, chatJid, groupFolder);

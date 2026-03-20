@@ -46,7 +46,11 @@ function getTranslatorLanguages(groupFolder: string): string[] {
   let raw = getGroupPref(groupFolder, 'translator_languages');
   // Handle double-serialized values (stored as string instead of array)
   if (typeof raw === 'string') {
-    try { raw = JSON.parse(raw); } catch { return []; }
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return [];
+    }
   }
   return Array.isArray(raw)
     ? raw.filter((l): l is string => typeof l === 'string')
@@ -251,9 +255,10 @@ export async function initJarvisBot(
           translateToMultiple(text, 'auto', targetLangs)
             .then((translations) => {
               if (translations.length > 0) {
-                const echo = translations
-                  .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                  .join('\n');
+                let echo = `_💬 ${senderName}:_`;
+                for (const t of translations) {
+                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
+                }
                 sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
                   () => {},
                 );
@@ -432,7 +437,7 @@ export async function initJarvisBot(
               const targetLangs = isGroup
                 ? getTranslatorLanguages(group.folder)
                 : getUserPreferredLanguages(group.folder, sender);
-              let echo = `_🎙 [${getLanguageName(result.language)}] "${result.text}"_`;
+              let echo = `_🎙 ${senderName} [${getLanguageName(result.language)}]:_\n_"${result.text}"_`;
               const translations = await translateToMultiple(
                 result.text,
                 result.language,
@@ -893,7 +898,7 @@ export class TelegramChannel implements Channel {
                     group.folder,
                     ctx.from?.id?.toString() || '',
                   );
-              let echo = `_🎙 [${getLanguageName(result.language)}] "${result.text}"_`;
+              let echo = `_🎙 ${senderName} [${getLanguageName(result.language)}]:_\n_"${result.text}"_`;
               const translations = await translateToMultiple(
                 result.text,
                 result.language,
