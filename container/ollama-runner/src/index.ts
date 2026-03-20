@@ -1094,6 +1094,47 @@ function trimHistoryForInference(history: Message[]): Message[] {
   return trimmed;
 }
 
+/**
+ * Split an XML-formatted prompt into per-sender groups.
+ * Returns an array of { sender, prompt } where each prompt contains only
+ * that sender's messages (preserving the XML wrapper and context header).
+ * If there's only one sender (or the prompt can't be parsed), returns the
+ * original prompt as a single entry.
+ */
+function splitBySender(prompt: string): Array<{ sender: string; prompt: string }> {
+  // Extract the context header (timezone etc.)
+  const contextMatch = prompt.match(/<context[^>]*\/>\n?/);
+  const header = contextMatch ? contextMatch[0] : '';
+
+  // Extract individual <message> elements with sender
+  const msgRegex = /<message\s+sender="([^"]*)"[^>]*>[\s\S]*?<\/message>/g;
+  const messages: Array<{ sender: string; xml: string }> = [];
+  let match;
+  while ((match = msgRegex.exec(prompt)) !== null) {
+    messages.push({ sender: match[1], xml: match[0] });
+  }
+
+  if (messages.length === 0) return [{ sender: 'unknown', prompt }];
+
+  // Get unique senders in order of appearance
+  const senders: string[] = [];
+  for (const m of messages) {
+    if (!senders.includes(m.sender)) senders.push(m.sender);
+  }
+
+  // Single sender — no splitting needed
+  if (senders.length <= 1) return [{ sender: senders[0] || 'unknown', prompt }];
+
+  // Multiple senders — group messages by sender, preserving order within each group
+  return senders.map((sender) => {
+    const senderMsgs = messages.filter((m) => m.sender === sender);
+    return {
+      sender,
+      prompt: `${header}<messages>\n${senderMsgs.map((m) => m.xml).join('\n')}\n</messages>`,
+    };
+  });
+}
+
 /** Extract a plain string from Ollama message content (handles string, array, or schema object). */
 export function extractContent(raw: unknown): string {
   if (typeof raw === 'string') return raw;
@@ -2631,6 +2672,19 @@ async function main(): Promise<void> {
         compressedHistory = null;
       }
 
+      // Per-user response queuing: when multiple users send messages in the
+      // same batch, process each sender separately to prevent cross-wiring.
+      const senderGroups = splitBySender(prompt);
+      if (senderGroups.length > 1) {
+        log(`Multi-sender batch: ${senderGroups.map((g) => g.sender).join(', ')} — processing sequentially`);
+      }
+
+      for (const senderGroup of senderGroups) {
+        if (senderGroups.length > 1) {
+          prompt = senderGroup.prompt;
+          log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
+        }
+
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
@@ -2794,9 +2848,8 @@ async function main(): Promise<void> {
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });
 
-      // Coordinator silently grades the secretary's classification and draft (fire-and-forget).
-      // Only runs when the secretary actually classified (not regex fallback, not image shortcut).
-      // Grades accumulate in SECRETARY_FEEDBACK_FILE and feed back into future classify prompts.
+      } // end per-sender loop
+
       log('Waiting for next message...');
       const nextMessage = await waitForIpcMessage();
       if (nextMessage === null) {
