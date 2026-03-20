@@ -1,4 +1,11 @@
 {
+  "0.2.48": {
+    "date": "2026-03-19",
+    "title": "fix: clear orphaned thinking messages on container restart",
+    "notes": [
+      "fix: clear orphaned thinking messages on container restart"
+    ]
+  },
   "0.2.47": {
     "date": "2026-03-19",
     "title": "fix: expand secretary-direct version pattern to match changelog queries",
