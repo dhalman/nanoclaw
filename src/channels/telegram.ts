@@ -240,8 +240,18 @@ export async function initJarvisBot(
       const isTranslateComplaint =
         TRANSLATE_DISSATISFIED.test(text) &&
         ctx.message.reply_to_message?.text?.includes('🌐');
+      if (isTranslateRequest || isTranslateComplaint) {
+        // Works in groups and DMs, with or without a reply
+        if (!ctx.message.reply_to_message) {
+          // No reply — translate the command itself? No, just skip.
+          // User needs to reply to a message to translate it.
+          if (isTranslateRequest) {
+            sendJarvisMessage(chatJid, '_Reply to a message with "translate" to translate it._').catch(() => {});
+            return;
+          }
+        }
+      }
       if (
-        isGroup &&
         ctx.message.reply_to_message &&
         (isTranslateRequest || isTranslateComplaint)
       ) {
