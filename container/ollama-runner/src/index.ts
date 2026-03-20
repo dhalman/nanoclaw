@@ -2220,19 +2220,23 @@ export async function callOllama(
       toolResults.push({ role: 'tool', content: result! });
     }
     const followUpStart = Date.now();
-    const followUp = await fetch(`${OLLAMA_HOST}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [...currentMessages, msg as Message, ...toolResults],
-        ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : { tools: OLLAMA_TOOLS }),
-        options: modelOpts,
-        ...(useThinkFlag ? { think: true } : {}),
-        ...keepAliveArgs,
-        stream: false,
+    const followUp = await withTimeout(
+      fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [...currentMessages, msg as Message, ...toolResults],
+          ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : { tools: OLLAMA_TOOLS }),
+          options: modelOpts,
+          ...(useThinkFlag ? { think: true } : {}),
+          ...keepAliveArgs,
+          stream: false,
+        }),
       }),
-    });
+      TOOL_TIMEOUT_MS,
+      `callOllama follow-up(${model})`,
+    );
     const next = await followUp.json() as OllamaResponse;
     roundTimings.push(Date.now() - followUpStart);
     msg = next.message;

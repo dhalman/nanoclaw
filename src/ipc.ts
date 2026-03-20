@@ -160,6 +160,15 @@ export function startIpcWatcher(deps: IpcDeps): void {
   const ipcBaseDir = path.join(DATA_DIR, 'ipc');
   fs.mkdirSync(ipcBaseDir, { recursive: true });
 
+  // Safe unlink that tolerates ENOENT (file already processed by concurrent watcher)
+  const safeUnlink = (filePath: string) => {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (e: unknown) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+    }
+  };
+
   const processIpcFiles = async () => {
     // Scan all group IPC directories (identity determined by directory)
     let groupFolders: string[];
@@ -195,7 +204,16 @@ export function startIpcWatcher(deps: IpcDeps): void {
           for (const file of messageFiles) {
             const filePath = path.join(messagesDir, file);
             try {
-              const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+              let raw: string;
+              try {
+                raw = fs.readFileSync(filePath, 'utf-8');
+              } catch (readErr: unknown) {
+                // File already processed by a concurrent watcher — skip
+                if ((readErr as NodeJS.ErrnoException).code === 'ENOENT')
+                  continue;
+                throw readErr;
+              }
+              const data = JSON.parse(raw);
               if (
                 expectedBuildId &&
                 data.buildId &&
@@ -205,7 +223,7 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   { file, dataBuildId: data.buildId, expectedBuildId },
                   'Dropping IPC message from old image',
                 );
-                fs.unlinkSync(filePath);
+                safeUnlink(filePath);
                 continue;
               }
               if (data.type === 'message' && data.chatJid && data.text) {
@@ -351,18 +369,24 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   );
                 }
               }
-              fs.unlinkSync(filePath);
+              safeUnlink(filePath);
             } catch (err) {
+              // Skip ENOENT — file was already processed by concurrent watcher
+              if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue;
               logger.error(
                 { file, sourceGroup, err },
                 'Error processing IPC message',
               );
-              const errorDir = path.join(ipcBaseDir, 'errors');
-              fs.mkdirSync(errorDir, { recursive: true });
-              fs.renameSync(
-                filePath,
-                path.join(errorDir, `${sourceGroup}-${file}`),
-              );
+              try {
+                const errorDir = path.join(ipcBaseDir, 'errors');
+                fs.mkdirSync(errorDir, { recursive: true });
+                fs.renameSync(
+                  filePath,
+                  path.join(errorDir, `${sourceGroup}-${file}`),
+                );
+              } catch {
+                /* file may already be gone */
+              }
             }
           }
         }
@@ -382,21 +406,34 @@ export function startIpcWatcher(deps: IpcDeps): void {
           for (const file of taskFiles) {
             const filePath = path.join(tasksDir, file);
             try {
-              const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+              let raw: string;
+              try {
+                raw = fs.readFileSync(filePath, 'utf-8');
+              } catch (readErr: unknown) {
+                if ((readErr as NodeJS.ErrnoException).code === 'ENOENT')
+                  continue;
+                throw readErr;
+              }
+              const data = JSON.parse(raw);
               // Pass source group identity to processTaskIpc for authorization
               await processTaskIpc(data, sourceGroup, isMain, deps);
-              fs.unlinkSync(filePath);
+              safeUnlink(filePath);
             } catch (err) {
+              if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue;
               logger.error(
                 { file, sourceGroup, err },
                 'Error processing IPC task',
               );
-              const errorDir = path.join(ipcBaseDir, 'errors');
-              fs.mkdirSync(errorDir, { recursive: true });
-              fs.renameSync(
-                filePath,
-                path.join(errorDir, `${sourceGroup}-${file}`),
-              );
+              try {
+                const errorDir = path.join(ipcBaseDir, 'errors');
+                fs.mkdirSync(errorDir, { recursive: true });
+                fs.renameSync(
+                  filePath,
+                  path.join(errorDir, `${sourceGroup}-${file}`),
+                );
+              } catch {
+                /* file may already be gone */
+              }
             }
           }
         }
