@@ -2744,13 +2744,29 @@ async function runWithConcurrentPoll(
 
   const wrappedMain = mainTask.then((r) => { finished = true; return r; }).catch((e) => { finished = true; throw e; });
 
+  const CANCEL_PATTERN = /^\s*(?:\/stop|\/cancel|stop|cancel|nevermind|abort)\s*$/i;
+  let cancelled = false;
+
   const pollLoop = async () => {
     // 2s startup delay — skip polling overhead for very fast responses.
     await new Promise<void>((r) => setTimeout(r, 2000));
-    while (!finished) {
+    while (!finished && !cancelled) {
       const messages = drainIpcInput();
       if (finished && messages.length === 0) break;
       for (const msg of messages) {
+        // Immediate cancel: detect cancel commands in IPC input
+        // Extract text from XML if present
+        const textMatch = msg.match(/<message[^>]*>([\s\S]*?)<\/message>/);
+        const rawText = textMatch ? textMatch[1].trim() : msg.trim();
+        if (CANCEL_PATTERN.test(rawText)) {
+          log('Cancel detected in IPC — aborting immediately');
+          cancelled = true;
+          writeOutput({ status: 'success', result: '_Stopped._', newSessionId: sessionIdLocal });
+          // Exit process — prespawn will restart cleanly
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+
         const elapsed = Math.round((Date.now() - ctx.startedAt) / 1000);
         const phase = ctx.getPhase();
         const phaseLabel = phase.startsWith('tool:') ? phase.slice(5).replace(/_/g, ' ') : phase;
