@@ -79,22 +79,21 @@ function saveStatusEntries(): void {
   );
 }
 
-/** Call when a user message is received for a chatJid — marks that status is no longer the last message. */
-export function markUserActivity(chatJid: string): void {
-  const entry = getStatusEntries().get(chatJid);
-  if (entry && entry.lastWasStatus) {
-    entry.lastWasStatus = false;
-    saveStatusEntries();
-  }
+/** Call when a user message is received for a chatJid (no-op — status is always edit-in-place now). */
+export function markUserActivity(_chatJid: string): void {
+  // Kept for API compat — status messages are always edited in place.
 }
 
-/** Send or edit a status message. Edit if last message was a status; send new otherwise. */
+/**
+ * Send or edit a status message. Always edits the existing pinned status
+ * message if one exists. Only sends new when there's no prior message ID
+ * or the edit fails (message deleted by user).
+ */
 async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
   const entries = getStatusEntries();
   const entry = entries.get(chatJid);
 
-  if (entry?.messageId && entry.lastWasStatus) {
-    // Last message in chat is a status — edit it
+  if (entry?.messageId) {
     try {
       await editJarvisMessage(chatJid, entry.messageId, text);
       logger.info(
@@ -107,7 +106,7 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
     }
   }
 
-  // User activity since last status, or no previous status — send new
+  // No existing status message or edit failed — send new
   const sentId = await sendJarvisMessage(chatJid, text);
   if (sentId) {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
