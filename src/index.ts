@@ -21,7 +21,6 @@ import {
   checkEngagement,
   disengageAll,
   disengageUser,
-  getUserPref,
   isEngaged,
 } from './engagement.js';
 import './channels/index.js';
@@ -75,7 +74,6 @@ import {
 } from './sender-allowlist.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
-import { translateToMultiple } from './translation.js';
 import { cancelVideoBackends } from './video-cancel.js';
 import { logger } from './logger.js';
 
@@ -262,31 +260,6 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
           await channel.sendMessage(chatJid, text);
         }
         outputSentToUser = true;
-
-        // Auto-translate Jarvis's response (reply-to the response message)
-        if (sentMsgId && text.length > 4) {
-          const prefs = getUserPref(group.folder, '', 'translator_languages');
-          let langs = prefs;
-          if (typeof langs === 'string') {
-            try {
-              langs = JSON.parse(langs);
-            } catch {
-              langs = null;
-            }
-          }
-          if (Array.isArray(langs) && langs.length > 0) {
-            translateToMultiple(text, 'auto', langs)
-              .then((translations) => {
-                if (translations.length > 0) {
-                  const echo = translations
-                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                    .join('\n\n');
-                  sendJarvisMessage(chatJid, echo, sentMsgId!).catch(() => {});
-                }
-              })
-              .catch(() => {});
-          }
-        }
       }
       // Only reset idle timer on actual results, not session-update markers (result: null)
       resetIdleTimer();
@@ -878,8 +851,11 @@ async function main(): Promise<void> {
       sendOrEditStatus(
         chatJid,
         `_${name} v${buildId} online — ${onlineTime}_ 😎`,
-      ).then(() => logger.info({ chatJid }, 'Host online status sent'))
-        .catch((err) => logger.warn({ chatJid, err }, 'Host online status failed'));
+      )
+        .then(() => logger.info({ chatJid }, 'Host online status sent'))
+        .catch((err) =>
+          logger.warn({ chatJid, err }, 'Host online status failed'),
+        );
     }
   }
 
