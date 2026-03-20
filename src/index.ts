@@ -503,8 +503,8 @@ async function startMessageLoop(): Promise<void> {
             const numId = parseInt(lastUserMsg.id, 10);
             if (!isNaN(numId)) {
               lastTriggerMessageId[chatJid] = numId;
-              // Instant 🧐 reaction — user sees acknowledgment immediately
-              reactToMessage(chatJid, numId, '🧐').catch(() => {});
+              // 👀 — Jarvis noticed the message
+              reactToMessage(chatJid, numId, '👀').catch(() => {});
             }
           }
 
@@ -522,12 +522,18 @@ async function startMessageLoop(): Promise<void> {
               reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
           }
           if (!engResult.shouldProcess) {
-            // Remove 🧐 if not processing (wasn't directed at Jarvis)
+            // Remove 👀 — wasn't for Jarvis
             if (lastUserMsg?.id) {
               const numId = parseInt(lastUserMsg.id, 10);
               if (!isNaN(numId)) removeReaction(chatJid, numId).catch(() => {});
             }
             continue;
+          }
+
+          // Upgrade 👀 → 🧐 — Jarvis is investigating
+          if (lastUserMsg?.id) {
+            const numId = parseInt(lastUserMsg.id, 10);
+            if (!isNaN(numId)) reactToMessage(chatJid, numId, '🧐').catch(() => {});
           }
 
           // Pull all messages since lastAgentTimestamp
