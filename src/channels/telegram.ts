@@ -543,12 +543,17 @@ export async function initJarvisBot(
         );
       }
 
+      // Voice messages in a Jarvis group are always directed at Jarvis
+      // (user intentionally pressed mic). Prepend name so engagement triggers.
+      const triggerContent = content.includes(ASSISTANT_NAME)
+        ? content
+        : `${ASSISTANT_NAME}, ${content}`;
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
         sender,
         sender_name: senderName,
-        content,
+        content: triggerContent,
         timestamp,
         is_from_me: false,
       });
