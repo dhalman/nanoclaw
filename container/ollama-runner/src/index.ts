@@ -1222,9 +1222,11 @@ async function trySecretaryDirect(
   chatJid: string,
   groupFolder: string,
 ): Promise<string | null> {
-  // Extract the actual user text from XML prompt (strip <context> and <messages> wrappers)
-  const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
-  const userText = textMatch ? textMatch[1].trim() : prompt;
+  // Extract the last message's text content from the XML prompt
+  const allMessages = [...prompt.matchAll(/<message[^>]*>([\s\S]*?)<\/message>/g)];
+  const userText = allMessages.length > 0
+    ? allMessages[allMessages.length - 1][1].trim()
+    : prompt;
   if (!userText || userText.length > 300) return null;
 
   // Web-direct: simple factual queries that just need a search
@@ -3110,8 +3112,8 @@ async function main(): Promise<void> {
         newSessionId: sessionId,
       });
 
-      // Auto-translate Jarvis's chat responses (not commands/tasks)
-      if (taskTypeRich === 'chat' && response && response.length > 4) {
+      // Auto-translate all Jarvis responses (verbatim, no commentary)
+      if (response && response.length > 4) {
         translateForListeners(response, assistantName, chatJid).catch(() => {});
       }
 
