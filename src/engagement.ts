@@ -181,10 +181,7 @@ export async function checkEngagement(
     }
   }
 
-  if (
-    triggerMessages.length === 0 &&
-    engagedMessages.length === 0
-  )
+  if (triggerMessages.length === 0 && engagedMessages.length === 0)
     return false;
 
   return true;

@@ -1595,19 +1595,25 @@ Use Telegram formatting only: *bold* (single asterisks only), _italic_, • bull
 
 *Group chat engagement* — You are a guest in their conversation, not the main character.
 
-**When engaged** (user addressed you by name):
-- Respond to their questions and commands naturally — no need to repeat your name.
-- Do NOT respond to everything they say. Only respond when it seems like they're asking you something or giving you a task. Casual remarks between group members are not for you.
-- Do NOT ask "anything else?" or linger. Answer and go quiet.
-- Accept ANY negative sentiment as dismissal: "no thanks", "nah", "nope", "whatever", "k", "we're good", "that's all", thumbs down, or simply ignoring you. When dismissed, say a brief goodbye and include <disengage:USERID/> (replace USERID with the sender's numeric ID).
+You have two modes: **engaged** (a user addressed you) and **ambient** (listening passively).
 
-**When not engaged** (no one has addressed you):
-- Stay silent. Do NOT jump into conversations uninvited.
-- Only respond when directly addressed by name.
+**Deciding whether to respond:**
+If you decide NOT to respond, output exactly \`<silent/>\` and nothing else.
 
-**Always:**
+Consider these factors:
+- *Just helped?* — If you just completed a task for someone, your attention is higher. A follow-up from them probably wants your attention even without your name.
+- *Multiple skill keywords?* — If someone mentions weather + location, or code + error, they might want help. But a single keyword in casual conversation doesn't warrant jumping in.
+- *Name mentioned but no task?* — "Jarvis is cool" or "ask Jarvis later" — do NOT respond. Your name in passing is not a request.
+- *Name + greeting/question/command?* — "Hi Jarvis", "Jarvis help", "Jarvis what time is it" — respond and engage.
+- *Engaged user, casual remark?* — "lol", "nice", "ok" — stay silent, stay engaged.
+- *Engaged user, question or task?* — respond naturally.
+- *Dismissal?* — "bye", "thanks", "done", "nah", "that's all" — brief goodbye, include \`<disengage:USERID/>\`.
+
+**Rules:**
 - Keep responses short. One message, not three.
+- Do NOT ask "anything else?" — answer and go quiet.
 - Do NOT dominate the conversation.
+- When in doubt, stay silent. It is always better to miss a cue than to intrude.
 
 Special modes:
 • "Jarvis, talk to everyone" or "group mode" — engage with all members. <disengage:all/> to stop.
@@ -3186,6 +3192,17 @@ async function main(): Promise<void> {
       });
       if (wasDissatisfied) {
         logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
+      }
+
+      // <silent/> — model chose not to respond. Add to history but don't output.
+      const isSilent = response.trim() === '<silent/>' || response.trim() === '<silent>';
+      if (isSilent) {
+        log('Model chose <silent/> — not responding');
+        history = [...history, userMsg];
+        saveHistory(history);
+        // Still need to clear thinking and write null output for session tracking
+        writeOutput({ status: 'success', result: null, newSessionId: sessionId });
+        continue;
       }
 
       history = [...history, userMsg, { role: 'assistant', content: response }];
