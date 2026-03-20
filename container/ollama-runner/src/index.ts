@@ -279,7 +279,7 @@ These patterns keep you in control as orchestrator — use escalate only when th
         properties: {
           model: {
             type: 'string',
-            description: 'Model name or alias. Built-in aliases: "flux" → "x/flux2-klein:9b" (image generation), "vision" or "llama" → "qwen2.5vl:72b" (vision model), "coder" → "qwen3-coder:30b" (code specialist), "artist" → "qwen2.5vl:72b" (visual advice — use generate_art/generate_film for actual generation), "secretary" → "qwen3:4b". Any model name containing "flux", "stable-diffusion", "sdxl", or "dall-e" activates the image generation path; all other names use text chat. You can also use any model name from ollama_list_models directly.',
+            description: 'Model name or alias. Built-in aliases: "flux" → "x/flux2-klein:9b" (image generation), "vision" or "llama" → "qwen2.5vl:72b" (vision model), "coder" → "qwen3-coder:30b" (code specialist), "artist" → "qwen2.5vl:72b" (visual advice — use generate_art/generate_film for actual generation), "secretary" → "qwen2.5:3b". Any model name containing "flux", "stable-diffusion", "sdxl", or "dall-e" activates the image generation path; all other names use text chat. You can also use any model name from ollama_list_models directly.',
           },
           prompt: {
             type: 'string',
@@ -637,7 +637,7 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://host.docker.internal:1143
 export const MODELS = {
   // Always-on (pinned in VRAM)
   COORDINATOR:  process.env.OLLAMA_MODEL_COORDINATOR  || 'qwen3.5:35b',
-  SECRETARY:    process.env.OLLAMA_MODEL_SECRETARY     || 'qwen3:4b',
+  SECRETARY:    process.env.OLLAMA_MODEL_SECRETARY     || 'qwen2.5:3b',
 
   // Specialists (evict after idle)
   CODER:        process.env.OLLAMA_MODEL_CODER         || 'qwen3-coder:30b',
@@ -804,7 +804,7 @@ export interface MessageClassification {
   taskTypeRich: RichTaskType;
   temperature: number;
   complexity: 'low' | 'medium' | 'high';
-  usedSecretary: boolean;  // true = actual qwen3:4b call succeeded; false = image shortcut or regex fallback
+  usedSecretary: boolean;  // true = actual qwen2.5:3b call succeeded; false = image shortcut or regex fallback
   needsWeb?: boolean;      // true when question requires live/current data; secretary skips draft, coordinator primed to web_search
 }
 
@@ -846,7 +846,7 @@ function formatFeedbackForPrompt(grades: SecretaryGrade[]): string {
   return lines.length > 0 ? `\nRecent corrections — self-calibrate:\n${lines.map((l) => `• ${l}`).join('\n')}\n` : '';
 }
 
-/** Classify a message using the Secretary (qwen3:4b) for semantic routing.
+/** Classify a message using the Secretary (qwen2.5:3b) for semantic routing.
  * For low-complexity messages the secretary also drafts an answer — the coordinator
  * reviews it and either echoes it or steps in with their own response.
  * Falls back to regex classifiers if the call fails or times out. */
@@ -1044,7 +1044,7 @@ function getHistoryConfig(model: string, think: boolean): { compressThreshold: n
     : { compressThreshold: HISTORY_COMPRESS_THRESHOLD, keepRecent: HISTORY_KEEP_RECENT };
 }
 
-/** Compress older history into a summary using qwen3:4b (secretary — fast, low cost). */
+/** Compress older history into a summary using qwen2.5:3b (secretary — fast, low cost). */
 async function compressHistory(history: Message[], compressThreshold = HISTORY_COMPRESS_THRESHOLD, keepRecent = HISTORY_KEEP_RECENT): Promise<Message[]> {
   if (history.length <= compressThreshold) return history;
 
@@ -1198,7 +1198,7 @@ export function getSystemPrompt(assistantName: string, groupFolder?: string): st
 
 *Your team:*
 
-• *Secretary (qwen3:4b)* — fast classifier. Routes every message to the right model and tier before you see it. Also compresses conversation history in the background to keep context fresh. Never used for reasoning or complex tasks.
+• *Secretary (qwen2.5:3b)* — fast classifier. Routes every message to the right model and tier before you see it. Also compresses conversation history in the background to keep context fresh. Never used for reasoning or complex tasks.
 • *You (${assistantName} · qwen3.5:35b)* — team lead and coordinator. Strong across reasoning, analysis, writing, planning, and conversation. You route tasks to the right specialist and handle general conversation directly. When a task has a clear specialist fit (code → coder, images → artist, hard reasoning → analyst), delegate immediately rather than attempting it yourself first.
 • *Coder (qwen3-coder:30b)* — software development expert. Auto-assigned for coding tasks: writing, debugging, reviewing, and refactoring code. Evicts from VRAM immediately after use to free space.
 • *Artist / Cinematographer (qwen2.5vl:72b)* — visual expert and creative director. Sees reference images directly. Crafts expert image and video generation prompts, selects the best backend, and executes generation end-to-end. Use generate_art for images, generate_film for videos. Consult via ollama_generate with model "artist" for visual advice without generating. Evicts from VRAM immediately after use.

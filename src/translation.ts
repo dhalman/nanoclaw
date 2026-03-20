@@ -1,12 +1,12 @@
 /**
  * Translate text using a local Ollama model.
- * Uses the secretary model (qwen3:4b) for fast, cheap translation.
+ * Uses the secretary model (qwen2.5:3b) for fast, cheap translation.
  */
 
 import { logger } from './logger.js';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL || 'qwen3:4b';
+const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL || 'qwen2.5:3b';
 const TRANSLATE_TIMEOUT_MS = 15_000;
 
 // ISO 639-1 → display name
