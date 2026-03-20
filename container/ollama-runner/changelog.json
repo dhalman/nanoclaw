@@ -1,4 +1,11 @@
 {
+  "0.2.34": {
+    "date": "2026-03-19",
+    "title": "fix: unify all translations to 35B model with consistent format",
+    "notes": [
+      "fix: unify all translations to 35B model with consistent format"
+    ]
+  },
   "0.2.33": {
     "date": "2026-03-19",
     "title": "fix: skip auto-translate for messages already in translation format",
