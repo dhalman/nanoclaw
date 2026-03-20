@@ -1,4 +1,11 @@
 {
+  "0.2.53": {
+    "date": "2026-03-19",
+    "title": "fix: add date to status timestamps",
+    "notes": [
+      "fix: add date to status timestamps"
+    ]
+  },
   "0.2.52": {
     "date": "2026-03-19",
     "title": "feat: add timestamp to online/stopped status messages",
