@@ -126,6 +126,15 @@ function buildVolumeMounts(
       containerPath: '/workspace/group',
       readonly: false,
     });
+
+    // Claude CLI inbox — writable so Andy can drop task files
+    const inboxDir = path.join(DATA_DIR, 'claude-inbox');
+    fs.mkdirSync(inboxDir, { recursive: true });
+    mounts.push({
+      hostPath: inboxDir,
+      containerPath: '/workspace/project/data/claude-inbox',
+      readonly: false,
+    });
   } else {
     // Other groups only get their own folder
     mounts.push({
