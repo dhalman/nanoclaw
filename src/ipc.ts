@@ -13,6 +13,7 @@ import {
   editJarvisMessage,
   deleteJarvisMessage,
   pinJarvisMessage,
+  unpinJarvisMessage,
 } from './channels/telegram.js';
 import { AvailableGroup } from './snapshots.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
@@ -96,10 +97,12 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
 
   if (entry?.messageId) {
     try {
+      await unpinJarvisMessage(chatJid, entry.messageId);
       await editJarvisMessage(chatJid, entry.messageId, text);
+      await pinJarvisMessage(chatJid, entry.messageId);
       logger.info(
         { chatJid, messageId: entry.messageId },
-        'Status message updated',
+        'Status message updated and re-pinned',
       );
       return;
     } catch {

@@ -715,6 +715,19 @@ export async function pinJarvisMessage(
   }
 }
 
+export async function unpinJarvisMessage(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.unpinChatMessage(numericId, { message_id: messageId });
+  } catch {
+    /* ignore — message may not be pinned */
+  }
+}
+
 /**
  * Send a video via the Jarvis bot.
  * videoBase64: base64-encoded MP4 bytes
