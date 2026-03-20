@@ -12,6 +12,7 @@ import {
   sendPoolMessage,
   editJarvisMessage,
   deleteJarvisMessage,
+  pinJarvisMessage,
 } from './channels/telegram.js';
 import { AvailableGroup } from './snapshots.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
@@ -106,12 +107,13 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
     }
   }
 
-  // No existing status message or edit failed — send new
+  // No existing status message or edit failed — send new and pin it
   const sentId = await sendJarvisMessage(chatJid, text);
   if (sentId) {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
     saveStatusEntries();
-    logger.info({ chatJid }, 'Status message sent');
+    await pinJarvisMessage(chatJid, sentId);
+    logger.info({ chatJid, messageId: sentId }, 'Status message sent and pinned');
   }
 }
 

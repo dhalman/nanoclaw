@@ -234,11 +234,17 @@ export async function initJarvisBot(
       // On-demand or improved translation: reply to any message with "translate",
       // or reply to a translation with dissatisfaction to get a 35B re-translation.
       const TRANSLATE_CMD = /^\s*(?:translate|translation|🌐)\s*$/i;
-      const TRANSLATE_DISSATISFIED = /\b(?:bad|wrong|incorrect|not (?:right|correct|accurate)|inaccurate|poor|terrible|awful|horrible|mistranslat|not quite|better translation|translate (?:again|better|properly|correctly)|re-?translate|fix (?:the )?translat)\b/i;
+      const TRANSLATE_DISSATISFIED =
+        /\b(?:bad|wrong|incorrect|not (?:right|correct|accurate)|inaccurate|poor|terrible|awful|horrible|mistranslat|not quite|better translation|translate (?:again|better|properly|correctly)|re-?translate|fix (?:the )?translat)\b/i;
       const isTranslateRequest = TRANSLATE_CMD.test(text);
-      const isTranslateComplaint = TRANSLATE_DISSATISFIED.test(text) &&
+      const isTranslateComplaint =
+        TRANSLATE_DISSATISFIED.test(text) &&
         ctx.message.reply_to_message?.text?.includes('🌐');
-      if (isGroup && ctx.message.reply_to_message && (isTranslateRequest || isTranslateComplaint)) {
+      if (
+        isGroup &&
+        ctx.message.reply_to_message &&
+        (isTranslateRequest || isTranslateComplaint)
+      ) {
         // For complaints about translations, get the original message being
         // replied to (the translation's reply_to). For direct "translate", use the reply target.
         let sourceText: string | undefined;
@@ -246,7 +252,8 @@ export async function initJarvisBot(
 
         if (isTranslateComplaint) {
           // The replied-to message is a translation — find the original it was replying to
-          const origReply = (ctx.message.reply_to_message as any)?.reply_to_message;
+          const origReply = (ctx.message.reply_to_message as any)
+            ?.reply_to_message;
           sourceText = origReply?.text || origReply?.caption;
           if (origReply?.message_id) replyTarget = origReply.message_id;
           // Fall back to stripping 🌐 lines from the translation message itself
@@ -271,9 +278,11 @@ export async function initJarvisBot(
               .then((translations) => {
                 if (translations.length > 0) {
                   const prefix = useHighQuality ? '_🔄 improved:_\n' : '';
-                  const echo = prefix + translations
-                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                    .join('\n');
+                  const echo =
+                    prefix +
+                    translations
+                      .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                      .join('\n');
                   sendJarvisMessage(chatJid, echo, replyTarget).catch(() => {});
                 }
               })
@@ -692,6 +701,24 @@ export async function deleteJarvisMessage(
     logger.debug(
       { chatId, messageId, err },
       'deleteJarvisMessage failed (ignored)',
+    );
+  }
+}
+
+export async function pinJarvisMessage(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.pinChatMessage(numericId, messageId, {
+      disable_notification: true,
+    });
+  } catch (err) {
+    logger.debug(
+      { chatId, messageId, err },
+      'pinJarvisMessage failed (ignored)',
     );
   }
 }
