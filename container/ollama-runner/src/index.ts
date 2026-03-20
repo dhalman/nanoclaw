@@ -2809,9 +2809,8 @@ async function main(): Promise<void> {
         return;
       }
 
-      // Ollama is up — send "online" status immediately (don't wait for video backends)
-      const onlineTime = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: process.env.TZ || 'UTC' });
-      sendIpc(`startup-${Date.now()}.json`, { type: 'status', chatJid, text: `_${assistantName} v${buildId} online — ${onlineTime}_ 😎` });
+      // Online status is sent by the host (index.ts) after bot init — not from the container.
+      // This avoids the race where IPC arrives before the bot can send/pin.
 
       // Warm the coordinator — it handles all first-message routing when secretary is disabled.
       // When secretary is enabled, warm secretary instead (classify needs it warm).

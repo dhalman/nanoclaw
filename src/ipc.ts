@@ -91,7 +91,7 @@ export function markUserActivity(_chatJid: string): void {
  * message if one exists. Only sends new when there's no prior message ID
  * or the edit fails (message deleted by user).
  */
-async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
+export async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
   const entries = getStatusEntries();
   const entry = entries.get(chatJid);
 

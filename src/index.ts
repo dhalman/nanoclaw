@@ -51,7 +51,7 @@ import {
 } from './db.js';
 import { GroupQueue } from './group-queue.js';
 import { resolveGroupFolderPath } from './group-folder.js';
-import { markUserActivity, sendStoppedStatus, startIpcWatcher } from './ipc.js';
+import { markUserActivity, sendOrEditStatus, sendStoppedStatus, startIpcWatcher } from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
   getAvailableGroups as getAvailableGroupsFromSnapshots,
@@ -844,6 +844,23 @@ async function main(): Promise<void> {
     writeGroupsSnapshot,
   });
   queue.setProcessMessagesFn(processGroupMessages);
+
+  // Send online status from host (bot is initialized, can pin)
+  {
+    const buildId = (() => {
+      try { return fs.readFileSync(path.join(process.cwd(), 'container/ollama-runner/build-id.txt'), 'utf-8').trim(); }
+      catch { return '?'; }
+    })();
+    const onlineTime = new Date().toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+    for (const [chatJid, group] of Object.entries(registeredGroups)) {
+      if (!group.containerConfig?.ollamaRunner) continue;
+      if (!chatJid.startsWith('tg:') && !chatJid.startsWith('tg-j:')) continue;
+      const name = group.containerConfig.assistantName || ASSISTANT_NAME;
+      sendOrEditStatus(chatJid, `_${name} v${buildId} online — ${onlineTime}_ 😎`).catch(() => {});
+    }
+  }
 
   // Pre-spawn persistent containers for all ollama-runner groups
   for (const [chatJid, group] of Object.entries(registeredGroups)) {
