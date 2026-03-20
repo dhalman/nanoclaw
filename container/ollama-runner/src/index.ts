@@ -2937,6 +2937,14 @@ async function main(): Promise<void> {
           log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
         }
 
+      // Immediate "..." acknowledgment — deleted when response arrives
+      const ackId = `ack-${Date.now()}`;
+      fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
+      fs.writeFileSync(
+        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
+        JSON.stringify({ type: 'thinking_start', chatJid, text: '_..._', thinkingId: ackId }),
+      );
+
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
@@ -2964,18 +2972,12 @@ async function main(): Promise<void> {
       const safeHistory = trimHistoryForInference(history);
       const messages = [systemMsg, ...safeHistory, userMsg, routeMsg];
 
-      // Status indicator: always send an immediate base message, append status labels to it.
-      // Uses thinking_start / thinking_update IPC types so the host edits the same Telegram
-      // message in place. On completion, the message is updated to show the final response time.
-      // Labels per tier: Responding (35b fast) · Working (coder) · Thinking (35b+think) · Reasoning (deepseek)
+      // Progressive status indicator using the "..." ack message:
+      // 1. "..." already sent (ackId) — shows message was received
+      // 2. Update with model/task after classification
+      // 3. Update with elapsed time during inference
+      // 4. Delete on completion — stats appended to the actual response
       let statusLabel = getStatusLabel(model, thinking);
-      const thinkingId = `thinking-${Date.now()}`;
-      const ipcMsgDir = IPC_MSG_DIR;
-      let elapsedSeconds = 0;
-      const thinkingUpdateFiles: string[] = [];
-      let thinkingInterval: ReturnType<typeof setInterval> | null = null;
-
-      // Derive a human-readable response type label from task type and images
       let responseType = currentImages?.length ? 'vision'
         : taskTypeRich === 'code' || taskTypeRich === 'debug' ? 'coding'
         : taskTypeRich === 'creative' ? 'creative'
@@ -2983,74 +2985,53 @@ async function main(): Promise<void> {
         : taskTypeRich === 'decision' ? 'decision'
         : thinking ? 'reasoning'
         : 'chat';
-
-      // Detect task assignment: imperative sentences that direct an action
-      const TASK_DETECT = /^(?:(?:can you|please|could you|i need(?: you to)?|i want(?: you to)?|i(?:'d| would) like(?: you to)?)\s+)?(?:write|create|generate|make|build|find|search|research|schedule|remind|set up|summarize|explain|analyze|fix|update|add|remove|delete|send|check|draw|design|calculate|translate|convert|edit|modify|list|fetch|get|help(?: me)?|do|run|execute|look\s+up|deploy|draft|plan|organize|prepare|record|download|upload|move|copy|rename|format)\b/i;
-      const firstLine = prompt.trim().split('\n')[0].trim();
-      const isTaskAssignment = TASK_DETECT.test(firstLine);
-      const taskSummary = isTaskAssignment
-        ? (firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine)
-        : null;
-
-      // Base text: responseType · model, with optional task summary
       const modelLabel = thinking ? `${model}+think` : model;
-      const buildBase = () => taskSummary ? `${modelLabel} · ${responseType} — ${taskSummary}` : `${modelLabel} · ${responseType}`;
-      let statusPart = '';
+      let elapsedSeconds = 0;
+      const statusFiles: string[] = [];
 
-      const buildText = () => statusPart ? `_${buildBase()} — ${statusPart}_` : `_${buildBase()}_`;
+      // Update "..." with model/task info now that classification is done
+      const statusFile1 = path.join(IPC_MSG_DIR, `${ackId}-upd-00000.json`);
+      statusFiles.push(statusFile1);
+      fs.writeFileSync(statusFile1, JSON.stringify({
+        type: 'thinking_update', chatJid, thinkingId: ackId,
+        text: `_${modelLabel} · ${responseType}_`,
+      }));
 
-      // Always send immediate acknowledgment
-      fs.mkdirSync(ipcMsgDir, { recursive: true });
-      const thinkingStartFile = path.join(ipcMsgDir, `${thinkingId}-start.json`);
-      fs.writeFileSync(thinkingStartFile, JSON.stringify({ type: 'thinking_start', chatJid, text: buildText(), thinkingId }));
+      let thinkingInterval: ReturnType<typeof setInterval> | null = null;
 
-      const sendUpdate = () => {
-        const f = path.join(ipcMsgDir, `${thinkingId}-upd-${String(elapsedSeconds).padStart(5, '0')}.json`);
-        thinkingUpdateFiles.push(f);
-        fs.mkdirSync(ipcMsgDir, { recursive: true });
-        fs.writeFileSync(f, JSON.stringify({ type: 'thinking_update', chatJid, text: buildText(), thinkingId }));
-      };
-
-      // Post a status update during sequential operations (e.g. tool calls).
       const setStatus = (text: string) => {
         if (/generating\s+image/i.test(text)) { statusLabel = 'Processing'; responseType = 'image'; }
         if (/generating\s+video/i.test(text)) { statusLabel = 'Processing'; responseType = 'video'; }
         elapsedSeconds += 5;
-        statusPart = text;
-        sendUpdate();
+        const f = path.join(IPC_MSG_DIR, `${ackId}-upd-${String(elapsedSeconds).padStart(5, '0')}.json`);
+        statusFiles.push(f);
+        fs.writeFileSync(f, JSON.stringify({
+          type: 'thinking_update', chatJid, thinkingId: ackId,
+          text: `_${modelLabel} · ${responseType} — ${text}_`,
+        }));
       };
 
-      // After 5s, append the status label to the base message
+      // After 5s, start showing elapsed time
       const thinkingDelay = setTimeout(() => {
         elapsedSeconds = 5;
-        statusPart = `${statusLabel}...`;
-        sendUpdate();
-
+        setStatus(`${statusLabel}... (${elapsedSeconds}s)`);
         thinkingInterval = setInterval(() => {
           elapsedSeconds += 5;
-          statusPart = `${statusLabel}... (${elapsedSeconds}s)`;
-          sendUpdate();
+          setStatus(`${statusLabel}... (${elapsedSeconds}s)`);
         }, 5000);
       }, 5000);
 
-      // On completion, update the indicator with the final response time instead of deleting it.
-      const clearThinking = (responseMs?: number) => {
+      // On completion: delete the status message (stats go in the response itself)
+      const clearThinking = () => {
         clearTimeout(thinkingDelay);
         if (thinkingInterval) { clearInterval(thinkingInterval); thinkingInterval = null; }
-        // Discard any pending intermediate update files
-        for (const f of thinkingUpdateFiles) { try { fs.unlinkSync(f); } catch { /* already read */ } }
-        thinkingUpdateFiles.length = 0;
-        let startConsumed = false;
-        try { fs.unlinkSync(thinkingStartFile); } catch { startConsumed = true; }
-        if (startConsumed) {
-          // Message already shown — update it with the final response time
-          const doneText = responseMs !== undefined
-            ? `_${modelLabel} · ${responseType} — ${(responseMs / 1000).toFixed(1)}s_`
-            : `_${buildBase()}_`;
-          const doneFile = path.join(ipcMsgDir, `${thinkingId}-zzz-done.json`);
-          fs.mkdirSync(ipcMsgDir, { recursive: true });
-          fs.writeFileSync(doneFile, JSON.stringify({ type: 'thinking_update', chatJid, text: doneText, thinkingId }));
-        }
+        for (const f of statusFiles) { try { fs.unlinkSync(f); } catch { /* already read */ } }
+        statusFiles.length = 0;
+        // Delete the status message from chat
+        fs.writeFileSync(
+          path.join(IPC_MSG_DIR, `${ackId}-clear.json`),
+          JSON.stringify({ type: 'thinking_clear', thinkingId: ackId }),
+        );
       };
 
       // Let the model drive the conversation.
@@ -3071,7 +3052,7 @@ async function main(): Promise<void> {
         callPromise, taskCtx, chatJid, groupFolder, history, assistantName, sessionId,
       );
       const responseMs = Date.now() - responseStart;
-      clearThinking(responseMs);
+      clearThinking();
       currentImages = undefined; // images consumed after first call
       log(`[PERF] response | model=${model} | task=${taskType} | think=${thinking} | prompt_chars=${prompt.length} | history_msgs=${history.length} | total_ms=${responseMs}${interrupts.length > 0 ? ` | mid_task_interrupts=${interrupts.length}` : ''}`);
       logPerf({
@@ -3106,9 +3087,13 @@ async function main(): Promise<void> {
         compressHistory(history, compressThreshold, keepRecent).then((h) => { compressedHistory = h; }).catch(() => {});
       }
 
+      // Append stats to response: model, task type, elapsed time
+      const statsLine = `\n\n_(${model.replace(/:.*/, '')}${thinking ? '+think' : ''} · ${taskTypeRich} · ${(responseMs / 1000).toFixed(1)}s)_`;
+      const responseWithStats = response ? response + statsLine : null;
+
       writeOutput({
         status: 'success',
-        result: response || null,
+        result: responseWithStats,
         newSessionId: sessionId,
       });
 
