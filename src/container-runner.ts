@@ -589,7 +589,7 @@ export async function runContainerAgent(
             JSON.stringify({
               type: 'message',
               chatJid: input.chatJid,
-              text: `_${assistantName} stopped — ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}_`,
+              text: `_${assistantName} stopped — ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}_`,
             }),
           );
         } catch {
