@@ -1207,6 +1207,9 @@ const DIRECT_PATTERNS: Array<{
   },
 ];
 
+// Patterns for queries that should go straight to web_search
+const WEB_DIRECT_PATTERN = /\b(?:weather|temperature|forecast|(?:what|how) (?:is|much|many|far|old|tall|long) (?:the |a )?(?:price|cost|population|distance|height|time|date|score)|stock price|exchange rate|current (?:time|date|weather|temperature|price|score))\b/i;
+
 /**
  * Try to handle a message directly via the secretary path.
  * Returns the response string if handled, or null if the coordinator should take over.
@@ -1218,13 +1221,50 @@ async function trySecretaryDirect(
   chatJid: string,
   groupFolder: string,
 ): Promise<string | null> {
-  // Only intercept simple messages routed to the default coordinator
-  if (cls.complexity !== 'low' || cls.think || cls.model !== MODELS.COORDINATOR) return null;
-
   // Extract the actual user text from XML prompt (strip <context> and <messages> wrappers)
   const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
   const userText = textMatch ? textMatch[1].trim() : prompt;
-  if (!userText || userText.length > 200) return null; // too long for direct execution
+  if (!userText || userText.length > 300) return null;
+
+  // Web-direct: simple factual queries that just need a search
+  if (cls.needsWeb && WEB_DIRECT_PATTERN.test(userText) && !cls.think) {
+    try {
+      const start = Date.now();
+      const searchResult = await handleToolCall('web_search', { query: userText }, chatJid, groupFolder);
+      if (searchResult && searchResult.length > 10) {
+        // Use secretary to summarize the search result into a brief answer
+        const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: MODELS.SECRETARY,
+            messages: [
+              { role: 'system', content: 'Answer the question in 1-2 sentences using the search results. Be direct.' },
+              { role: 'user', content: `Question: ${userText}\n\nSearch results:\n${searchResult.slice(0, 2000)}` },
+            ],
+            keep_alive: KEEP_ALIVE_SPECIALIST,
+            options: { num_ctx: 4096, temperature: 0.1, num_predict: 200 },
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (resp.ok) {
+          const data = await resp.json() as OllamaResponse;
+          const answer = extractContent(data.message.content).trim();
+          if (answer) {
+            log(`[secretary-direct] web_search+summarize → ${Date.now() - start}ms (bypassed coordinator)`);
+            return answer;
+          }
+        }
+      }
+    } catch (err) {
+      log(`[secretary-direct] web_search failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+    }
+    return null;
+  }
+
+  // Tool-direct: simple queries that map to a single tool call
+  if (cls.complexity !== 'low' || cls.think || cls.model !== MODELS.COORDINATOR) return null;
 
   for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
     const match = userText.match(pattern);
