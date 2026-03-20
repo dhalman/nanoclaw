@@ -690,7 +690,7 @@ const AUTO_ESCALATE_PATTERN = /\bI apologize\b|\bmy apologies\b|(?:I'?m|I am) so
 //   — unambiguous coding verbs: implement, refactor, debug
 //   — action verb + code artifact noun (function, class, script, API, SQL, regex, etc.)
 const CODING_PATTERN = /`[^`\n]+`|```|\b(?:implement|refactor|debug)\b|\b\w+\.[jt]sx?|\.py|\.go|\.rs|\.rb|\.sh\b|\b(?:write|create|generate|build|fix|add|update|edit|change|run|execute|test|read|look at|review|check|inspect|examine|find|open|show)\s+(?:(?:a|an|the|my|some|this|your|that)\s+)?(?:function|class|method|script|module|component|endpoint|api\b|sql\b|query|regex|regexp|algorithm|program\b|snippet|codebase|test(?:s)?|spec(?:s)?|cli\b|source|file|repo|repository|package|library|import|dependency|config|dockerfile|workflow)/im;
-const CREATIVE_PATTERN = /(?:write|tell|create|compose|craft|generate)\s+(?:a\s+)?(?:story|poem|song|script|narrative|fiction|tale|essay|joke|haiku|limerick|creative)/im;
+const CREATIVE_PATTERN = /(?:write|tell|create|compose|craft|generate|draw|paint|sketch|design|make)\s+(?:(?:a|an|me|us)\s+)?(?:story|poem|song|script|narrative|fiction|tale|essay|joke|haiku|limerick|creative|picture|image|photo|illustration|art|painting|portrait|video|film|animation|clip)/im;
 const BRAINSTORM_PATTERN = /(?:brainstorm|ideas? for|suggest(?:ions)?|what if|alternatives?|possibilities|ways to|how (?:could|might|would|can)(?: (?:i|we))?|how can\b|give me \d+ |list \d+ )/im;
 const ANALYSIS_PATTERN = /(?:analyz|explain|summariz|describ|compar|what (?:is|are|does|do)|how does|why (?:is|does|do)|tell me about|define|difference between)/im;
 
@@ -714,12 +714,25 @@ export function selectModelFallback(text: string, hasImages?: boolean): string {
 export type TaskType = 'code' | 'creative' | 'brainstorm' | 'analysis';
 export type RichTaskType = 'chat' | 'code' | 'creative' | 'analysis' | 'decision' | 'debug' | 'research';
 
+const DEBUG_PATTERN = /\b(?:debug|error|bug|crash|exception|traceback|stack\s*trace|undefined is not|cannot read|segfault|ENOENT|EACCES|panic|fatal)\b/im;
+const RESEARCH_PATTERN = /\b(?:search|look\s*up|find\s+(?:me|out)|google|research|what\s+(?:is|are)\s+the\s+(?:latest|current|best))\b/im;
+
 export function detectTaskType(text: string): TaskType {
   if (CODING_PATTERN.test(text)) return 'code';
   if (CREATIVE_PATTERN.test(text)) return 'creative';
   if (BRAINSTORM_PATTERN.test(text)) return 'brainstorm';
   if (ANALYSIS_PATTERN.test(text)) return 'analysis';
   return 'analysis';
+}
+
+export function detectRichTaskType(text: string): RichTaskType {
+  if (DEBUG_PATTERN.test(text)) return 'debug';
+  if (CODING_PATTERN.test(text)) return 'code';
+  if (CREATIVE_PATTERN.test(text)) return 'creative';
+  if (RESEARCH_PATTERN.test(text) || detectNeedsWeb(text)) return 'research';
+  if (DECISION_PATTERN.test(text)) return 'decision';
+  if (BRAINSTORM_PATTERN.test(text)) return 'analysis';
+  return 'chat';
 }
 
 const TASK_TEMPERATURE: Record<RichTaskType, number> = {
@@ -851,7 +864,7 @@ export async function classifyMessage(text: string, hasImages: boolean): Promise
     const model = selectModelFallback(text);
     const think = shouldThinkFallback(text);
     const taskType = detectTaskType(text);
-    const taskTypeRich: RichTaskType = taskType === 'code' ? 'code' : taskType === 'creative' ? 'creative' : 'analysis';
+    const taskTypeRich = detectRichTaskType(text);
     const complexity = estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
     const dissatisfied = detectDissatisfaction(text);
@@ -926,8 +939,10 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
     const model = selectModelFallback(text);
     const think = shouldThinkFallback(text);
     const taskType = detectTaskType(text);
-    const taskTypeRich: RichTaskType = taskType === 'code' ? 'code' : taskType === 'creative' ? 'creative' : 'analysis';
-    return { model, think, taskType, taskTypeRich, temperature: getTemperature(text), complexity: 'medium', usedSecretary: false };
+    const taskTypeRich = detectRichTaskType(text);
+    const complexity = estimateComplexity(text);
+    const needsWeb = detectNeedsWeb(text);
+    return { model, think, taskType, taskTypeRich, temperature: getTemperature(text), complexity, needsWeb, usedSecretary: false };
   }
 }
 

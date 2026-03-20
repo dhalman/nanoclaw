@@ -1,4 +1,11 @@
 {
+  "0.2.27": {
+    "date": "2026-03-19",
+    "title": "fix: improve regex classifier fallback for creative, research, debug tasks",
+    "notes": [
+      "fix: improve regex classifier fallback for creative, research, debug tasks"
+    ]
+  },
   "0.2.26": {
     "date": "2026-03-19",
     "title": "feat: per-user response queuing in group chats",
