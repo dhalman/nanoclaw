@@ -668,6 +668,10 @@ const HISTORY_KEEP_RECENT = 10;        // keep last 10 verbatim; compress the re
 // Extended history config — thinking, reasoning, and coding tiers (larger context windows)
 const HISTORY_COMPRESS_THRESHOLD_EXT = 50; // compress when >50 messages
 const HISTORY_KEEP_RECENT_EXT = 25;        // keep last 25 verbatim
+// Hard safety limits for what gets sent to Ollama (prevents inference hangs)
+const INFERENCE_MAX_MESSAGES = 40;     // never send more than 40 history messages to inference
+const INFERENCE_MAX_CHARS = 48_000;    // ~12K tokens — hard cap on total chars sent
+const MSG_CONTENT_MAX_CHARS = 4_000;   // truncate individual message content beyond this
 const SECRETARY_FEEDBACK_MAX = 50; // rolling store; only non-correct grades kept
 const IPC_POLL_MS = 100;
 
@@ -1054,6 +1058,81 @@ async function compressHistory(history: Message[], compressThreshold = HISTORY_C
     log('History compression failed, trimming instead');
     return recent;
   }
+}
+
+/**
+ * Hard-cap history for inference to prevent Ollama hangs.
+ * 1. Truncates individual message content beyond MSG_CONTENT_MAX_CHARS
+ * 2. Keeps only the most recent INFERENCE_MAX_MESSAGES
+ * 3. Enforces total character budget of INFERENCE_MAX_CHARS
+ * Applied just before sending to Ollama — does NOT modify persisted history.
+ */
+function trimHistoryForInference(history: Message[]): Message[] {
+  // Truncate oversized individual messages (tool outputs, long responses)
+  let trimmed = history.map((m) => {
+    const content = typeof m.content === 'string' ? m.content : '';
+    if (content.length > MSG_CONTENT_MAX_CHARS) {
+      return { ...m, content: content.slice(0, MSG_CONTENT_MAX_CHARS) + '\n[...truncated]' };
+    }
+    return m;
+  });
+
+  // Keep only most recent messages
+  if (trimmed.length > INFERENCE_MAX_MESSAGES) {
+    const dropped = trimmed.length - INFERENCE_MAX_MESSAGES;
+    trimmed = trimmed.slice(-INFERENCE_MAX_MESSAGES);
+    log(`History trimmed for inference: dropped ${dropped} oldest messages`);
+  }
+
+  // Enforce total character budget — drop oldest until under budget
+  let totalChars = trimmed.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0);
+  while (totalChars > INFERENCE_MAX_CHARS && trimmed.length > 2) {
+    const removed = trimmed.shift()!;
+    totalChars -= typeof removed.content === 'string' ? removed.content.length : 0;
+  }
+
+  return trimmed;
+}
+
+/**
+ * Split an XML-formatted prompt into per-sender groups.
+ * Returns an array of { sender, prompt } where each prompt contains only
+ * that sender's messages (preserving the XML wrapper and context header).
+ * If there's only one sender (or the prompt can't be parsed), returns the
+ * original prompt as a single entry.
+ */
+function splitBySender(prompt: string): Array<{ sender: string; prompt: string }> {
+  // Extract the context header (timezone etc.)
+  const contextMatch = prompt.match(/<context[^>]*\/>\n?/);
+  const header = contextMatch ? contextMatch[0] : '';
+
+  // Extract individual <message> elements with sender
+  const msgRegex = /<message\s+sender="([^"]*)"[^>]*>[\s\S]*?<\/message>/g;
+  const messages: Array<{ sender: string; xml: string }> = [];
+  let match;
+  while ((match = msgRegex.exec(prompt)) !== null) {
+    messages.push({ sender: match[1], xml: match[0] });
+  }
+
+  if (messages.length === 0) return [{ sender: 'unknown', prompt }];
+
+  // Get unique senders in order of appearance
+  const senders: string[] = [];
+  for (const m of messages) {
+    if (!senders.includes(m.sender)) senders.push(m.sender);
+  }
+
+  // Single sender — no splitting needed
+  if (senders.length <= 1) return [{ sender: senders[0] || 'unknown', prompt }];
+
+  // Multiple senders — group messages by sender, preserving order within each group
+  return senders.map((sender) => {
+    const senderMsgs = messages.filter((m) => m.sender === sender);
+    return {
+      sender,
+      prompt: `${header}<messages>\n${senderMsgs.map((m) => m.xml).join('\n')}\n</messages>`,
+    };
+  });
 }
 
 /** Extract a plain string from Ollama message content (handles string, array, or schema object). */
@@ -2220,19 +2299,23 @@ export async function callOllama(
       toolResults.push({ role: 'tool', content: result! });
     }
     const followUpStart = Date.now();
-    const followUp = await fetch(`${OLLAMA_HOST}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [...currentMessages, msg as Message, ...toolResults],
-        ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : { tools: OLLAMA_TOOLS }),
-        options: modelOpts,
-        ...(useThinkFlag ? { think: true } : {}),
-        ...keepAliveArgs,
-        stream: false,
+    const followUp = await withTimeout(
+      fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [...currentMessages, msg as Message, ...toolResults],
+          ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : { tools: OLLAMA_TOOLS }),
+          options: modelOpts,
+          ...(useThinkFlag ? { think: true } : {}),
+          ...keepAliveArgs,
+          stream: false,
+        }),
       }),
-    });
+      TOOL_TIMEOUT_MS,
+      `callOllama follow-up(${model})`,
+    );
     const next = await followUp.json() as OllamaResponse;
     roundTimings.push(Date.now() - followUpStart);
     msg = next.message;
@@ -2589,6 +2672,19 @@ async function main(): Promise<void> {
         compressedHistory = null;
       }
 
+      // Per-user response queuing: when multiple users send messages in the
+      // same batch, process each sender separately to prevent cross-wiring.
+      const senderGroups = splitBySender(prompt);
+      if (senderGroups.length > 1) {
+        log(`Multi-sender batch: ${senderGroups.map((g) => g.sender).join(', ')} — processing sequentially`);
+      }
+
+      for (const senderGroup of senderGroups) {
+        if (senderGroups.length > 1) {
+          prompt = senderGroup.prompt;
+          log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
+        }
+
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
@@ -2597,7 +2693,9 @@ async function main(): Promise<void> {
       // to delegate, search, or enable thinking before starting inference
       const routeHint = buildRouteHint(prompt, !!currentImages?.length);
       const routeMsg: Message = { role: 'system', content: routeHint };
-      const messages = [systemMsg, ...history, userMsg, routeMsg];
+      // Hard-cap history to prevent Ollama inference hangs on large contexts
+      const safeHistory = trimHistoryForInference(history);
+      const messages = [systemMsg, ...safeHistory, userMsg, routeMsg];
 
       // Status indicator: always send an immediate base message, append status labels to it.
       // Uses thinking_start / thinking_update IPC types so the host edits the same Telegram
@@ -2728,9 +2826,16 @@ async function main(): Promise<void> {
       }
       saveHistory(history);
 
-      // Schedule background compression — runs during waitForIpcMessage, not during inference
+      // Compress history — synchronous if critically large, background otherwise
       const { compressThreshold, keepRecent } = getHistoryConfig(model, thinking);
-      if (history.length > compressThreshold) {
+      if (history.length > INFERENCE_MAX_MESSAGES) {
+        // Critical: history exceeds inference safety limit — compress NOW before next turn
+        try {
+          history = await compressHistory(history, compressThreshold, keepRecent);
+          log(`History force-compressed (was ${history.length + compressThreshold} msgs, now ${history.length})`);
+          saveHistory(history);
+        } catch { /* trimHistoryForInference will catch it at inference time */ }
+      } else if (history.length > compressThreshold) {
         compressHistory(history, compressThreshold, keepRecent).then((h) => { compressedHistory = h; }).catch(() => {});
       }
 
@@ -2743,9 +2848,8 @@ async function main(): Promise<void> {
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });
 
-      // Coordinator silently grades the secretary's classification and draft (fire-and-forget).
-      // Only runs when the secretary actually classified (not regex fallback, not image shortcut).
-      // Grades accumulate in SECRETARY_FEEDBACK_FILE and feed back into future classify prompts.
+      } // end per-sender loop
+
       log('Waiting for next message...');
       const nextMessage = await waitForIpcMessage();
       if (nextMessage === null) {

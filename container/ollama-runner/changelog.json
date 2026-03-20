@@ -1,4 +1,40 @@
 {
+  "0.2.26": {
+    "date": "2026-03-19",
+    "title": "feat: per-user response queuing in group chats",
+    "notes": [
+      "feat: per-user response queuing in group chats"
+    ]
+  },
+  "0.2.25": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.25",
+    "notes": []
+  },
+  "0.2.24": {
+    "date": "2026-03-19",
+    "title": "fix: prevent history from hanging Ollama inference",
+    "notes": [
+      "fix: prevent history from hanging Ollama inference"
+    ]
+  },
+  "0.2.23": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.23",
+    "notes": []
+  },
+  "0.2.22": {
+    "date": "2026-03-19",
+    "title": "fix: ollama-runner follow-up fetch timeout, IPC race condition, add 113 tests",
+    "notes": [
+      "fix: ollama-runner follow-up fetch timeout, IPC race condition, add 113 tests"
+    ]
+  },
+  "0.2.21": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.21",
+    "notes": []
+  },
   "0.2.20": {
     "date": "2026-03-19",
     "title": "Build 0.2.20",

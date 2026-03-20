@@ -53,6 +53,31 @@ vi.mock('./mount-security.js', () => ({
   validateAdditionalMounts: vi.fn(() => []),
 }));
 
+// Mock credential-proxy
+vi.mock('./credential-proxy.js', () => ({
+  detectAuthMode: vi.fn(() => 'api-key'),
+}));
+
+// Mock container-runtime
+vi.mock('./container-runtime.js', () => ({
+  CONTAINER_RUNTIME_BIN: 'docker',
+  CONTAINER_HOST_GATEWAY: 'host.docker.internal',
+  hostGatewayArgs: vi.fn(() => [
+    '--add-host',
+    'host.docker.internal:host-gateway',
+  ]),
+  readonlyMountArgs: vi.fn((h: string, c: string) => ['-v', `${h}:${c}:ro`]),
+  stopContainer: vi.fn((name: string) => `docker stop ${name}`),
+}));
+
+// Mock group-folder
+vi.mock('./group-folder.js', () => ({
+  resolveGroupFolderPath: vi.fn(
+    (f: string) => `/tmp/nanoclaw-test-groups/${f}`,
+  ),
+  resolveGroupIpcPath: vi.fn((f: string) => `/tmp/nanoclaw-test-data/ipc/${f}`),
+}));
+
 // Create a controllable fake ChildProcess
 function createFakeProcess() {
   const proc = new EventEmitter() as EventEmitter & {
@@ -196,6 +221,106 @@ describe('container-runner timeout behavior', () => {
     expect(result.status).toBe('error');
     expect(result.error).toContain('timed out');
     expect(onOutput).not.toHaveBeenCalled();
+  });
+
+  it('non-zero exit with no output resolves as error', async () => {
+    const resultPromise = runContainerAgent(testGroup, testInput, () => {});
+
+    // Container exits with error code, no output
+    fakeProc.emit('close', 1);
+    await vi.advanceTimersByTimeAsync(10);
+
+    const result = await resultPromise;
+    expect(result.status).toBe('error');
+    expect(result.error).toContain('exited with code 1');
+  });
+
+  it('spawn error resolves as error', async () => {
+    const resultPromise = runContainerAgent(testGroup, testInput, () => {});
+
+    fakeProc.emit('error', new Error('spawn failed'));
+    await vi.advanceTimersByTimeAsync(10);
+
+    const result = await resultPromise;
+    expect(result.status).toBe('error');
+    expect(result.error).toContain('spawn failed');
+  });
+
+  it('tracks newSessionId from streamed output', async () => {
+    const onOutput = vi.fn(async () => {});
+    const resultPromise = runContainerAgent(
+      testGroup,
+      testInput,
+      () => {},
+      onOutput,
+    );
+
+    emitOutputMarker(fakeProc, {
+      status: 'success',
+      result: 'response',
+      newSessionId: 'new-session-abc',
+    });
+
+    await vi.advanceTimersByTimeAsync(10);
+    fakeProc.emit('close', 0);
+    await vi.advanceTimersByTimeAsync(10);
+
+    const result = await resultPromise;
+    expect(result.newSessionId).toBe('new-session-abc');
+  });
+
+  it('handles multiple streamed outputs', async () => {
+    const outputs: ContainerOutput[] = [];
+    const onOutput = vi.fn(async (o: ContainerOutput) => {
+      outputs.push(o);
+    });
+    const resultPromise = runContainerAgent(
+      testGroup,
+      testInput,
+      () => {},
+      onOutput,
+    );
+
+    emitOutputMarker(fakeProc, { status: 'success', result: 'first' });
+    emitOutputMarker(fakeProc, { status: 'success', result: 'second' });
+
+    await vi.advanceTimersByTimeAsync(10);
+    fakeProc.emit('close', 0);
+    await vi.advanceTimersByTimeAsync(10);
+
+    await resultPromise;
+    expect(onOutput).toHaveBeenCalledTimes(2);
+    expect(outputs[0].result).toBe('first');
+    expect(outputs[1].result).toBe('second');
+  });
+
+  it('calls onProcess with proc and container name', async () => {
+    const onProcess = vi.fn();
+    const resultPromise = runContainerAgent(testGroup, testInput, onProcess);
+
+    fakeProc.emit('close', 0);
+    await vi.advanceTimersByTimeAsync(10);
+
+    await resultPromise;
+    expect(onProcess).toHaveBeenCalledTimes(1);
+    expect(onProcess.mock.calls[0][0]).toBe(fakeProc);
+    expect(onProcess.mock.calls[0][1]).toMatch(/^nanoclaw-test-group-/);
+  });
+
+  it('ollama-runner container writes stopped IPC on unexpected exit', async () => {
+    const fs = (await import('fs')).default;
+    const resultPromise = runContainerAgent(jarvisGroup, jarvisInput, () => {});
+
+    // Non-zero exit (not timeout) triggers stopped IPC
+    fakeProc.emit('close', 137);
+    await vi.advanceTimersByTimeAsync(10);
+
+    await resultPromise;
+    // writeFileSync should have been called for the stopped message
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('stopped-'),
+      expect.stringContaining('Jarvis stopped'),
+    );
   });
 
   it('normal exit after output resolves as success', async () => {
