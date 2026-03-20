@@ -1,4 +1,11 @@
 {
+  "0.2.50": {
+    "date": "2026-03-19",
+    "title": "feat: mount claude-inbox writable in main container",
+    "notes": [
+      "feat: mount claude-inbox writable in main container"
+    ]
+  },
   "0.2.49": {
     "date": "2026-03-19",
     "title": "feat: progressive status indicator with stats-in-response",
