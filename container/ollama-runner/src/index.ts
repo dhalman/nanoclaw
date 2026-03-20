@@ -1150,6 +1150,88 @@ function splitBySender(prompt: string): Array<{ sender: string; prompt: string }
   });
 }
 
+// --- Secretary Direct Execution ---
+// Simple queries that map to a single tool call bypass the coordinator entirely.
+// The secretary (qwen2.5:3b) classifies, we pattern-match the intent to a tool,
+// execute it, and format a brief response — ~300ms total vs ~5-8s through coordinator.
+
+const DIRECT_PATTERNS: Array<{
+  pattern: RegExp;
+  tool: string;
+  args: (match: RegExpMatchArray, text: string) => Record<string, unknown>;
+  format: (result: string) => string;
+}> = [
+  {
+    // "status", "are you online", "service status", "check services", "health check"
+    pattern: /\b(?:status|health|services?|backends?|are you (?:online|running|alive|up|ok|working))\b/i,
+    tool: 'service_status',
+    args: () => ({}),
+    format: (r) => r,
+  },
+  {
+    // "version", "what version", "build", "build id"
+    pattern: /\b(?:version|build\s*(?:id|number)?|what (?:version|build))\b/i,
+    tool: 'get_changelog',
+    args: () => ({}),
+    format: (r) => {
+      const lines = r.split('\n').slice(0, 5);
+      return lines.join('\n');
+    },
+  },
+  {
+    // "help", "what can you do", "capabilities"
+    pattern: /\b(?:help|what can you do|capabilities|commands|features)\b/i,
+    tool: 'get_help',
+    args: () => ({}),
+    format: (r) => r,
+  },
+  {
+    // "perf", "performance", "how fast", "response time", "benchmarks"
+    pattern: /\b(?:perf(?:ormance)?|benchmarks?|response time|how fast|speed|latency)\b/i,
+    tool: 'perf_summary',
+    args: () => ({}),
+    format: (r) => r,
+  },
+];
+
+/**
+ * Try to handle a message directly via the secretary path.
+ * Returns the response string if handled, or null if the coordinator should take over.
+ * Only fires for low-complexity, non-thinking, default-model messages.
+ */
+async function trySecretaryDirect(
+  prompt: string,
+  cls: MessageClassification,
+  chatJid: string,
+  groupFolder: string,
+): Promise<string | null> {
+  // Only intercept simple messages routed to the default coordinator
+  if (cls.complexity !== 'low' || cls.think || cls.model !== MODELS.COORDINATOR) return null;
+
+  // Extract the actual user text from XML prompt (strip <context> and <messages> wrappers)
+  const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
+  const userText = textMatch ? textMatch[1].trim() : prompt;
+  if (!userText || userText.length > 200) return null; // too long for direct execution
+
+  for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
+    const match = userText.match(pattern);
+    if (!match) continue;
+
+    try {
+      const start = Date.now();
+      const result = await handleToolCall(tool, args(match, userText), chatJid, groupFolder);
+      const response = format(result);
+      log(`[secretary-direct] ${tool} → ${Date.now() - start}ms (bypassed coordinator)`);
+      return response;
+    } catch (err) {
+      log(`[secretary-direct] ${tool} failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+      return null;
+    }
+  }
+
+  return null;
+}
+
 /** Extract a plain string from Ollama message content (handles string, array, or schema object). */
 export function extractContent(raw: unknown): string {
   if (typeof raw === 'string') return raw;
@@ -2703,6 +2785,18 @@ async function main(): Promise<void> {
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
+
+      // Secretary direct execution: simple queries bypass the coordinator
+      const directResult = await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
+      if (directResult) {
+        const userMsg: Message = { role: 'user', content: prompt };
+        history = [...history, userMsg, { role: 'assistant', content: directResult }];
+        saveHistory(history);
+        writeOutput({ status: 'success', result: directResult, newSessionId: sessionId });
+        writeOutput({ status: 'success', result: null, newSessionId: sessionId });
+        continue; // skip coordinator, go to next sender or wait for IPC
+      }
+
       const userMsg: Message = { role: 'user', content: prompt };
       // Inject routing hint — zero-inference classification that primes the coordinator
       // to delegate, search, or enable thinking before starting inference
