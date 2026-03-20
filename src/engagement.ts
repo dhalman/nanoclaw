@@ -133,10 +133,24 @@ export async function checkEngagement(
     }
   }
 
-  // Already-engaged users: passively listening — respond without name
+  // Already-engaged users: respond to questions/commands, ignore casual chatter
   const engagedMessages = messages.filter(
     (m) => !m.is_from_me && engaged.has(m.sender),
   );
+
+  // Non-engaged, non-mention messages: check if Jarvis can proactively help
+  // (e.g., someone asks a question that matches his skills)
+  const SKILL_PATTERN = /\b(?:weather|temperature|translate|search|find|look\s*up|price|generate|draw|paint|create|image|video|code|debug|fix|how\s+(?:do|to|can)|what\s+(?:is|are|does)|who\s+(?:is|are)|when\s+(?:is|was|will))\b/i;
+  const proactiveMessages = messages.filter(
+    (m) =>
+      !m.is_from_me &&
+      !engaged.has(m.sender) &&
+      !MENTION_PATTERN.test(m.content.trim()) &&
+      SKILL_PATTERN.test(m.content.trim()) &&
+      isTriggerAllowed(chatJid, m.sender, allowlistCfg),
+  );
+  // Proactive offers go through — the system prompt tells Jarvis to offer
+  // help briefly ("I can help with that if you'd like") not jump in fully
 
   // Owner triggers (is_from_me) always work via regex
   const ownerTriggers = messages.filter(
@@ -181,7 +195,7 @@ export async function checkEngagement(
     }
   }
 
-  if (triggerMessages.length === 0 && engagedMessages.length === 0)
+  if (triggerMessages.length === 0 && engagedMessages.length === 0 && proactiveMessages.length === 0)
     return false;
 
   return true;
