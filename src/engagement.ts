@@ -57,14 +57,43 @@ const engagedUsers: Record<string, Set<string>> = {};
 
 // Track emoji usage per user — learn their style to mirror back
 const userEmojiHistory: Record<string, Record<string, number>> = {};
-const TELEGRAM_EMOJI = ['👍', '👎', '❤', '🔥', '🥰', '👏', '😁', '🤔', '🤯', '😱', '😢', '🎉', '🤩', '🙏', '👌', '🤡', '🥱', '😍', '🐳', '🌚', '💯', '🫡', '👋'];
+const TELEGRAM_EMOJI = [
+  '👍',
+  '👎',
+  '❤',
+  '🔥',
+  '🥰',
+  '👏',
+  '😁',
+  '🤔',
+  '🤯',
+  '😱',
+  '😢',
+  '🎉',
+  '🤩',
+  '🙏',
+  '👌',
+  '🤡',
+  '🥱',
+  '😍',
+  '🐳',
+  '🌚',
+  '💯',
+  '🫡',
+  '👋',
+];
 
 /** Record emojis a user sends so we can mirror their style. */
-export function learnUserEmoji(chatJid: string, userId: string, text: string): void {
+export function learnUserEmoji(
+  chatJid: string,
+  userId: string,
+  text: string,
+): void {
   const key = `${chatJid}:${userId}`;
   if (!userEmojiHistory[key]) userEmojiHistory[key] = {};
   // Extract emojis from text
-  const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu;
+  const emojiRegex =
+    /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu;
   const emojis = text.match(emojiRegex) || [];
   for (const e of emojis) {
     userEmojiHistory[key][e] = (userEmojiHistory[key][e] || 0) + 1;
@@ -72,7 +101,11 @@ export function learnUserEmoji(chatJid: string, userId: string, text: string): v
 }
 
 /** Pick an emoji that mirrors the user's style for a given mood. */
-function pickUserEmoji(chatJid: string, userId: string, fallback: string): string {
+function pickUserEmoji(
+  chatJid: string,
+  userId: string,
+  fallback: string,
+): string {
   const key = `${chatJid}:${userId}`;
   const history = userEmojiHistory[key];
   if (!history || Object.keys(history).length === 0) return fallback;
@@ -145,7 +178,17 @@ export async function checkEngagement(
 }> {
   const isMainGroup = group.isMain === true;
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
-  if (!needsTrigger) return { shouldProcess: true, dismissals: [] };
+  if (!needsTrigger) {
+    // (nojar) tag forces ignore even for main groups
+    if (messages.every((m) => /\(nojar\)/i.test(m.content))) {
+      return { shouldProcess: false, dismissals: [] };
+    }
+    return { shouldProcess: true, dismissals: [] };
+  }
+
+  // (nojar) tag — force Jarvis to completely ignore the message
+  const filtered = messages.filter((m) => !/\(nojar\)/i.test(m.content));
+  if (filtered.length === 0) return { shouldProcess: false, dismissals: [] };
 
   const engaged = getEngaged(chatJid);
 
@@ -190,10 +233,7 @@ export async function checkEngagement(
         engaged.delete(m.sender);
         const emoji = pickUserEmoji(chatJid, m.sender, trivial.emoji);
         dismissedMessages.push({ message: m, emoji });
-        logger.info(
-          { chatJid, user: m.sender, emoji },
-          'Disengaged (trivial)',
-        );
+        logger.info({ chatJid, user: m.sender, emoji }, 'Disengaged (trivial)');
       }
     }
     // Learn emoji from all messages (not just trivial) to build user profile

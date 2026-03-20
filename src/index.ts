@@ -704,6 +704,9 @@ async function main(): Promise<void> {
           return;
         }
       }
+      // (nojar) — completely invisible to Jarvis: don't store, don't learn, don't process
+      if (/\(nojar\)/i.test(msg.content)) return;
+
       storeMessage(msg);
 
       // Learn user's emoji style from every message
