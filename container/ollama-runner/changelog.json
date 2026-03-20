@@ -1,9 +1,20 @@
 {
+  "0.3.39": {
+    "date": "2026-03-20",
+    "title": "v0.3.38 \u2014 Dynamic response translation, version sync",
+    "notes": [
+      "v0.3.38 \u2014 Dynamic response translation, version sync",
+      "v0.3.38 \u2014 NLP-based reaction sentiment analysis",
+      "v0.3.37 \u2014 Broader praise detection for emoji reactions",
+      "v0.3.36 \u2014 Reasoning forwarded to DM in group chats",
+      "v0.3.35 \u2014 Changelog synced, non-printable characters cleaned"
+    ]
+  },
   "0.3.22": {
     "date": "2026-03-20",
-    "title": "feat: instant 👀 reaction acknowledgment on message receipt",
+    "title": "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt",
     "notes": [
-      "feat: instant 👀 reaction acknowledgment on message receipt"
+      "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt"
     ]
   },
   "0.3.21": {
@@ -250,7 +261,7 @@
     "title": "fix: unpinChatMessage takes messageId directly, not options object",
     "notes": [
       "fix: unpinChatMessage takes messageId directly, not options object",
-      "fix: unpin → edit → re-pin status message on update"
+      "fix: unpin \u2192 edit \u2192 re-pin status message on update"
     ]
   },
   "0.2.54": {
@@ -650,7 +661,7 @@
     "title": "Translation Pipeline, NLP Router, Instant Commands",
     "notes": [
       "Auto-translate group messages. Secretary-direct commands bypass the coordinator (~2ms). Complete engagement overhaul. 520 tests passing.",
-      "Secretary swap to qwen2.5:3b (15x faster). Secretary-direct for version/status/help/restart. Native language tags. On-demand translation via 👀 or reply."
+      "Secretary swap to qwen2.5:3b (15x faster). Secretary-direct for version/status/help/restart. Native language tags. On-demand translation via \ud83d\udc40 or reply."
     ]
   },
   "0.3.26": {
@@ -704,7 +715,7 @@
     "title": "Swap secretary to gemma3:4b, NLP-first classification",
     "notes": [
       "Replaced qwen2.5:3b with gemma3:4b for message classification. Benchmarked 12/12 accuracy (was 11/12). ~630ms vs 210ms but accuracy matters more than speed for task routing.",
-      "Removed regex guard for creative→coder misrouting  -  gemma3 handles it correctly. qwen2.5:3b stays for translations (lighter, sufficient). Warm script loads both gemma3:4b + qwen2.5:3b + coordinator."
+      "Removed regex guard for creative\u2192coder misrouting  -  gemma3 handles it correctly. qwen2.5:3b stays for translations (lighter, sufficient). Warm script loads both gemma3:4b + qwen2.5:3b + coordinator."
     ]
   },
   "0.3.33": {
@@ -727,7 +738,7 @@
     "title": "Reasoning forwarded to DM in group chats",
     "notes": [
       "In group chats, reasoning blocks are stripped from the visible response and forwarded privately to DJ's DM. Keeps group chat clean while preserving full transparency for the owner.",
-      "Reasoning arrives as: 🧠 [GroupName] reasoning: ... in the Jarvis DM."
+      "Reasoning arrives as: \ud83e\udde0 [GroupName] reasoning: ... in the Jarvis DM."
     ]
   },
   "0.3.37": {
