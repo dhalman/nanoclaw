@@ -1,4 +1,13 @@
 {
+  "0.2.56": {
+    "date": "2026-03-19",
+    "title": "fix: retry status message send after 3s if bot not ready",
+    "notes": [
+      "fix: retry status message send after 3s if bot not ready",
+      "fix: add warn-level logging to all pin/status paths for debugging",
+      "fix: log pin failures at warn level for debugging"
+    ]
+  },
   "0.2.55": {
     "date": "2026-03-19",
     "title": "fix: unpinChatMessage takes messageId directly, not options object",
