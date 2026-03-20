@@ -1,4 +1,11 @@
 {
+  "0.3.18": {
+    "date": "2026-03-20",
+    "title": "feat: passive persistent engagement with dismissal",
+    "notes": [
+      "feat: passive persistent engagement with dismissal"
+    ]
+  },
   "0.3.17": {
     "date": "2026-03-20",
     "title": "fix: NLP intent treats greetings as directed, add engagement logging",
