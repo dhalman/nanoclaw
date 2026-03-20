@@ -1286,40 +1286,38 @@ async function translateForListeners(
 
   const translationStart = Date.now();
 
-  const results = await Promise.allSettled(
-    langs.map(async (targetLang) => {
-      const targetName = getLanguageNameLocal(targetLang);
-      try {
-        const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: MODELS.SECRETARY,
-            messages: [
-              { role: 'system', content: `Translate to ${targetName}. Return ONLY the translation, nothing else.` },
-              { role: 'user', content: userText },
-            ],
-            keep_alive: KEEP_ALIVE_SPECIALIST,
-            options: { num_ctx: 1024, temperature: 0.1 },
-            stream: false,
-          }),
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!resp.ok) return null;
-        const data = await resp.json() as OllamaResponse;
-        const translation = extractContent(data.message.content).trim();
-        if (!translation || translation.toLowerCase() === userText.trim().toLowerCase()) return null;
-        return { lang: targetLang, name: targetName, text: translation };
-      } catch {
-        return null;
+  // Run translations sequentially through the coordinator (35B) for quality.
+  // Sequential because Ollama processes one request at a time per model anyway.
+  const translations: Array<{ lang: string; name: string; text: string }> = [];
+  for (const targetLang of langs) {
+    const targetName = getLanguageNameLocal(targetLang);
+    try {
+      const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODELS.COORDINATOR,
+          messages: [
+            { role: 'system', content: `Translate the following text to ${targetName}. VERBATIM word-for-word translation — preserve tone, slang, and intent. Return ONLY the translated text. No explanations, no quotes, no preamble.` },
+            { role: 'user', content: userText },
+          ],
+          keep_alive: -1,
+          options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
+          think: false,
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json() as OllamaResponse;
+      const translation = extractContent(data.message.content).trim();
+      if (translation && translation.toLowerCase() !== userText.trim().toLowerCase()) {
+        translations.push({ lang: targetLang, name: targetName, text: translation });
       }
-    }),
-  );
-
-  const translations = results
-    .filter((r): r is PromiseFulfilledResult<{ lang: string; name: string; text: string } | null> => r.status === 'fulfilled')
-    .map((r) => r.value)
-    .filter((t): t is { lang: string; name: string; text: string } => t !== null);
+    } catch {
+      // Skip failed translations
+    }
+  }
 
   if (translations.length === 0) return;
 
