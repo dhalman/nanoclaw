@@ -1,4 +1,16 @@
 {
+  "0.3.25": {
+    "date": "2026-03-20",
+    "title": "feat: per-model inference pool with memory budget (125GB cap)",
+    "notes": [
+      "feat: per-model inference pool with memory budget (125GB cap)",
+      "feat: \"what's new\" goes to coordinator for friendly summary",
+      "feat: emoji reactions on Jarvis responses as sentiment feedback",
+      "feat: \ud83d\udc40 noticed \u2192 \ud83e\uddd0 investigating \u2192 removed on response",
+      "fix: \ud83e\uddd0 reaction fires BEFORE engagement check \u2014 truly instant",
+      "fix: regex-first engagement \u2014 NLP only for ambiguous mentions"
+    ]
+  },
   "0.3.24": {
     "date": "2026-03-20",
     "title": "feat: per-specialist personality prompts",
