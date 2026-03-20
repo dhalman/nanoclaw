@@ -255,16 +255,46 @@ export async function initJarvisBot(
           translateToMultiple(text, 'auto', targetLangs)
             .then((translations) => {
               if (translations.length > 0) {
-                let echo = `_💬 ${senderName}:_`;
-                for (const t of translations) {
-                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
-                }
+                const echo = translations
+                  .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                  .join('\n');
                 sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
                   () => {},
                 );
               }
             })
             .catch(() => {});
+        }
+      }
+
+      // On-demand translation: reply to any message with "translate" to translate it
+      const TRANSLATE_CMD = /^\s*(?:translate|translation|🌐)\s*$/i;
+      if (
+        isGroup &&
+        ctx.message.reply_to_message &&
+        TRANSLATE_CMD.test(text)
+      ) {
+        const replyText =
+          ctx.message.reply_to_message.text ||
+          (ctx.message.reply_to_message as any).caption;
+        if (replyText) {
+          const targetLangs = getTranslatorLanguages(group.folder);
+          if (targetLangs.length > 0) {
+            translateToMultiple(replyText, 'auto', targetLangs)
+              .then((translations) => {
+                if (translations.length > 0) {
+                  const echo = translations
+                    .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                    .join('\n');
+                  sendJarvisMessage(
+                    chatJid,
+                    echo,
+                    ctx.message.reply_to_message!.message_id,
+                  ).catch(() => {});
+                }
+              })
+              .catch(() => {});
+          }
         }
       }
 
@@ -437,7 +467,7 @@ export async function initJarvisBot(
               const targetLangs = isGroup
                 ? getTranslatorLanguages(group.folder)
                 : getUserPreferredLanguages(group.folder, sender);
-              let echo = `_🎙 ${senderName} [${getLanguageName(result.language)}]:_\n_"${result.text}"_`;
+              let echo = `_🎙 [${getLanguageName(result.language)}] "${result.text}"_`;
               const translations = await translateToMultiple(
                 result.text,
                 result.language,
@@ -452,7 +482,7 @@ export async function initJarvisBot(
                   content += `\n[${t.targetName}: ${t.text}]`;
                 }
               }
-              sendJarvisMessage(chatJid, echo).catch(() => {});
+              sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(() => {});
             } else {
               content = '[Voice message - transcription unavailable]';
             }
@@ -898,7 +928,7 @@ export class TelegramChannel implements Channel {
                     group.folder,
                     ctx.from?.id?.toString() || '',
                   );
-              let echo = `_🎙 ${senderName} [${getLanguageName(result.language)}]:_\n_"${result.text}"_`;
+              let echo = `_🎙 [${getLanguageName(result.language)}] "${result.text}"_`;
               const translations = await translateToMultiple(
                 result.text,
                 result.language,
