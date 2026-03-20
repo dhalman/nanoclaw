@@ -126,6 +126,15 @@ function buildVolumeMounts(
       containerPath: '/workspace/group',
       readonly: false,
     });
+
+    // Claude CLI inbox — writable so Andy can drop task files
+    const inboxDir = path.join(DATA_DIR, 'claude-inbox');
+    fs.mkdirSync(inboxDir, { recursive: true });
+    mounts.push({
+      hostPath: inboxDir,
+      containerPath: '/workspace/project/data/claude-inbox',
+      readonly: false,
+    });
   } else {
     // Other groups only get their own folder
     mounts.push({
@@ -580,7 +589,7 @@ export async function runContainerAgent(
             JSON.stringify({
               type: 'message',
               chatJid: input.chatJid,
-              text: `_${assistantName} stopped._`,
+              text: `_${assistantName} stopped — ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}_`,
             }),
           );
         } catch {

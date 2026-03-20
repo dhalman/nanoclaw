@@ -652,10 +652,11 @@ const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION]);
 // Only coordinator supports think: true — secretary is classification-only
 const MODELS_WITH_THINK = new Set([MODELS.COORDINATOR]);
 
-// Models that stay pinned in VRAM (keep_alive: -1)
-const MODELS_PINNED = new Set([MODELS.COORDINATOR]);
+// Models that stay pinned in VRAM (keep_alive: KEEP_ALIVE_PINNED)
+const MODELS_PINNED = new Set([MODELS.COORDINATOR, MODELS.SECRETARY]);
 // Specialists evict immediately after use — frees VRAM for larger models
-const KEEP_ALIVE_SPECIALIST = '0';
+const KEEP_ALIVE_PINNED = -1;      // never evict — stays in VRAM permanently
+const KEEP_ALIVE_SPECIALIST = '0'; // evict immediately — frees VRAM for other models
 const TOOL_TIMEOUT_MS = 600_000;       // 10 min — deepseek-r1 with thinking can run 2-5 min
 const IMAGE_TOOL_TIMEOUT_MS = 120_000; // 2 min for image generation
 const VIDEO_TOOL_TIMEOUT_MS = 360_000; // 6 min for video generation (internal deadline is 5 min)
@@ -905,7 +906,7 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
       body: JSON.stringify({
         model: MODELS.SECRETARY,
         messages: [{ role: 'user', content: classifyPrompt }],
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: KEEP_ALIVE_PINNED,
         options: { num_ctx: 1024, temperature: 0.1 },
         stream: false,
       }),
@@ -1072,7 +1073,7 @@ async function compressHistory(history: Message[], compressThreshold = HISTORY_C
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODELS.SECRETARY,  // background task
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: KEEP_ALIVE_PINNED,
         options: { num_ctx: 8192 },
         messages: [{ role: 'user', content: summaryPrompt }],
         stream: false,
@@ -1182,8 +1183,8 @@ const DIRECT_PATTERNS: Array<{
     format: (r) => r,
   },
   {
-    // "version", "what version", "build", "build id"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what (?:version|build))\b/i,
+    // "version", "what version", "build", "what's new", "changelog", "release notes", "version notes"
+    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|updates?|what changed)\b/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
@@ -1221,9 +1222,11 @@ async function trySecretaryDirect(
   chatJid: string,
   groupFolder: string,
 ): Promise<string | null> {
-  // Extract the actual user text from XML prompt (strip <context> and <messages> wrappers)
-  const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
-  const userText = textMatch ? textMatch[1].trim() : prompt;
+  // Extract the last message's text content from the XML prompt
+  const allMessages = [...prompt.matchAll(/<message[^>]*>([\s\S]*?)<\/message>/g)];
+  const userText = allMessages.length > 0
+    ? allMessages[allMessages.length - 1][1].trim()
+    : prompt;
   if (!userText || userText.length > 300) return null;
 
   // Web-direct: simple factual queries that just need a search
@@ -1340,7 +1343,7 @@ async function translateForListeners(
           { role: 'system', content: `Translate the text to each language listed. Verbatim — preserve tone, slang, intent. Return one translation per line, format: LANG: translation\nNo other text.` },
           { role: 'user', content: `Languages: ${langList}\n\nText: ${userText}` },
         ],
-        keep_alive: KEEP_ALIVE_SPECIALIST,
+        keep_alive: KEEP_ALIVE_PINNED,
         options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
         stream: false,
       }),
@@ -1374,7 +1377,7 @@ async function translateForListeners(
   // Format matching host-side UX: italic lines with [Language] prefix
   const translationMsg = translations
     .map((t) => `_🌐 [${t.name}] ${t.text}_`)
-    .join('\n');
+    .join('\n\n');
 
   try {
     const ipcFile = path.join(IPC_MSG_DIR, `translate-${Date.now()}.json`);
@@ -2404,7 +2407,7 @@ export async function callOllama(
   // Only send think: true for models that support the flag; architect always reasons internally
   const useThinkFlag = MODELS_WITH_THINK.has(model) && !!think;
   // Coordinator and secretary stay pinned; specialists evict after 60s to free VRAM.
-  const keepAliveArgs = MODELS_PINNED.has(model) ? { keep_alive: -1 } : { keep_alive: KEEP_ALIVE_SPECIALIST };
+  const keepAliveArgs = MODELS_PINNED.has(model) ? { keep_alive: KEEP_ALIVE_PINNED } : { keep_alive: KEEP_ALIVE_SPECIALIST };
 
   // Per-model options — tuned per mode:
   //   coordinator non-think: 16k context + tight sampling for speed (halved KV cache ≈ 2x faster attention)
@@ -2807,7 +2810,8 @@ async function main(): Promise<void> {
       }
 
       // Ollama is up — send "online" status immediately (don't wait for video backends)
-      sendIpc(`startup-${Date.now()}.json`, { type: 'status', chatJid, text: `_${assistantName} v${buildId} online_ 😎` });
+      const onlineTime = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: process.env.TZ || 'UTC' });
+      sendIpc(`startup-${Date.now()}.json`, { type: 'status', chatJid, text: `_${assistantName} v${buildId} online — ${onlineTime}_ 😎` });
 
       // Warm the coordinator — it handles all first-message routing when secretary is disabled.
       // When secretary is enabled, warm secretary instead (classify needs it warm).
@@ -2815,7 +2819,7 @@ async function main(): Promise<void> {
       fetch(`${OLLAMA_HOST}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: -1, options: { num_predict: 0 }, stream: false }),
+        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0 }, stream: false }),
       }).then(() => log(`${warmModel} warmed`)).catch(() => {});
 
       makeServiceMonitor(
@@ -2934,6 +2938,14 @@ async function main(): Promise<void> {
           log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
         }
 
+      // Immediate "..." acknowledgment — deleted when response arrives
+      const ackId = `ack-${Date.now()}`;
+      fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
+      fs.writeFileSync(
+        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
+        JSON.stringify({ type: 'thinking_start', chatJid, text: '_..._', thinkingId: ackId }),
+      );
+
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
@@ -2961,18 +2973,12 @@ async function main(): Promise<void> {
       const safeHistory = trimHistoryForInference(history);
       const messages = [systemMsg, ...safeHistory, userMsg, routeMsg];
 
-      // Status indicator: always send an immediate base message, append status labels to it.
-      // Uses thinking_start / thinking_update IPC types so the host edits the same Telegram
-      // message in place. On completion, the message is updated to show the final response time.
-      // Labels per tier: Responding (35b fast) · Working (coder) · Thinking (35b+think) · Reasoning (deepseek)
+      // Progressive status indicator using the "..." ack message:
+      // 1. "..." already sent (ackId) — shows message was received
+      // 2. Update with model/task after classification
+      // 3. Update with elapsed time during inference
+      // 4. Delete on completion — stats appended to the actual response
       let statusLabel = getStatusLabel(model, thinking);
-      const thinkingId = `thinking-${Date.now()}`;
-      const ipcMsgDir = IPC_MSG_DIR;
-      let elapsedSeconds = 0;
-      const thinkingUpdateFiles: string[] = [];
-      let thinkingInterval: ReturnType<typeof setInterval> | null = null;
-
-      // Derive a human-readable response type label from task type and images
       let responseType = currentImages?.length ? 'vision'
         : taskTypeRich === 'code' || taskTypeRich === 'debug' ? 'coding'
         : taskTypeRich === 'creative' ? 'creative'
@@ -2980,74 +2986,53 @@ async function main(): Promise<void> {
         : taskTypeRich === 'decision' ? 'decision'
         : thinking ? 'reasoning'
         : 'chat';
-
-      // Detect task assignment: imperative sentences that direct an action
-      const TASK_DETECT = /^(?:(?:can you|please|could you|i need(?: you to)?|i want(?: you to)?|i(?:'d| would) like(?: you to)?)\s+)?(?:write|create|generate|make|build|find|search|research|schedule|remind|set up|summarize|explain|analyze|fix|update|add|remove|delete|send|check|draw|design|calculate|translate|convert|edit|modify|list|fetch|get|help(?: me)?|do|run|execute|look\s+up|deploy|draft|plan|organize|prepare|record|download|upload|move|copy|rename|format)\b/i;
-      const firstLine = prompt.trim().split('\n')[0].trim();
-      const isTaskAssignment = TASK_DETECT.test(firstLine);
-      const taskSummary = isTaskAssignment
-        ? (firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine)
-        : null;
-
-      // Base text: responseType · model, with optional task summary
       const modelLabel = thinking ? `${model}+think` : model;
-      const buildBase = () => taskSummary ? `${modelLabel} · ${responseType} — ${taskSummary}` : `${modelLabel} · ${responseType}`;
-      let statusPart = '';
+      let elapsedSeconds = 0;
+      const statusFiles: string[] = [];
 
-      const buildText = () => statusPart ? `_${buildBase()} — ${statusPart}_` : `_${buildBase()}_`;
+      // Update "..." with model/task info now that classification is done
+      const statusFile1 = path.join(IPC_MSG_DIR, `${ackId}-upd-00000.json`);
+      statusFiles.push(statusFile1);
+      fs.writeFileSync(statusFile1, JSON.stringify({
+        type: 'thinking_update', chatJid, thinkingId: ackId,
+        text: `_${modelLabel} · ${responseType}_`,
+      }));
 
-      // Always send immediate acknowledgment
-      fs.mkdirSync(ipcMsgDir, { recursive: true });
-      const thinkingStartFile = path.join(ipcMsgDir, `${thinkingId}-start.json`);
-      fs.writeFileSync(thinkingStartFile, JSON.stringify({ type: 'thinking_start', chatJid, text: buildText(), thinkingId }));
+      let thinkingInterval: ReturnType<typeof setInterval> | null = null;
 
-      const sendUpdate = () => {
-        const f = path.join(ipcMsgDir, `${thinkingId}-upd-${String(elapsedSeconds).padStart(5, '0')}.json`);
-        thinkingUpdateFiles.push(f);
-        fs.mkdirSync(ipcMsgDir, { recursive: true });
-        fs.writeFileSync(f, JSON.stringify({ type: 'thinking_update', chatJid, text: buildText(), thinkingId }));
-      };
-
-      // Post a status update during sequential operations (e.g. tool calls).
       const setStatus = (text: string) => {
         if (/generating\s+image/i.test(text)) { statusLabel = 'Processing'; responseType = 'image'; }
         if (/generating\s+video/i.test(text)) { statusLabel = 'Processing'; responseType = 'video'; }
         elapsedSeconds += 5;
-        statusPart = text;
-        sendUpdate();
+        const f = path.join(IPC_MSG_DIR, `${ackId}-upd-${String(elapsedSeconds).padStart(5, '0')}.json`);
+        statusFiles.push(f);
+        fs.writeFileSync(f, JSON.stringify({
+          type: 'thinking_update', chatJid, thinkingId: ackId,
+          text: `_${modelLabel} · ${responseType} — ${text}_`,
+        }));
       };
 
-      // After 5s, append the status label to the base message
+      // After 5s, start showing elapsed time
       const thinkingDelay = setTimeout(() => {
         elapsedSeconds = 5;
-        statusPart = `${statusLabel}...`;
-        sendUpdate();
-
+        setStatus(`${statusLabel}... (${elapsedSeconds}s)`);
         thinkingInterval = setInterval(() => {
           elapsedSeconds += 5;
-          statusPart = `${statusLabel}... (${elapsedSeconds}s)`;
-          sendUpdate();
+          setStatus(`${statusLabel}... (${elapsedSeconds}s)`);
         }, 5000);
       }, 5000);
 
-      // On completion, update the indicator with the final response time instead of deleting it.
-      const clearThinking = (responseMs?: number) => {
+      // On completion: delete the status message (stats go in the response itself)
+      const clearThinking = () => {
         clearTimeout(thinkingDelay);
         if (thinkingInterval) { clearInterval(thinkingInterval); thinkingInterval = null; }
-        // Discard any pending intermediate update files
-        for (const f of thinkingUpdateFiles) { try { fs.unlinkSync(f); } catch { /* already read */ } }
-        thinkingUpdateFiles.length = 0;
-        let startConsumed = false;
-        try { fs.unlinkSync(thinkingStartFile); } catch { startConsumed = true; }
-        if (startConsumed) {
-          // Message already shown — update it with the final response time
-          const doneText = responseMs !== undefined
-            ? `_${modelLabel} · ${responseType} — ${(responseMs / 1000).toFixed(1)}s_`
-            : `_${buildBase()}_`;
-          const doneFile = path.join(ipcMsgDir, `${thinkingId}-zzz-done.json`);
-          fs.mkdirSync(ipcMsgDir, { recursive: true });
-          fs.writeFileSync(doneFile, JSON.stringify({ type: 'thinking_update', chatJid, text: doneText, thinkingId }));
-        }
+        for (const f of statusFiles) { try { fs.unlinkSync(f); } catch { /* already read */ } }
+        statusFiles.length = 0;
+        // Delete the status message from chat
+        fs.writeFileSync(
+          path.join(IPC_MSG_DIR, `${ackId}-clear.json`),
+          JSON.stringify({ type: 'thinking_clear', thinkingId: ackId }),
+        );
       };
 
       // Let the model drive the conversation.
@@ -3068,7 +3053,7 @@ async function main(): Promise<void> {
         callPromise, taskCtx, chatJid, groupFolder, history, assistantName, sessionId,
       );
       const responseMs = Date.now() - responseStart;
-      clearThinking(responseMs);
+      clearThinking();
       currentImages = undefined; // images consumed after first call
       log(`[PERF] response | model=${model} | task=${taskType} | think=${thinking} | prompt_chars=${prompt.length} | history_msgs=${history.length} | total_ms=${responseMs}${interrupts.length > 0 ? ` | mid_task_interrupts=${interrupts.length}` : ''}`);
       logPerf({
@@ -3103,16 +3088,17 @@ async function main(): Promise<void> {
         compressHistory(history, compressThreshold, keepRecent).then((h) => { compressedHistory = h; }).catch(() => {});
       }
 
+      // Append stats to response: model, task type, elapsed time
+      const statsLine = `\n\n_(${model.replace(/:.*/, '')}${thinking ? '+think' : ''} · ${taskTypeRich} · ${(responseMs / 1000).toFixed(1)}s)_`;
+      const responseWithStats = response ? response + statsLine : null;
+
       writeOutput({
         status: 'success',
-        result: response || null,
+        result: responseWithStats,
         newSessionId: sessionId,
       });
 
-      // Auto-translate Jarvis's chat responses (not commands/tasks)
-      if (taskTypeRich === 'chat' && response && response.length > 4) {
-        translateForListeners(response, assistantName, chatJid).catch(() => {});
-      }
+      // Response translations handled on host side (reply-to the sent message)
 
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });

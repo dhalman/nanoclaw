@@ -81,7 +81,7 @@ export const JARVIS_BOT_TOKEN = process.env.JARVIS_BOT_TOKEN || '';
 // Direct address only — "Jarvis, ..." or "hey Jarvis" or "@Jarvis" or "Jarvis?"
 // Does NOT match "Jarvis said..." or "ask Jarvis later" (talking ABOUT, not TO)
 export const TRIGGER_PATTERN = new RegExp(
-  `(?:^|\\b(?:hey|hi|ok|yo)\\s+)${escapeRegex(ASSISTANT_NAME)}\\b[,?!:]?\\s|` + // "Jarvis, ..." / "hey Jarvis ..."
+  `(?:^|\\b(?:hey|hi|ok|yo)\\s+)${escapeRegex(ASSISTANT_NAME)}\\b[,?!:]?(?:\\s|$)|` + // "Jarvis, ..." / "hey Jarvis" / "hi Jarvis"
     `(?:^|\\s)@${escapeRegex(ASSISTANT_NAME)}\\b|` + // "@Jarvis"
     `^${escapeRegex(ASSISTANT_NAME)}[,?!:\\s]`, // starts with "Jarvis,"
   'im',

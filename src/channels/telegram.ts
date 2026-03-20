@@ -282,7 +282,7 @@ export async function initJarvisBot(
                     prefix +
                     translations
                       .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                      .join('\n');
+                      .join('\n\n');
                   sendJarvisMessage(chatJid, echo, replyTarget).catch(() => {});
                 }
               })
@@ -303,18 +303,10 @@ export async function initJarvisBot(
         is_from_me: false,
       });
 
-      // Auto-translate in groups: translate when message is member-to-member.
-      // A message is directed at Jarvis if: mentions his name AND not replying to another member.
-      // Even if engaged, replying to someone else = member-to-member = translate.
-      const mentionsJarvis = TRIGGER_PATTERN.test(text);
-      const isReplyToOther =
-        ctx.message.reply_to_message &&
-        ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
-      const isDirectedAtJarvis = mentionsJarvis && !isReplyToOther;
-      // Skip auto-translate for messages that are already translations
+      // Auto-translate all group messages (skip messages that are already translations)
       const isTranslationOutput =
         /^_?🌐\s*\[/.test(text) || /^_?🎙\s/.test(text) || /^_?💬\s/.test(text);
-      if (isGroup && !isDirectedAtJarvis && !isTranslationOutput) {
+      if (isGroup && !isTranslationOutput) {
         const targetLangs = getTranslatorLanguages(group.folder);
         if (targetLangs.length > 0 && text.length > 2) {
           translateToMultiple(text, 'auto', targetLangs)
@@ -322,7 +314,7 @@ export async function initJarvisBot(
               if (translations.length > 0) {
                 const echo = translations
                   .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-                  .join('\n');
+                  .join('\n\n');
                 sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
                   () => {},
                 );
@@ -509,7 +501,7 @@ export async function initJarvisBot(
               );
               if (translations.length > 0) {
                 for (const t of translations) {
-                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
+                  echo += `\n\n_🌐 [${t.targetName}] ${t.text}_`;
                 }
                 content = `[Voice (${getLanguageName(result.language)}): ${result.text}]`;
                 for (const t of translations) {
@@ -603,7 +595,7 @@ export async function initJarvisBot(
         if (translations.length > 0) {
           const echo = translations
             .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
-            .join('\n');
+            .join('\n\n');
           sendJarvisMessage(chatJid, echo, messageId).catch(() => {});
         }
       } catch (err) {
@@ -720,6 +712,19 @@ export async function pinJarvisMessage(
       { chatId, messageId, err },
       'pinJarvisMessage failed (ignored)',
     );
+  }
+}
+
+export async function unpinJarvisMessage(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.unpinChatMessage(numericId, messageId);
+  } catch {
+    /* ignore — message may not be pinned */
   }
 }
 
@@ -990,7 +995,7 @@ export class TelegramChannel implements Channel {
               );
               if (translations.length > 0) {
                 for (const t of translations) {
-                  echo += `\n_🌐 [${t.targetName}] ${t.text}_`;
+                  echo += `\n\n_🌐 [${t.targetName}] ${t.text}_`;
                 }
                 content = `[Voice (${getLanguageName(result.language)}): ${result.text}]`;
                 for (const t of translations) {

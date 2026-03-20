@@ -13,6 +13,7 @@ import {
   editJarvisMessage,
   deleteJarvisMessage,
   pinJarvisMessage,
+  unpinJarvisMessage,
 } from './channels/telegram.js';
 import { AvailableGroup } from './snapshots.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
@@ -96,24 +97,31 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
 
   if (entry?.messageId) {
     try {
+      await unpinJarvisMessage(chatJid, entry.messageId);
       await editJarvisMessage(chatJid, entry.messageId, text);
+      await pinJarvisMessage(chatJid, entry.messageId);
       logger.info(
         { chatJid, messageId: entry.messageId },
-        'Status message updated',
+        'Status message updated and re-pinned',
       );
       return;
     } catch {
-      logger.debug({ chatJid }, 'Could not edit status, sending new');
+      // Edit failed (message deleted?) — delete the old one and send new
+      logger.debug({ chatJid }, 'Could not edit status, replacing');
+      await deleteJarvisMessage(chatJid, entry.messageId);
     }
   }
 
-  // No existing status message or edit failed — send new and pin it
+  // Send new status message, pin it, delete the old one if it existed
   const sentId = await sendJarvisMessage(chatJid, text);
   if (sentId) {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
     saveStatusEntries();
     await pinJarvisMessage(chatJid, sentId);
-    logger.info({ chatJid, messageId: sentId }, 'Status message sent and pinned');
+    logger.info(
+      { chatJid, messageId: sentId },
+      'Status message sent and pinned',
+    );
   }
 }
 
@@ -142,7 +150,17 @@ export async function sendStoppedStatus(
     if (!group.containerConfig?.ollamaRunner) continue;
     if (!chatJid.startsWith('tg:') && !chatJid.startsWith('tg-j:')) continue;
     try {
-      await sendOrEditStatus(chatJid, `_${assistantName} stopped._`);
+      const stopTime = new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      await sendOrEditStatus(
+        chatJid,
+        `_${assistantName} stopped — ${stopTime}_`,
+      );
     } catch (err) {
       logger.debug({ chatJid, err }, 'Failed to send stopped status');
     }
@@ -267,6 +285,17 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   isMain ||
                   (targetGroup && targetGroup.folder === sourceGroup)
                 ) {
+                  // Clear orphaned thinking messages for this chat (container restarted)
+                  for (const [tid, entry] of thinkingMessages) {
+                    if (entry.chatJid === data.chatJid) {
+                      await deleteJarvisMessage(entry.chatJid, entry.messageId);
+                      thinkingMessages.delete(tid);
+                      logger.info(
+                        { chatJid: entry.chatJid, thinkingId: tid },
+                        'Cleared orphaned thinking message',
+                      );
+                    }
+                  }
                   await sendOrEditStatus(data.chatJid, data.text);
                 }
               } else if (

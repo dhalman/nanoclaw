@@ -1,4 +1,104 @@
 {
+  "0.2.55": {
+    "date": "2026-03-19",
+    "title": "fix: unpinChatMessage takes messageId directly, not options object",
+    "notes": [
+      "fix: unpinChatMessage takes messageId directly, not options object",
+      "fix: unpin \u2192 edit \u2192 re-pin status message on update"
+    ]
+  },
+  "0.2.54": {
+    "date": "2026-03-19",
+    "title": "fix: delete old status message before sending new pinned one",
+    "notes": [
+      "fix: delete old status message before sending new pinned one"
+    ]
+  },
+  "0.2.53": {
+    "date": "2026-03-19",
+    "title": "fix: add date to status timestamps",
+    "notes": [
+      "fix: add date to status timestamps"
+    ]
+  },
+  "0.2.52": {
+    "date": "2026-03-19",
+    "title": "feat: add timestamp to online/stopped status messages",
+    "notes": [
+      "feat: add timestamp to online/stopped status messages"
+    ]
+  },
+  "0.2.51": {
+    "date": "2026-03-19",
+    "title": "fix: add vertical whitespace between translation lines",
+    "notes": [
+      "fix: add vertical whitespace between translation lines"
+    ]
+  },
+  "0.2.50": {
+    "date": "2026-03-19",
+    "title": "feat: mount claude-inbox writable in main container",
+    "notes": [
+      "feat: mount claude-inbox writable in main container"
+    ]
+  },
+  "0.2.49": {
+    "date": "2026-03-19",
+    "title": "feat: progressive status indicator with stats-in-response",
+    "notes": [
+      "feat: progressive status indicator with stats-in-response"
+    ]
+  },
+  "0.2.48": {
+    "date": "2026-03-19",
+    "title": "fix: clear orphaned thinking messages on container restart",
+    "notes": [
+      "fix: clear orphaned thinking messages on container restart"
+    ]
+  },
+  "0.2.47": {
+    "date": "2026-03-19",
+    "title": "fix: expand secretary-direct version pattern to match changelog queries",
+    "notes": [
+      "fix: expand secretary-direct version pattern to match changelog queries"
+    ]
+  },
+  "0.2.46": {
+    "date": "2026-03-19",
+    "title": "feat: NLP intent detection for engagement, translate all messages",
+    "notes": [
+      "feat: NLP intent detection for engagement, translate all messages"
+    ]
+  },
+  "0.2.45": {
+    "date": "2026-03-19",
+    "title": "fix: add missing getUserPref import",
+    "notes": [
+      "fix: add missing getUserPref import",
+      "fix: host-side response translation, native language tags, secretary-direct version"
+    ]
+  },
+  "0.2.44": {
+    "date": "2026-03-19",
+    "title": "fix: trigger pattern, secretary-direct extraction, translate all responses",
+    "notes": [
+      "fix: trigger pattern, secretary-direct extraction, translate all responses"
+    ]
+  },
+  "0.2.43": {
+    "date": "2026-03-19",
+    "title": "fix: restart Ollama on warm to clear hung state",
+    "notes": [
+      "fix: restart Ollama on warm to clear hung state"
+    ]
+  },
+  "0.2.42": {
+    "date": "2026-03-19",
+    "title": "fix: pin secretary in VRAM, add KEEP_ALIVE_PINNED constant, fix warm script",
+    "notes": [
+      "fix: pin secretary in VRAM, add KEEP_ALIVE_PINNED constant, fix warm script"
+    ]
+  },
   "0.2.41": {
     "date": "2026-03-19",
     "title": "Build 0.2.41",
