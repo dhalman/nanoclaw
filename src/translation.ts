@@ -1,12 +1,16 @@
 /**
  * Translate text using a local Ollama model.
- * Uses the secretary model (qwen2.5:3b) for fast parallel translation.
+ * Uses qwen2.5:3b (secretary) for auto-translations — runs on a separate
+ * model from the coordinator so translations don't queue/timeout.
+ * On-demand translations (👀 reaction, "translate" reply) use the same
+ * model for consistency. Users can ask Jarvis directly for a more
+ * accurate translation which will use the coordinator (35B).
  */
 
 import { logger } from './logger.js';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL || 'qwen3.5:35b';
+const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL || 'qwen2.5:3b';
 const TRANSLATE_TIMEOUT_MS = 15_000;
 
 // ISO 639-1 → display name
