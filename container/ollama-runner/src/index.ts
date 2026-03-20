@@ -1392,6 +1392,34 @@ async function trySecretaryDirect(
     }
   }
 
+  // Image generation: obvious art requests go straight to generate_art
+  const ART_DIRECT = /\b(?:(?:create|generate|make|draw|paint|design)\s+(?:a |an |me )?(?:image|picture|photo|illustration|art|painting|portrait))\b/i;
+  if (ART_DIRECT.test(userText)) {
+    try {
+      const start = Date.now();
+      const result = await handleToolCall('generate_art', { request: userText }, chatJid, groupFolder);
+      log(`[secretary-direct] generate_art → ${Date.now() - start}ms (bypassed coordinator)`);
+      return result;
+    } catch (err) {
+      log(`[secretary-direct] generate_art failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+      return null;
+    }
+  }
+
+  // Video generation: obvious video requests go straight to generate_film
+  const VIDEO_DIRECT = /\b(?:(?:create|generate|make)\s+(?:a |an |me )?(?:video|film|animation|clip))\b/i;
+  if (VIDEO_DIRECT.test(userText)) {
+    try {
+      const start = Date.now();
+      const result = await handleToolCall('generate_film', { request: userText }, chatJid, groupFolder);
+      log(`[secretary-direct] generate_film → ${Date.now() - start}ms (bypassed coordinator)`);
+      return result;
+    } catch (err) {
+      log(`[secretary-direct] generate_film failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+      return null;
+    }
+  }
+
   // Tool-direct: simple queries that map to a single tool call.
   // Check patterns BEFORE complexity gate — version/status/help are always direct.
   for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
