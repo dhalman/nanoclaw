@@ -21,6 +21,7 @@ import {
   checkEngagement,
   disengageAll,
   disengageUser,
+  getUserPref,
   isEngaged,
 } from './engagement.js';
 import './channels/index.js';
@@ -255,7 +256,11 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
           const prefs = getUserPref(group.folder, '', 'translator_languages');
           let langs = prefs;
           if (typeof langs === 'string') {
-            try { langs = JSON.parse(langs); } catch { langs = null; }
+            try {
+              langs = JSON.parse(langs);
+            } catch {
+              langs = null;
+            }
           }
           if (Array.isArray(langs) && langs.length > 0) {
             translateToMultiple(text, 'auto', langs)
