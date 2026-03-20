@@ -1303,10 +1303,19 @@ async function trySecretaryDirect(
       else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
       const merged = [...new Set([...current, ...found])];
       setGroupPref('translator_languages', merged);
-      const names = merged.map((c) => knownLangs[Object.entries(knownLangs).find(([, v]) => v === c)?.[0] || ''] ? Object.entries(knownLangs).find(([, v]) => v === c)?.[0] || c : c);
+      const codeToName = (c: string) => Object.entries(knownLangs).find(([, v]) => v === c)?.[0] || c;
       log(`[secretary-direct] registered languages: ${merged.join(', ')}`);
-      return `Translation languages updated: ${names.join(', ')} (${merged.join(', ')})`;
+      return `✅ Translations enabled: ${merged.map(codeToName).join(', ')}`;
     }
+    // No languages specified — check if any are already set
+    const existing = getPref('translator_languages');
+    let current: string[] = [];
+    if (Array.isArray(existing)) current = existing.filter((l): l is string => typeof l === 'string');
+    else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
+    if (current.length > 0) {
+      return `Translations already active: ${current.join(', ')}. Say which languages to add.`;
+    }
+    return 'Which languages should I translate to? e.g. "add spanish, german, bulgarian for translation"';
   }
 
   // Disable/clear translations: "turn off translation", "remove all languages", "stop translating"
@@ -1314,7 +1323,7 @@ async function trySecretaryDirect(
   if (LANG_DISABLE.test(userText)) {
     setGroupPref('translator_languages', []);
     log('[secretary-direct] translations disabled');
-    return 'Translations disabled. All languages removed.';
+    return '🔇 Translations off.';
   }
 
   // Remove specific languages: "remove spanish from translation"
