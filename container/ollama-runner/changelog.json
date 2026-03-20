@@ -1,4 +1,9 @@
 {
+  "0.2.25": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.25",
+    "notes": []
+  },
   "0.2.24": {
     "date": "2026-03-19",
     "title": "fix: prevent history from hanging Ollama inference",
