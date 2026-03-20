@@ -1,4 +1,11 @@
 {
+  "0.3.4": {
+    "date": "2026-03-19",
+    "title": "feat: immediate cancel via IPC poll loop (100ms response)",
+    "notes": [
+      "feat: immediate cancel via IPC poll loop (100ms response)"
+    ]
+  },
   "0.3.3": {
     "date": "2026-03-19",
     "title": "Build 0.3.3",
