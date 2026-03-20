@@ -3067,6 +3067,11 @@ async function main(): Promise<void> {
         newSessionId: sessionId,
       });
 
+      // Auto-translate Jarvis's chat responses (not commands/tasks)
+      if (taskTypeRich === 'chat' && response && response.length > 4) {
+        translateForListeners(response, assistantName, chatJid).catch(() => {});
+      }
+
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });
 
