@@ -1,4 +1,11 @@
 {
+  "0.2.69": {
+    "date": "2026-03-19",
+    "title": "fix: voice replies to other users don't trigger Jarvis",
+    "notes": [
+      "fix: voice replies to other users don't trigger Jarvis"
+    ]
+  },
   "0.2.68": {
     "date": "2026-03-19",
     "title": "feat: OLLAMA_NUM_PARALLEL=2, fix voice messages not triggering",
