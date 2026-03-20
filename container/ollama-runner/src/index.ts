@@ -541,7 +541,7 @@ context_mode:
 ];
 
 // run_command is intentionally NOT in OLLAMA_TOOLS — offering it as a structured tool causes
-// llama3.2 to call it proactively (e.g. `git status` before every response). It is still
+// the model to call it proactively (e.g. `git status` before every response). It is still
 // available via text-encoded tool calls (parseTextToolCall) for explicit user requests.
 
 // Container mount paths — all workspace paths in one place
@@ -2612,50 +2612,14 @@ async function _callOllamaInner(
   onToolStart?: (toolName: string) => void,
   complexity?: 'low' | 'medium' | 'high',
 ): Promise<string> {
-  // llama3.2-vision only supports one image per call.
-  // When multiple images are provided, describe each separately and inject as text context.
-  let resolvedImages = images;
-  let resolvedMessages = messages;
-  if (images && images.length > 1 && model === MODELS.VISION) {
-    log(`Multiple images (${images.length}) with vision model — describing in parallel`);
-    const descResults = await Promise.all(images.map((img, i) =>
-      withTimeout(
-        fetch(`${OLLAMA_HOST}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: 'user', content: `Describe image ${i + 1} in detail: subject, appearance, colors, style.`, images: [img] }],
-            stream: false,
-          }),
-        }),
-        30_000,
-        `describe-image-${i + 1}`,
-      ).then(async (r) => {
-        if (!r.ok) return `Image ${i + 1}: (description unavailable)`;
-        const d = await r.json() as OllamaResponse;
-        return `Image ${i + 1}: ${extractContent(d.message.content).trim()}`;
-      }).catch(() => `Image ${i + 1}: (description unavailable)`),
-    ));
-    const descriptions = descResults;
-    // Inject descriptions as a prefix on the last user message; no images in main call
-    const descContext = descriptions.join('\n\n');
-    resolvedImages = undefined;
-    resolvedMessages = messages.map((m, i) =>
-      i === messages.length - 1 && m.role === 'user'
-        ? { ...m, content: `[Images provided]\n${descContext}\n\n${typeof m.content === 'string' ? m.content : ''}`.trim() }
-        : m,
-    );
-  }
-
-  // Attach images to the last user message if provided
-  let messagesWithImages = resolvedImages && resolvedImages.length > 0
-    ? resolvedMessages.map((m, i) =>
-        i === resolvedMessages.length - 1 && m.role === 'user'
-          ? { ...m, images: resolvedImages }
+  // Attach images to the last user message (qwen2.5vl supports multiple images natively)
+  let messagesWithImages = images && images.length > 0
+    ? messages.map((m, i) =>
+        i === messages.length - 1 && m.role === 'user'
+          ? { ...m, images }
           : m,
       )
-    : resolvedMessages;
+    : messages;
 
   // Per-specialist personality — injected as system message when the specialist doesn't have one
   const SPECIALIST_PERSONALITIES: Record<string, string> = {

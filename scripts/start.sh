@@ -44,6 +44,10 @@ if ! docker info &>/dev/null; then
   [ $waited -lt $MAX_WAIT ] && echo "Docker ready after ${waited}s"
 fi
 
+# Restart Ollama and warm models (clears hung state, pins secretary + coordinator)
+echo "Warming Ollama models..."
+bash "$PROJECT_ROOT/scripts/warm-ollama.sh" >> "$LOGS_DIR/ollama-warmup.log" 2>&1
+
 # Stop any leftover agent containers
 ORPHANS=$(docker ps --filter name=nanoclaw- --format '{{.Names}}' 2>/dev/null || true)
 if [ -n "$ORPHANS" ]; then
