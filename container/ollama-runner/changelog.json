@@ -1,4 +1,11 @@
 {
+  "0.2.39": {
+    "date": "2026-03-19",
+    "title": "fix: status message always edits in place, never sends new",
+    "notes": [
+      "fix: status message always edits in place, never sends new"
+    ]
+  },
   "0.2.38": {
     "date": "2026-03-19",
     "title": "feat: secretary-direct web search for simple factual queries",
