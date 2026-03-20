@@ -1213,9 +1213,9 @@ const DIRECT_PATTERNS: Array<{
   format: (result: string) => string;
 }> = [
   {
-    // "version", "what version", "build", "what's new", "changelog", "release notes"
-    // Must be before status — "what version are you running" contains "running"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|what changed)\b/i,
+    // Technical: "version", "changelog", "release notes" → raw notes via secretary-direct
+    // "what's new" is NOT here — it goes to the coordinator for a friendly summary
+    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:version|build)|change\s*log|release\s*notes?|version\s*notes?)\b/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
