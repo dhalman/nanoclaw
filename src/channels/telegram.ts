@@ -707,10 +707,11 @@ export async function pinJarvisMessage(
     await jarvisApi.pinChatMessage(numericId, messageId, {
       disable_notification: true,
     });
+    logger.info({ chatId, messageId }, 'Message pinned');
   } catch (err) {
-    logger.debug(
+    logger.warn(
       { chatId, messageId, err },
-      'pinJarvisMessage failed (ignored)',
+      'pinJarvisMessage failed',
     );
   }
 }
