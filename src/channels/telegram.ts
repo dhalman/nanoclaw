@@ -751,6 +751,34 @@ export async function pinJarvisMessage(
   }
 }
 
+export async function reactToMessage(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.setMessageReaction(numericId, messageId, [
+      { type: 'emoji', emoji: '👀' as any },
+    ]);
+  } catch {
+    /* ignore — reactions may not be available in all chats */
+  }
+}
+
+export async function removeReaction(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.setMessageReaction(numericId, messageId, []);
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function unpinJarvisMessage(
   chatId: string,
   messageId: number,

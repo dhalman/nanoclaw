@@ -14,6 +14,8 @@ import {
 import {
   initBotPool,
   initJarvisBot,
+  reactToMessage,
+  removeReaction,
   sendJarvisMessage,
 } from './channels/telegram.js';
 import { startCredentialProxy } from './credential-proxy.js';
@@ -256,6 +258,8 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
             ? lastTriggerMessageId[chatJid]
             : undefined;
           sentMsgId = await sendJarvisMessage(chatJid, text, replyTo);
+          // Remove 👀 reaction now that response is sent
+          if (replyTo) removeReaction(chatJid, replyTo).catch(() => {});
         } else {
           await channel.sendMessage(chatJid, text);
         }
@@ -515,12 +519,16 @@ async function startMessageLoop(): Promise<void> {
             .find((m) => !m.is_from_me);
           if (lastUserMsg?.id) {
             const numId = parseInt(lastUserMsg.id, 10);
-            if (!isNaN(numId)) lastTriggerMessageId[chatJid] = numId;
+            if (!isNaN(numId)) {
+              lastTriggerMessageId[chatJid] = numId;
+              // Instant acknowledgment: react with 👀 so user knows Jarvis heard them
+              reactToMessage(chatJid, numId).catch(() => {});
+            }
           }
 
           // Cancel command: pipe to container for immediate IPC cancel, then kill as backup
-          const isCancelCommand = groupMessages.some(
-            (m) => CANCEL_PATTERN.test(m.content.trim()),
+          const isCancelCommand = groupMessages.some((m) =>
+            CANCEL_PATTERN.test(m.content.trim()),
           );
           if (isCancelCommand) {
             // Pipe cancel to container so IPC poll loop catches it (~100ms)
