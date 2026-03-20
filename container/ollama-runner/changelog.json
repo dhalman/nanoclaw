@@ -1,4 +1,11 @@
 {
+  "0.3.20": {
+    "date": "2026-03-20",
+    "title": "fix: remove proactive mode \u2014 just engaged and not engaged",
+    "notes": [
+      "fix: remove proactive mode \u2014 just engaged and not engaged"
+    ]
+  },
   "0.3.19": {
     "date": "2026-03-20",
     "title": "feat: nuanced engagement \u2014 attentive when engaged, proactive when skilled",
