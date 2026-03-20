@@ -12,11 +12,17 @@ else
   OLLAMA_HOST="http://localhost:11434"
 fi
 
-# Wait for Ollama to be ready
+# Restart Ollama to clear any hung state, then wait for it to be ready
+echo "Restarting Ollama..."
+pkill -f 'ollama' 2>/dev/null || true
+sleep 2
+open -a Ollama 2>/dev/null || (nohup ollama serve > /dev/null 2>&1 &)
+
 for i in $(seq 1 30); do
   curl -sf "$OLLAMA_HOST/api/tags" > /dev/null 2>&1 && break
   sleep 1
 done
+echo "Ollama ready."
 
 warm() {
   local MODEL="$1"
