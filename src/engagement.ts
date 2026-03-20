@@ -1,11 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import {
-  ASSISTANT_NAME,
-  GROUPS_DIR,
-  TRIGGER_PATTERN,
-} from './config.js';
+import { ASSISTANT_NAME, GROUPS_DIR, TRIGGER_PATTERN } from './config.js';
 import { logger } from './logger.js';
 import { SenderAllowlistConfig, isTriggerAllowed } from './sender-allowlist.js';
 import { NewMessage, RegisteredGroup } from './types.js';
@@ -58,6 +54,36 @@ async function classifyIntent(
 
 // Per-group set of user IDs the assistant is currently engaged with.
 const engagedUsers: Record<string, Set<string>> = {};
+
+// Track emoji usage per user — learn their style to mirror back
+const userEmojiHistory: Record<string, Record<string, number>> = {};
+const TELEGRAM_EMOJI = ['👍', '👎', '❤', '🔥', '🥰', '👏', '😁', '🤔', '🤯', '😱', '😢', '🎉', '🤩', '🙏', '👌', '🤡', '🥱', '😍', '🐳', '🌚', '💯', '🫡', '👋'];
+
+/** Record emojis a user sends so we can mirror their style. */
+export function learnUserEmoji(chatJid: string, userId: string, text: string): void {
+  const key = `${chatJid}:${userId}`;
+  if (!userEmojiHistory[key]) userEmojiHistory[key] = {};
+  // Extract emojis from text
+  const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu;
+  const emojis = text.match(emojiRegex) || [];
+  for (const e of emojis) {
+    userEmojiHistory[key][e] = (userEmojiHistory[key][e] || 0) + 1;
+  }
+}
+
+/** Pick an emoji that mirrors the user's style for a given mood. */
+function pickUserEmoji(chatJid: string, userId: string, fallback: string): string {
+  const key = `${chatJid}:${userId}`;
+  const history = userEmojiHistory[key];
+  if (!history || Object.keys(history).length === 0) return fallback;
+
+  // Find user's most-used emoji that's in Telegram's reaction set
+  const sorted = Object.entries(history)
+    .filter(([e]) => TELEGRAM_EMOJI.includes(e))
+    .sort((a, b) => b[1] - a[1]);
+
+  return sorted.length > 0 ? sorted[0][0] : fallback;
+}
 
 function getEngaged(chatJid: string): Set<string> {
   if (!engagedUsers[chatJid]) engagedUsers[chatJid] = new Set();
@@ -113,7 +139,10 @@ export async function checkEngagement(
   group: RegisteredGroup,
   messages: NewMessage[],
   allowlistCfg: SenderAllowlistConfig,
-): Promise<{ shouldProcess: boolean; dismissals: Array<{ message: NewMessage; emoji: string }> }> {
+): Promise<{
+  shouldProcess: boolean;
+  dismissals: Array<{ message: NewMessage; emoji: string }>;
+}> {
   const isMainGroup = group.isMain === true;
   const needsTrigger = !isMainGroup && group.requiresTrigger !== false;
   if (!needsTrigger) return { shouldProcess: true, dismissals: [] };
@@ -124,24 +153,51 @@ export async function checkEngagement(
   // Returns the emoji to react with, or null if the message is not trivial.
   const TRIVIAL_REACTIONS: Array<{ pattern: RegExp; emoji: string }> = [
     { pattern: /^\s*(?:thanks?|thank\s*you|thx|ty)\s*[!.]?\s*$/i, emoji: '🙏' },
-    { pattern: /^\s*(?:ok|okay|k|kk|got\s*it|understood|roger|copy)\s*[!.]?\s*$/i, emoji: '👍' },
-    { pattern: /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit)\s*[!.]?\s*$/i, emoji: '🔥' },
-    { pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i, emoji: '🫡' },
+    {
+      pattern:
+        /^\s*(?:ok|okay|k|kk|got\s*it|understood|roger|copy)\s*[!.]?\s*$/i,
+      emoji: '👍',
+    },
+    {
+      pattern:
+        /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit)\s*[!.]?\s*$/i,
+      emoji: '🔥',
+    },
+    {
+      pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i,
+      emoji: '🫡',
+    },
     { pattern: /^\s*(?:lol|lmao|haha|😂|🤣|😆)\s*$/i, emoji: '😁' },
-    { pattern: /^\s*(?:bye|goodbye|go away|later|peace|cya|see\s*ya)\s*[!.]?\s*$/i, emoji: '👋' },
-    { pattern: /^\s*(?:stop|cancel|nevermind|nah|nope|no\s*thanks?|enough|done|that'?s\s*(?:all|enough|it)|i'?m\s*good|we'?re\s*good|whatever|quiet|shut\s*up|leave)\s*[!.]?\s*$/i, emoji: '👍' },
+    {
+      pattern:
+        /^\s*(?:bye|goodbye|go away|later|peace|cya|see\s*ya)\s*[!.]?\s*$/i,
+      emoji: '👋',
+    },
+    {
+      pattern:
+        /^\s*(?:stop|cancel|nevermind|nah|nope|no\s*thanks?|enough|done|that'?s\s*(?:all|enough|it)|i'?m\s*good|we'?re\s*good|whatever|quiet|shut\s*up|leave)\s*[!.]?\s*$/i,
+      emoji: '👍',
+    },
     { pattern: /^\s*(?:👋|👍|👌|🙏|🫡|💯|✅|🤙)\s*$/i, emoji: '👍' },
   ];
   const dismissedMessages: Array<{ message: NewMessage; emoji: string }> = [];
   for (const m of messages) {
     if (!m.is_from_me && engaged.has(m.sender)) {
-      const trivial = TRIVIAL_REACTIONS.find((r) => r.pattern.test(m.content.trim()));
+      const trivial = TRIVIAL_REACTIONS.find((r) =>
+        r.pattern.test(m.content.trim()),
+      );
       if (trivial) {
         engaged.delete(m.sender);
-        dismissedMessages.push({ message: m, emoji: trivial.emoji });
-        logger.info({ chatJid, user: m.sender, emoji: trivial.emoji }, 'Disengaged (trivial)');
+        const emoji = pickUserEmoji(chatJid, m.sender, trivial.emoji);
+        dismissedMessages.push({ message: m, emoji });
+        logger.info(
+          { chatJid, user: m.sender, emoji },
+          'Disengaged (trivial)',
+        );
       }
     }
+    // Learn emoji from all messages (not just trivial) to build user profile
+    if (!m.is_from_me) learnUserEmoji(chatJid, m.sender, m.content);
   }
 
   // Already-engaged users: respond to questions/commands, ignore casual chatter

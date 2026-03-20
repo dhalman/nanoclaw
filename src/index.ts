@@ -24,6 +24,7 @@ import {
   disengageAll,
   disengageUser,
   isEngaged,
+  learnUserEmoji,
 } from './engagement.js';
 import './channels/index.js';
 import {
@@ -504,7 +505,8 @@ async function startMessageLoop(): Promise<void> {
           // React to trivial dismissals with emoji
           for (const d of engResult.dismissals) {
             const msgId = parseInt(d.message.id, 10);
-            if (!isNaN(msgId)) reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
+            if (!isNaN(msgId))
+              reactToMessage(chatJid, msgId, d.emoji).catch(() => {});
           }
           if (!engResult.shouldProcess) continue;
 
@@ -703,6 +705,9 @@ async function main(): Promise<void> {
         }
       }
       storeMessage(msg);
+
+      // Learn user's emoji style from every message
+      if (!msg.is_from_me) learnUserEmoji(chatJid, msg.sender, msg.content);
 
       // Mark user activity so status messages send new instead of editing
       if (!msg.is_from_me) markUserActivity(chatJid);
