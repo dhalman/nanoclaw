@@ -601,15 +601,53 @@ export async function initJarvisBot(
       if (!group) return;
 
       const reactions = ctx.messageReaction?.new_reaction ?? [];
-      // Use 👀 (eyes) as the translate trigger — it's in Telegram's supported emoji list
-      // and semantically means "let me see this in my language"
-      const hasTranslateEmoji = reactions.some(
-        (r) =>
-          (r.type === 'emoji' && r.emoji === '👀') || r.type === 'custom_emoji',
-      );
+      const emojiReactions = reactions
+        .filter((r) => r.type === 'emoji')
+        .map((r) => (r as any).emoji as string);
+
+      // Sentiment feedback: reactions on Jarvis's messages are feedback
+      const messageId = ctx.messageReaction?.message_id;
+      if (
+        messageId &&
+        ctx.messageReaction?.user?.id !== jarvisBot?.botInfo?.id
+      ) {
+        const isOnBotMessage = ctx.messageReaction?.message_id != null; // We can't tell easily — log all for learning
+        const POSITIVE = [
+          '👍',
+          '❤',
+          '🔥',
+          '👏',
+          '🎉',
+          '🤩',
+          '💯',
+          '😍',
+          '👌',
+          '🙏',
+        ];
+        const NEGATIVE = ['👎', '🤮', '💩', '🤡', '😢', '🤬'];
+        const sentiment = emojiReactions.some((e) => POSITIVE.includes(e))
+          ? 'positive'
+          : emojiReactions.some((e) => NEGATIVE.includes(e))
+            ? 'negative'
+            : null;
+        if (sentiment) {
+          logger.info(
+            { chatJid, messageId, sentiment, emojis: emojiReactions },
+            'Reaction sentiment on message',
+          );
+          // Learn the user's emoji preferences
+          const userId = ctx.messageReaction?.user?.id?.toString() || '';
+          if (userId) {
+            const { learnUserEmoji } = await import('../engagement.js');
+            for (const e of emojiReactions) learnUserEmoji(chatJid, userId, e);
+          }
+        }
+      }
+
+      // 👀 as translate trigger
+      const hasTranslateEmoji = emojiReactions.includes('👀');
       if (!hasTranslateEmoji) return;
 
-      const messageId = ctx.messageReaction?.message_id;
       if (!messageId) return;
 
       // Look up the message content from DB
