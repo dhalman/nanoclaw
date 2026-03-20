@@ -1,4 +1,11 @@
 {
+  "0.2.51": {
+    "date": "2026-03-19",
+    "title": "fix: add vertical whitespace between translation lines",
+    "notes": [
+      "fix: add vertical whitespace between translation lines"
+    ]
+  },
   "0.2.50": {
     "date": "2026-03-19",
     "title": "feat: mount claude-inbox writable in main container",
