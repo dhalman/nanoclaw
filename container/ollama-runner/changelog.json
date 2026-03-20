@@ -1,4 +1,11 @@
 {
+  "0.2.32": {
+    "date": "2026-03-19",
+    "title": "fix: translate command now translates the replied-to message, not itself",
+    "notes": [
+      "fix: translate command now translates the replied-to message, not itself"
+    ]
+  },
   "0.2.31": {
     "date": "2026-03-19",
     "title": "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call",
