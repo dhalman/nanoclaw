@@ -518,20 +518,23 @@ async function startMessageLoop(): Promise<void> {
             if (!isNaN(numId)) lastTriggerMessageId[chatJid] = numId;
           }
 
-          // Cancel command: kill the active container immediately
+          // Cancel command: pipe to container for immediate IPC cancel, then kill as backup
           const isCancelCommand = groupMessages.some(
-            (m) => m.is_from_me && CANCEL_PATTERN.test(m.content.trim()),
+            (m) => CANCEL_PATTERN.test(m.content.trim()),
           );
-          if (isCancelCommand && queue.killActive(chatJid)) {
-            logger.info(
-              { chatJid },
-              'Active container killed by cancel command',
-            );
+          if (isCancelCommand) {
+            // Pipe cancel to container so IPC poll loop catches it (~100ms)
+            queue.sendMessage(chatJid, 'cancel');
+            // Backup: kill container after 2s if IPC cancel didn't exit
+            setTimeout(() => {
+              if (queue.killActive(chatJid)) {
+                logger.info({ chatJid }, 'Container killed by cancel backup');
+              }
+            }, 2000);
             lastAgentTimestamp[chatJid] =
               groupMessages[groupMessages.length - 1].timestamp;
             saveState();
             cancelVideoBackends().catch(() => {});
-            channel.sendMessage?.(chatJid, '_Stopped._')?.catch(() => {});
           } else if (queue.sendMessage(chatJid, formatted)) {
             logger.debug(
               { chatJid, count: messagesToSend.length },
