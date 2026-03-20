@@ -2425,6 +2425,16 @@ Respond with ONLY valid JSON, no explanation, no markdown:
       const scheduleType = String(toolArgs.schedule_type ?? '');
       const scheduleValue = String(toolArgs.schedule_value ?? '').trim();
       if (!prompt || !scheduleType || !scheduleValue) return 'Error: create requires prompt, schedule_type, and schedule_value';
+
+      // Group chat restriction: only reminders (text responses) allowed.
+      // Execution tasks (code, config changes, service commands) require DM.
+      const isGroupChat = chatJid.includes('-'); // group JIDs have negative IDs
+      if (isGroupChat) {
+        const isReminder = /\b(?:remind|reminder|notify|alert|ping|tell\s+me|let\s+me\s+know)\b/i.test(prompt);
+        if (!isReminder) {
+          return 'Execution tasks can only be scheduled from a private DM. In group chats, I can only set reminders. Try: "remind me in 2 hours to..."';
+        }
+      }
       const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const contextMode = toolArgs.context_mode === 'isolated' ? 'isolated' : 'group';
       fs.mkdirSync(ipcTasksDir, { recursive: true });
