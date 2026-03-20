@@ -1,4 +1,11 @@
 {
+  "0.2.58": {
+    "date": "2026-03-19",
+    "title": "fix: log host online status success/failure",
+    "notes": [
+      "fix: log host online status success/failure"
+    ]
+  },
   "0.2.57": {
     "date": "2026-03-19",
     "title": "fix: send online status from host after bot init, not from container",
