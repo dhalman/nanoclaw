@@ -1,4 +1,11 @@
 {
+  "0.2.35": {
+    "date": "2026-03-19",
+    "title": "fix: use 3B for all auto-translations, 35B only on direct request",
+    "notes": [
+      "fix: use 3B for all auto-translations, 35B only on direct request"
+    ]
+  },
   "0.2.34": {
     "date": "2026-03-19",
     "title": "fix: unify all translations to 35B model with consistent format",
