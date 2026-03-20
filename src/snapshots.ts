@@ -85,9 +85,7 @@ export function writeGroupsSnapshot(
 }
 
 /** Map raw DB tasks to the snapshot format. */
-function mapTasks(
-  tasks: ReturnType<typeof getAllTasks>,
-): Array<{
+function mapTasks(tasks: ReturnType<typeof getAllTasks>): Array<{
   id: string;
   groupFolder: string;
   prompt: string;
