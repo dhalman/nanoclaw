@@ -1,4 +1,11 @@
 {
+  "0.3.16": {
+    "date": "2026-03-20",
+    "title": "fix: stop re-pinning on status update \u2014 just edit silently",
+    "notes": [
+      "fix: stop re-pinning on status update \u2014 just edit silently"
+    ]
+  },
   "0.3.15": {
     "date": "2026-03-20",
     "title": "Build 0.3.15",
