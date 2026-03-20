@@ -1176,21 +1176,22 @@ const DIRECT_PATTERNS: Array<{
   format: (result: string) => string;
 }> = [
   {
-    // "status", "are you online", "service status", "check services", "health check"
-    pattern: /\b(?:status|health|services?|backends?|are you (?:online|running|alive|up|ok|working))\b/i,
-    tool: 'service_status',
-    args: () => ({}),
-    format: (r) => r,
-  },
-  {
-    // "version", "what version", "build", "what's new", "changelog", "release notes", "version notes"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|updates?|what changed)\b/i,
+    // "version", "what version", "build", "what's new", "changelog", "release notes"
+    // Must be before status — "what version are you running" contains "running"
+    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|what changed)\b/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
       const lines = r.split('\n').slice(0, 5);
       return lines.join('\n');
     },
+  },
+  {
+    // "status", "are you online", "service status", "check services", "health check"
+    pattern: /\b(?:(?:service\s*)?status|health(?:\s*check)?|backends?|check\s+services?|are you (?:online|up|ok|alive))\b/i,
+    tool: 'service_status',
+    args: () => ({}),
+    format: (r) => r,
   },
   {
     // "help", "what can you do", "capabilities"
