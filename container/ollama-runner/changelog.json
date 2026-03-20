@@ -1,4 +1,11 @@
 {
+  "0.3.17": {
+    "date": "2026-03-20",
+    "title": "fix: NLP intent treats greetings as directed, add engagement logging",
+    "notes": [
+      "fix: NLP intent treats greetings as directed, add engagement logging"
+    ]
+  },
   "0.3.16": {
     "date": "2026-03-20",
     "title": "fix: stop re-pinning on status update \u2014 just edit silently",
