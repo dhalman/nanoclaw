@@ -1,4 +1,12 @@
 {
+  "0.2.45": {
+    "date": "2026-03-19",
+    "title": "fix: add missing getUserPref import",
+    "notes": [
+      "fix: add missing getUserPref import",
+      "fix: host-side response translation, native language tags, secretary-direct version"
+    ]
+  },
   "0.2.44": {
     "date": "2026-03-19",
     "title": "fix: trigger pattern, secretary-direct extraction, translate all responses",
