@@ -1266,9 +1266,8 @@ async function trySecretaryDirect(
     return null;
   }
 
-  // Tool-direct: simple queries that map to a single tool call
-  if (cls.complexity !== 'low' || cls.think || cls.model !== MODELS.COORDINATOR) return null;
-
+  // Tool-direct: simple queries that map to a single tool call.
+  // Check patterns BEFORE complexity gate — version/status/help are always direct.
   for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
     const match = userText.match(pattern);
     if (!match) continue;
@@ -3027,9 +3026,9 @@ async function main(): Promise<void> {
         if (thinkingInterval) { clearInterval(thinkingInterval); thinkingInterval = null; }
         for (const f of statusFiles) { try { fs.unlinkSync(f); } catch { /* already read */ } }
         statusFiles.length = 0;
-        // Delete the status message from chat
+        // Delete the status message from chat (zzz prefix sorts after start/upd files)
         fs.writeFileSync(
-          path.join(IPC_MSG_DIR, `${ackId}-clear.json`),
+          path.join(IPC_MSG_DIR, `${ackId}-zzz-clear.json`),
           JSON.stringify({ type: 'thinking_clear', thinkingId: ackId }),
         );
       };
