@@ -657,6 +657,72 @@ const MODELS_PINNED = new Set([MODELS.COORDINATOR, MODELS.SECRETARY]);
 // Specialists evict immediately after use — frees VRAM for larger models
 const KEEP_ALIVE_PINNED = -1;      // never evict — stays in VRAM permanently
 const KEEP_ALIVE_SPECIALIST = '0'; // evict immediately — frees VRAM for other models
+// --- Model inference pool ---
+// Models >30GB (architect, vision) share ONE slot — they can't coexist in VRAM.
+// Secretary gets 4 slots (tiny, fast). Coordinator gets 1. Others get 2.
+// 30s timeout prevents indefinite waits.
+const MODEL_SIZE_GB: Record<string, number> = {
+  [MODELS.SECRETARY]: 4, [MODELS.COORDINATOR]: 26, [MODELS.CODER]: 19,
+  [MODELS.ARCHITECT]: 43, [MODELS.VISION]: 49, [MODELS.IMAGE]: 12,
+};
+const LARGE_MODEL_THRESHOLD_GB = 30;
+const SLOT_TIMEOUT_MS = 30_000;
+
+// Shared slot for all large models — only one can run at a time
+let largeModelSlotBusy = false;
+const largeModelWaiters: Array<() => void> = [];
+// Per-model slots for smaller models
+const modelSlots: Record<string, number> = {};
+const modelWaiters: Record<string, Array<() => void>> = {};
+
+function getMaxSlots(model: string): number {
+  if (model === MODELS.SECRETARY) return 4;
+  const size = MODEL_SIZE_GB[model] || 20;
+  if (size > LARGE_MODEL_THRESHOLD_GB) return 1; // shared slot
+  if (model === MODELS.COORDINATOR) return 1;
+  return 2;
+}
+
+function isLargeModel(model: string): boolean {
+  return (MODEL_SIZE_GB[model] || 20) > LARGE_MODEL_THRESHOLD_GB;
+}
+
+async function acquireSlot(model: string): Promise<void> {
+  const deadline = Date.now() + SLOT_TIMEOUT_MS;
+
+  if (isLargeModel(model)) {
+    // All large models share one slot
+    while (largeModelSlotBusy) {
+      if (Date.now() > deadline) throw new Error(`Large model slot unavailable (${model}) — another large model is running`);
+      await new Promise<void>((r) => { largeModelWaiters.push(r); setTimeout(r, 5000); });
+    }
+    largeModelSlotBusy = true;
+    log(`[pool] acquired large-model slot for ${model}`);
+    return;
+  }
+
+  const max = getMaxSlots(model);
+  while ((modelSlots[model] || 0) >= max) {
+    if (Date.now() > deadline) throw new Error(`Model slot unavailable (${model}) — ${max} already running`);
+    if (!modelWaiters[model]) modelWaiters[model] = [];
+    await new Promise<void>((r) => { modelWaiters[model].push(r); setTimeout(r, 5000); });
+  }
+  modelSlots[model] = (modelSlots[model] || 0) + 1;
+  log(`[pool] acquired ${model} slot (${modelSlots[model]}/${max})`);
+}
+
+function releaseSlot(model: string): void {
+  if (isLargeModel(model)) {
+    largeModelSlotBusy = false;
+    const w = largeModelWaiters.shift();
+    if (w) w();
+    return;
+  }
+  modelSlots[model] = Math.max(0, (modelSlots[model] || 0) - 1);
+  const w = modelWaiters[model]?.shift();
+  if (w) w();
+}
+
 const TOOL_TIMEOUT_MS = 600_000;       // 10 min — deepseek-r1 with thinking can run 2-5 min
 const IMAGE_TOOL_TIMEOUT_MS = 120_000; // 2 min for image generation
 const VIDEO_TOOL_TIMEOUT_MS = 360_000; // 6 min for video generation (internal deadline is 5 min)
@@ -2547,7 +2613,27 @@ export async function callOllama(
   onToolStart?: (toolName: string) => void,
   complexity?: 'low' | 'medium' | 'high',
 ): Promise<string> {
-  // llama3.2-vision only supports one image per call.
+  // Acquire model slot (prevents large models from coexisting in VRAM)
+  await acquireSlot(model);
+  try {
+    return await _callOllamaInner(model, messages, chatJid, groupFolder, images, temperature, setStatus, think, onToolStart, complexity);
+  } finally {
+    releaseSlot(model);
+  }
+}
+
+async function _callOllamaInner(
+  model: string,
+  messages: Message[],
+  chatJid: string,
+  groupFolder: string,
+  images?: string[],
+  temperature?: number,
+  setStatus?: (text: string) => void,
+  think?: boolean,
+  onToolStart?: (toolName: string) => void,
+  complexity?: 'low' | 'medium' | 'high',
+): Promise<string> {
   // When multiple images are provided, describe each separately and inject as text context.
   let resolvedImages = images;
   let resolvedMessages = messages;
