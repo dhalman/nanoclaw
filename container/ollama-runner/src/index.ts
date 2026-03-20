@@ -1206,6 +1206,13 @@ const DIRECT_PATTERNS: Array<{
     args: () => ({}),
     format: (r) => r,
   },
+  {
+    // "restart", "reboot", "reset"
+    pattern: /^\s*(?:restart|reboot|reset)\s*$/i,
+    tool: 'restart_self',
+    args: () => ({}),
+    format: () => 'Restarting now... 🔄',
+  },
 ];
 
 // Patterns for queries that should go straight to web_search
@@ -2936,15 +2943,11 @@ async function main(): Promise<void> {
           log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
         }
 
-      // Immediate "..." acknowledgment — deleted when response arrives
+      const cls = await classifyMessage(prompt, !!currentImages?.length);
+
+      // Send status indicator after classification (one message, no doubles)
       const ackId = `ack-${Date.now()}`;
       fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
-      fs.writeFileSync(
-        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
-        JSON.stringify({ type: 'thinking_start', chatJid, text: '_..._', thinkingId: ackId }),
-      );
-
-      const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
 
@@ -2988,13 +2991,11 @@ async function main(): Promise<void> {
       let elapsedSeconds = 0;
       const statusFiles: string[] = [];
 
-      // Update "..." with model/task info now that classification is done
-      const statusFile1 = path.join(IPC_MSG_DIR, `${ackId}-upd-00000.json`);
-      statusFiles.push(statusFile1);
-      fs.writeFileSync(statusFile1, JSON.stringify({
-        type: 'thinking_update', chatJid, thinkingId: ackId,
-        text: `_${modelLabel} · ${responseType}_`,
-      }));
+      // Single status message with model/task info (sent after classification, ~300ms)
+      fs.writeFileSync(
+        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
+        JSON.stringify({ type: 'thinking_start', chatJid, text: `_${modelLabel} · ${responseType}_`, thinkingId: ackId }),
+      );
 
       let thinkingInterval: ReturnType<typeof setInterval> | null = null;
 
