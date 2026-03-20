@@ -739,10 +739,10 @@
   },
   "0.3.38": {
     "date": "2026-03-20",
-    "title": "NLP-based reaction sentiment analysis",
+    "title": "Dynamic response translation to registered languages",
     "notes": [
-      "Emoji reactions are now analyzed in context using gemma3:4b. The meaning of an emoji depends on what message it was reacting to - fire on a fast answer means \"impressive\", crying on bad news means empathy not criticism.",
-      "Background NLP call interprets emoji + message combo. Returns sentiment (positive/negative/neutral/mixed), meaning (one sentence), and whether it is actionable feedback. Logged to perf data for pattern analysis."
+      "When a request or response is not in English, Jarvis appends translations to all registered languages. No translation when both request and response are English. Languages controlled by translator_languages preference.",
+      "Reasoning blocks stripped from group chat responses and forwarded privately to DJ DM. Version synced to 0.3.38."
     ]
   }
 }

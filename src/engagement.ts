@@ -213,7 +213,10 @@ export async function checkEngagement(
     },
     {
       // Multi-word praise that mentions the assistant — "Impressive Jarvis!", "Good job Jarvis"
-      pattern: new RegExp(`^\\s*(?:impressive|proud|well done|good job|nice work|great job|love it|bravo)\\b[^.?]*$`, 'i'),
+      pattern: new RegExp(
+        `^\\s*(?:impressive|proud|well done|good job|nice work|great job|love it|bravo)\\b[^.?]*$`,
+        'i',
+      ),
       emoji: '❤',
     },
     {

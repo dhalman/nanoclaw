@@ -623,16 +623,19 @@ export async function initJarvisBot(
             const emojis = emojiReactions.join(' ');
 
             // Ask gemma3:4b to interpret the reaction in context
-            const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
+            const OLLAMA_HOST =
+              process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
             const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: 'gemma3:4b',
-                messages: [{
-                  role: 'user',
-                  content: `A user reacted with ${emojis} to this message: "${msgText}"\n\nWhat does this reaction mean in context? Reply with JSON only:\n{"sentiment":"positive|negative|neutral|mixed","meaning":"one sentence","actionable":true|false}`,
-                }],
+                messages: [
+                  {
+                    role: 'user',
+                    content: `A user reacted with ${emojis} to this message: "${msgText}"\n\nWhat does this reaction mean in context? Reply with JSON only:\n{"sentiment":"positive|negative|neutral|mixed","meaning":"one sentence","actionable":true|false}`,
+                  },
+                ],
                 keep_alive: -1,
                 options: { num_ctx: 512, temperature: 0, num_predict: 60 },
                 stream: false,
@@ -640,19 +643,38 @@ export async function initJarvisBot(
               signal: AbortSignal.timeout(3000),
             });
             if (resp.ok) {
-              const data = await resp.json() as { message: { content: string } };
-              const raw = data.message.content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+              const data = (await resp.json()) as {
+                message: { content: string };
+              };
+              const raw = data.message.content
+                .trim()
+                .replace(/^```(?:json)?\s*/i, '')
+                .replace(/\s*```$/i, '');
               try {
-                const analysis = JSON.parse(raw.match(/\{[^{}]*\}/)?.[0] || raw);
+                const analysis = JSON.parse(
+                  raw.match(/\{[^{}]*\}/)?.[0] || raw,
+                );
                 logger.info(
-                  { chatJid, messageId, emojis, sentiment: analysis.sentiment, meaning: analysis.meaning, actionable: analysis.actionable },
+                  {
+                    chatJid,
+                    messageId,
+                    emojis,
+                    sentiment: analysis.sentiment,
+                    meaning: analysis.meaning,
+                    actionable: analysis.actionable,
+                  },
                   'Reaction sentiment analyzed',
                 );
               } catch {
-                logger.info({ chatJid, messageId, emojis }, 'Reaction logged (analysis parse failed)');
+                logger.info(
+                  { chatJid, messageId, emojis },
+                  'Reaction logged (analysis parse failed)',
+                );
               }
             }
-          } catch { /* background — ignore failures */ }
+          } catch {
+            /* background — ignore failures */
+          }
         })();
       }
 

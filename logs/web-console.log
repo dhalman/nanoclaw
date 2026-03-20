@@ -2867,3 +2867,267 @@ Attaching to existing tmux session 'claude'
 [2026/03/20 12:08:08:3185] W: handler_server_protocol_init: requires 'upload-dir' pvo
 [2026/03/20 12:08:08:3200] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
 [2026/03/20 12:08:08:3201] N:  Listening on port: 7682
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:17:25:1674] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:17:25:1682] N: tty configuration:
+[2026/03/20 13:17:25:1682] N:   start command: tmux attach -t claude
+[2026/03/20 13:17:25:1682] N:   close signal: SIGHUP (1)
+[2026/03/20 13:17:25:1682] N:   terminal type: xterm-256color
+[2026/03/20 13:17:25:1690] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:17:25:1756] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:17:25:1760] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:17:25:1760] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:17:25:1761] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:17:25:1761] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:17:25:1786] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:17:25:1786] N:  Listening on port: 7682
+[2026/03/20 13:28:11:1571] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:28:11:1574] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:28:17:7051] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:28:17:7058] N: tty configuration:
+[2026/03/20 13:28:17:7058] N:   start command: tmux attach -t claude
+[2026/03/20 13:28:17:7058] N:   close signal: SIGHUP (1)
+[2026/03/20 13:28:17:7058] N:   terminal type: xterm-256color
+[2026/03/20 13:28:17:7067] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:28:17:7119] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:28:17:7120] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:28:17:7121] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:28:17:7121] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:28:17:7121] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:28:17:7137] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:28:17:7137] N:  Listening on port: 7682
+[2026/03/20 13:30:25:9547] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:30:25:9549] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:30:33:0785] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:30:33:0792] N: tty configuration:
+[2026/03/20 13:30:33:0792] N:   start command: tmux attach -t claude
+[2026/03/20 13:30:33:0792] N:   close signal: SIGHUP (1)
+[2026/03/20 13:30:33:0792] N:   terminal type: xterm-256color
+[2026/03/20 13:30:33:0801] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:30:33:0856] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:30:33:0857] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:30:33:0857] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:30:33:0857] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:30:33:0858] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:30:33:0872] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:30:33:0872] N:  Listening on port: 7682
+[2026/03/20 13:33:18:3751] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:33:18:3752] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:33:25:6475] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:33:25:6482] N: tty configuration:
+[2026/03/20 13:33:25:6482] N:   start command: tmux attach -t claude
+[2026/03/20 13:33:25:6482] N:   close signal: SIGHUP (1)
+[2026/03/20 13:33:25:6482] N:   terminal type: xterm-256color
+[2026/03/20 13:33:25:6491] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:33:25:6550] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:33:25:6552] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:33:25:6552] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:33:25:6552] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:33:25:6552] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:33:25:6571] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:33:25:6572] N:  Listening on port: 7682
+[2026/03/20 13:36:09:9559] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:36:09:9560] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:36:17:3136] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:36:17:3143] N: tty configuration:
+[2026/03/20 13:36:17:3143] N:   start command: tmux attach -t claude
+[2026/03/20 13:36:17:3143] N:   close signal: SIGHUP (1)
+[2026/03/20 13:36:17:3144] N:   terminal type: xterm-256color
+[2026/03/20 13:36:17:3151] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:36:17:3214] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:36:17:3217] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:36:17:3217] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:36:17:3217] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:36:17:3217] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:36:17:3240] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:36:17:3241] N:  Listening on port: 7682
+[2026/03/20 13:41:27:9174] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:41:27:9196] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:41:35:1520] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:41:35:1527] N: tty configuration:
+[2026/03/20 13:41:35:1527] N:   start command: tmux attach -t claude
+[2026/03/20 13:41:35:1527] N:   close signal: SIGHUP (1)
+[2026/03/20 13:41:35:1527] N:   terminal type: xterm-256color
+[2026/03/20 13:41:35:1535] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:41:35:1605] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:41:35:1607] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:41:35:1607] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:41:35:1607] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:41:35:1607] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:41:35:1623] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:41:35:1624] N:  Listening on port: 7682
+[2026/03/20 13:47:42:7403] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:47:42:7430] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:47:51:3289] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:47:51:3313] N: tty configuration:
+[2026/03/20 13:47:51:3313] N:   start command: tmux attach -t claude
+[2026/03/20 13:47:51:3316] N:   close signal: SIGHUP (1)
+[2026/03/20 13:47:51:3317] N:   terminal type: xterm-256color
+[2026/03/20 13:47:51:3331] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:47:51:3428] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:47:51:3432] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:47:51:3433] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:47:51:3433] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:47:51:3433] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:47:51:3474] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:47:51:3475] N:  Listening on port: 7682
+[2026/03/20 13:53:39:9337] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:53:39:9339] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:53:47:3096] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:53:47:3114] N: tty configuration:
+[2026/03/20 13:53:47:3115] N:   start command: tmux attach -t claude
+[2026/03/20 13:53:47:3115] N:   close signal: SIGHUP (1)
+[2026/03/20 13:53:47:3115] N:   terminal type: xterm-256color
+[2026/03/20 13:53:47:3131] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:53:47:3203] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:53:47:3205] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:53:47:3205] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:53:47:3205] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:53:47:3205] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:53:47:3224] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:53:47:3225] N:  Listening on port: 7682
+[2026/03/20 13:58:16:7918] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:58:16:7919] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 13:58:58:2529] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 13:58:58:2536] N: tty configuration:
+[2026/03/20 13:58:58:2536] N:   start command: tmux attach -t claude
+[2026/03/20 13:58:58:2536] N:   close signal: SIGHUP (1)
+[2026/03/20 13:58:58:2537] N:   terminal type: xterm-256color
+[2026/03/20 13:58:58:2545] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 13:58:58:2603] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 13:58:58:2605] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 13:58:58:2605] W: ssh pvo "ops" is mandatory
+[2026/03/20 13:58:58:2605] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 13:58:58:2605] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 13:58:58:2624] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 13:58:58:2625] N:  Listening on port: 7682
+[2026/03/20 13:59:54:4537] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 13:59:54:4538] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 14:00:01:0948] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 14:00:01:0959] N: tty configuration:
+[2026/03/20 14:00:01:0959] N:   start command: tmux attach -t claude
+[2026/03/20 14:00:01:0959] N:   close signal: SIGHUP (1)
+[2026/03/20 14:00:01:0959] N:   terminal type: xterm-256color
+[2026/03/20 14:00:01:0969] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 14:00:01:1025] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 14:00:01:1027] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 14:00:01:1027] W: ssh pvo "ops" is mandatory
+[2026/03/20 14:00:01:1028] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 14:00:01:1028] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 14:00:01:1050] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 14:00:01:1051] N:  Listening on port: 7682
+[2026/03/20 14:09:00:8180] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 14:09:00:8181] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 14:09:07:6567] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 14:09:07:6571] N: tty configuration:
+[2026/03/20 14:09:07:6571] N:   start command: tmux attach -t claude
+[2026/03/20 14:09:07:6571] N:   close signal: SIGHUP (1)
+[2026/03/20 14:09:07:6571] N:   terminal type: xterm-256color
+[2026/03/20 14:09:07:6577] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 14:09:07:6614] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 14:09:07:6615] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 14:09:07:6615] W: ssh pvo "ops" is mandatory
+[2026/03/20 14:09:07:6615] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 14:09:07:6615] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 14:09:07:6628] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 14:09:07:6629] N:  Listening on port: 7682
+[2026/03/20 14:12:01:9928] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 14:12:01:9931] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 14:12:09:4596] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 14:12:09:4603] N: tty configuration:
+[2026/03/20 14:12:09:4603] N:   start command: tmux attach -t claude
+[2026/03/20 14:12:09:4603] N:   close signal: SIGHUP (1)
+[2026/03/20 14:12:09:4603] N:   terminal type: xterm-256color
+[2026/03/20 14:12:09:4614] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 14:12:09:4666] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 14:12:09:4668] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 14:12:09:4668] W: ssh pvo "ops" is mandatory
+[2026/03/20 14:12:09:4668] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 14:12:09:4668] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 14:12:09:4682] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 14:12:09:4682] N:  Listening on port: 7682
+[2026/03/20 14:13:48:6722] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 14:13:48:6723] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 14:13:55:3720] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 14:13:55:3728] N: tty configuration:
+[2026/03/20 14:13:55:3728] N:   start command: tmux attach -t claude
+[2026/03/20 14:13:55:3728] N:   close signal: SIGHUP (1)
+[2026/03/20 14:13:55:3728] N:   terminal type: xterm-256color
+[2026/03/20 14:13:55:3737] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 14:13:55:3795] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 14:13:55:3797] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 14:13:55:3797] W: ssh pvo "ops" is mandatory
+[2026/03/20 14:13:55:3797] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 14:13:55:3797] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 14:13:55:3815] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 14:13:55:3816] N:  Listening on port: 7682
+[2026/03/20 14:21:36:0369] N: received signal: SIGTERM (15), exiting...
+[2026/03/20 14:21:36:0371] N: send ^C to force exit.
+Attaching to existing tmux session 'claude'
+
+  Web Console: http://localhost:7681
+
+[2026/03/20 14:21:42:7413] N: ttyd 1.7.7-unknown (libwebsockets 4.5.7-unknown)
+[2026/03/20 14:21:42:7420] N: tty configuration:
+[2026/03/20 14:21:42:7420] N:   start command: tmux attach -t claude
+[2026/03/20 14:21:42:7420] N:   close signal: SIGHUP (1)
+[2026/03/20 14:21:42:7420] N:   terminal type: xterm-256color
+[2026/03/20 14:21:42:7430] N: lws_create_context: LWS: 4.5.7-unknown, NET CLI SRV H1 H2 WS SS-JSON-POL ConMon IPV6-off
+[2026/03/20 14:21:42:7487] N: elops_init_pt_uv:  Using foreign event loop...
+[2026/03/20 14:21:42:7489] W: callback_lws_sshd_demo: Can't open /etc/lws-test-sshd-server-key
+[2026/03/20 14:21:42:7489] W: ssh pvo "ops" is mandatory
+[2026/03/20 14:21:42:7489] W: callback_raw_test: Missing pvo "fifo-path", raw file fd testing disabled
+[2026/03/20 14:21:42:7489] W: handler_server_protocol_init: requires 'upload-dir' pvo
+[2026/03/20 14:21:42:7519] N: [vh|2|default||7682]: lws_socket_bind: source ads 0.0.0.0
+[2026/03/20 14:21:42:7520] N:  Listening on port: 7682

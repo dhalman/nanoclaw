@@ -4,7 +4,7 @@ import { ASSISTANT_NAME, GROUPS_DIR, TRIGGER_PATTERN } from './config.js';
 import { logger } from './logger.js';
 import { isTriggerAllowed } from './sender-allowlist.js';
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-const INTENT_MODEL = process.env.OLLAMA_MODEL_SECRETARY || 'qwen2.5:3b';
+const INTENT_MODEL = process.env.OLLAMA_MODEL_SECRETARY || 'gemma3:4b';
 // Fast regex: does the message mention the assistant name at all?
 const MENTION_PATTERN = new RegExp(`\\b${ASSISTANT_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
 /**
@@ -28,7 +28,7 @@ async function classifyIntent(text) {
                 options: { num_ctx: 512, temperature: 0.0, num_predict: 10 },
                 stream: false,
             }),
-            signal: AbortSignal.timeout(1500),
+            signal: AbortSignal.timeout(3000),
         });
         if (!resp.ok)
             return null;
@@ -164,8 +164,17 @@ export async function checkEngagement(chatJid, group, messages, allowlistCfg) {
             emoji: '👍',
         },
         {
-            pattern: /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit)\s*[!.]?\s*$/i,
+            pattern: /^\s*(?:awesome|amazing|great|perfect|nice|cool|sweet|fire|lit|impressive|proud|love it|beautiful|excellent|fantastic|brilliant|solid|🔥|💯|❤️)\s*[!.]?\s*$/i,
             emoji: '🔥',
+        },
+        {
+            pattern: /^\s*(?:(?:i(?:'?m| am)\s+)?(?:very\s+)?(?:proud|impressed|happy|pleased)(?:\s+of\s+you)?)[!.]?\s*$/i,
+            emoji: '❤',
+        },
+        {
+            // Multi-word praise that mentions the assistant — "Impressive Jarvis!", "Good job Jarvis"
+            pattern: new RegExp(`^\\s*(?:impressive|proud|well done|good job|nice work|great job|love it|bravo)\\b[^.?]*$`, 'i'),
+            emoji: '❤',
         },
         {
             pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i,
@@ -207,19 +216,20 @@ export async function checkEngagement(chatJid, group, messages, allowlistCfg) {
         MENTION_PATTERN.test(m.content.trim()) &&
         isTriggerAllowed(chatJid, m.sender, allowlistCfg));
     const triggerMessages = [...ownerTriggers];
-    // Fast path: regex trigger matches are always engaged (no NLP needed)
-    // NLP is only for ambiguous cases where name is mentioned but regex doesn't match
-    for (const m of candidates) {
-        if (TRIGGER_PATTERN.test(m.content.trim())) {
-            // Clear regex match — engage immediately, no NLP cost
-            triggerMessages.push(m);
-        }
-        else {
-            // Ambiguous: name mentioned but not in a clear trigger pattern
-            // Use NLP only here — and with a tight 2s timeout
+    if (candidates.length > 0) {
+        const intents = await Promise.all(candidates.map(async (m) => {
             const intent = await classifyIntent(m.content.trim());
+            return { message: m, intent };
+        }));
+        for (const { message, intent } of intents) {
             if (intent === 'engage') {
-                triggerMessages.push(m);
+                triggerMessages.push(message);
+            }
+            else if (intent === null) {
+                // NLP failed — fall back to regex
+                if (TRIGGER_PATTERN.test(message.content.trim())) {
+                    triggerMessages.push(message);
+                }
             }
         }
     }

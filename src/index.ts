@@ -259,12 +259,19 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       const isGroupChat = chatJid.includes('-');
       const DJ_DM = 'tg-j:365278370';
       if (isGroupChat && text) {
-        const reasoningMatch = text.match(/💭\s*\*Reasoning:\*\n([\s\S]*?)(?=\n\n|$)/);
+        const reasoningMatch = text.match(
+          /💭\s*\*Reasoning:\*\n([\s\S]*?)(?=\n\n|$)/,
+        );
         if (reasoningMatch) {
           const reasoning = reasoningMatch[1].trim();
-          text = text.replace(/💭\s*\*Reasoning:\*\n[\s\S]*?(?=\n\n|$)/, '').trim();
+          text = text
+            .replace(/💭\s*\*Reasoning:\*\n[\s\S]*?(?=\n\n|$)/, '')
+            .trim();
           // Forward reasoning to DJ's DM
-          sendJarvisMessage(DJ_DM, `_🧠 [${group.name}] reasoning:_\n${reasoning}`).catch(() => {});
+          sendJarvisMessage(
+            DJ_DM,
+            `_🧠 [${group.name}] reasoning:_\n${reasoning}`,
+          ).catch(() => {});
         }
       }
 

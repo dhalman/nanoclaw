@@ -148,6 +148,20 @@ async function processGroupMessages(chatJid) {
                 .replace(/<\/disengage>/g, '')
                 .trim();
             logger.info({ group: group.name }, `Agent output: ${raw.slice(0, 200)}`);
+            // In group chats: strip reasoning, forward to DJ's DM
+            const isGroupChat = chatJid.includes('-');
+            const DJ_DM = 'tg-j:365278370';
+            if (isGroupChat && text) {
+                const reasoningMatch = text.match(/💭\s*\*Reasoning:\*\n([\s\S]*?)(?=\n\n|$)/);
+                if (reasoningMatch) {
+                    const reasoning = reasoningMatch[1].trim();
+                    text = text
+                        .replace(/💭\s*\*Reasoning:\*\n[\s\S]*?(?=\n\n|$)/, '')
+                        .trim();
+                    // Forward reasoning to DJ's DM
+                    sendJarvisMessage(DJ_DM, `_🧠 [${group.name}] reasoning:_\n${reasoning}`).catch(() => { });
+                }
+            }
             if (text) {
                 let sentMsgId = null;
                 if (group.containerConfig?.ollamaRunner) {
@@ -331,7 +345,22 @@ async function startMessageLoop() {
                         logger.warn({ chatJid }, 'No channel owns JID, skipping messages');
                         continue;
                     }
-                    // Track message ID and react BEFORE engagement check (instant feedback)
+                    // Unified engagement check: trigger detection, per-user prefs, dismissal
+                    const engResult = await checkEngagement(chatJid, group, groupMessages, allowlistCfg);
+                    // React to trivial dismissals with emoji
+                    for (const d of engResult.dismissals) {
+                        const msgId = parseInt(d.message.id, 10);
+                        if (!isNaN(msgId))
+                            reactToMessage(chatJid, msgId, d.emoji).catch(() => { });
+                    }
+                    if (!engResult.shouldProcess)
+                        continue;
+                    // Pull all messages since lastAgentTimestamp so non-trigger
+                    // context that accumulated between triggers is included.
+                    const allPending = getMessagesSince(chatJid, lastAgentTimestamp[chatJid] || '', ASSISTANT_NAME);
+                    const messagesToSend = allPending.length > 0 ? allPending : groupMessages;
+                    const formatted = formatMessages(messagesToSend, TIMEZONE);
+                    // Track the last user message ID for reply-to in groups
                     const lastUserMsg = [...groupMessages]
                         .reverse()
                         .find((m) => !m.is_from_me);
@@ -339,37 +368,10 @@ async function startMessageLoop() {
                         const numId = parseInt(lastUserMsg.id, 10);
                         if (!isNaN(numId)) {
                             lastTriggerMessageId[chatJid] = numId;
-                            // 👀 — Jarvis noticed the message
-                            reactToMessage(chatJid, numId, '👀').catch(() => { });
-                        }
-                    }
-                    // Engagement check (may call NLP for ambiguous mentions)
-                    const engResult = await checkEngagement(chatJid, group, groupMessages, allowlistCfg);
-                    // React to trivial dismissals with mood-appropriate emoji
-                    for (const d of engResult.dismissals) {
-                        const msgId = parseInt(d.message.id, 10);
-                        if (!isNaN(msgId))
-                            reactToMessage(chatJid, msgId, d.emoji).catch(() => { });
-                    }
-                    if (!engResult.shouldProcess) {
-                        // Remove 👀 — wasn't for Jarvis
-                        if (lastUserMsg?.id) {
-                            const numId = parseInt(lastUserMsg.id, 10);
-                            if (!isNaN(numId))
-                                removeReaction(chatJid, numId).catch(() => { });
-                        }
-                        continue;
-                    }
-                    // Upgrade 👀 → 🧐 — Jarvis is investigating
-                    if (lastUserMsg?.id) {
-                        const numId = parseInt(lastUserMsg.id, 10);
-                        if (!isNaN(numId))
+                            // Instant acknowledgment reaction
                             reactToMessage(chatJid, numId, '🧐').catch(() => { });
+                        }
                     }
-                    // Pull all messages since lastAgentTimestamp
-                    const allPending = getMessagesSince(chatJid, lastAgentTimestamp[chatJid] || '', ASSISTANT_NAME);
-                    const messagesToSend = allPending.length > 0 ? allPending : groupMessages;
-                    const formatted = formatMessages(messagesToSend, TIMEZONE);
                     // Cancel command: pipe to container for immediate IPC cancel, then kill as backup
                     const isCancelCommand = groupMessages.some((m) => CANCEL_PATTERN.test(m.content.trim()));
                     if (isCancelCommand) {

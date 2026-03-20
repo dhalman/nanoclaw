@@ -19643,3 +19643,844 @@ INFO:     127.0.0.1:60920 - "GET /api/models HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60924 - "GET /api/models HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60943 - "GET /api/models HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60946 - "GET /api/models HTTP/1.1" 200 OK
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:17:20,443 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [16640]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64045 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64049 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64069 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64072 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64084 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64086 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64097 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64098 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64112 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64114 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64126 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64127 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64140 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64141 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64156 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64153 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64169 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64172 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64182 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64184 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64200 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64198 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64212 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64214 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64228 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64230 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64242 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64243 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64256 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64257 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64271 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64272 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64285 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64286 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64301 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64300 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64315 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64318 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64330 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64331 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64343 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64344 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64358 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64359 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64372 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64373 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64385 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64388 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64402 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64404 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64415 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64417 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64432 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64430 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64446 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64444 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64463 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64464 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64475 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64476 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64492 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64493 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64509 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64510 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64525 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64526 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64539 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64541 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64554 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64556 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64569 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64570 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64585 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64586 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64602 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64603 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64615 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64617 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64631 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64632 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64642 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64645 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64657 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64658 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64673 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64676 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [16640]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:28:14,596 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [17007]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64740 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64738 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64757 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64758 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64773 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64771 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64801 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64803 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64818 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64820 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64834 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64836 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64854 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64855 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64864 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64866 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64885 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64884 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17007]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:30:29,510 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [17300]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64938 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64943 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64964 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64967 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64975 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64978 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64989 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64991 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65002 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65003 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65018 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65017 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65029 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65030 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65047 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65048 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65076 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65077 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65097 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65101 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65110 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65112 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17300]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:33:21,845 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [17601]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:65185 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65189 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65212 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65213 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65225 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65226 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65236 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65238 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65252 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65253 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65266 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65267 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65279 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65280 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65293 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65296 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65328 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65329 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65364 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65365 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65397 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65399 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17601]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:36:13,484 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [17816]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:65461 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65466 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65485 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65488 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65499 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65502 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65522 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65524 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49158 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49160 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49187 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49188 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49213 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49215 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49225 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49227 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49241 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49239 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49254 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49255 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49268 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49269 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49286 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49287 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49311 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49315 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49340 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49343 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49356 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49358 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49371 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49373 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49387 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49389 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49401 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49403 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49422 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49424 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49434 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49435 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49451 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49453 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17816]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:41:31,366 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [18195]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49525 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49527 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49550 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49551 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49563 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49564 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49575 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49578 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49591 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49593 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49631 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49632 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49653 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49654 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49665 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49681 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49682 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49695 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49696 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49716 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49717 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49740 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49741 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49757 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49758 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49769 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49770 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49791 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49792 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49808 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49810 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49808 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49814 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49833 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49834 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49855 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49857 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49870 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49872 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49884 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49885 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49899 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49901 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49913 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49915 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49928 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49930 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49942 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49943 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49962 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49963 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [18195]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:47:47,325 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [18550]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50017 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50022 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50045 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50044 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50053 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50054 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50074 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50110 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50111 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50126 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50127 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50138 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50137 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50153 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50155 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50166 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50167 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50183 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50184 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50210 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50211 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50226 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50227 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50238 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50239 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50254 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50256 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50266 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50268 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50287 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50299 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50298 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50313 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50311 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50325 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50326 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50340 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50341 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50355 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50376 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50377 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50388 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [18550]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:53:43,389 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [18938]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50475 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50478 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50502 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50510 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50511 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50528 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50529 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50542 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50543 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50558 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50560 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50571 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50572 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50586 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50590 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50601 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50603 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50617 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50618 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50630 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50633 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50645 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50648 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50660 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50661 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50677 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50678 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50694 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50695 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50713 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50716 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50728 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50729 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50743 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50744 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [18938]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:58:20,287 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [19324]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50817 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50814 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50837 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50836 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50847 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50848 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50862 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50864 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19324]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 13:59:57,892 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [19613]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50914 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50919 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50930 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50933 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50947 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50945 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50957 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50958 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50976 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50988 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50991 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51001 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51004 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51019 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51018 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51038 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51041 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51053 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51054 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51067 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51070 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51081 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51083 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51107 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51108 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51124 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51125 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51140 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51139 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51154 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51157 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51171 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51173 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51186 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51188 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51202 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51203 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51215 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51217 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51232 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51236 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51246 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51247 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51271 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51272 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51287 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51289 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51303 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51307 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51316 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51317 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51332 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51334 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51344 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51347 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51360 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51374 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51376 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51401 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51399 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51423 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51425 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51441 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51442 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51453 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51454 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51474 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51477 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51490 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51491 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19613]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 14:09:04,385 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [20039]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51543 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51547 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51567 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51570 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51583 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51587 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51597 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51599 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51615 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51628 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51630 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51645 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51658 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51660 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51684 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51685 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51704 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51706 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51721 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51719 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51731 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51733 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20039]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 14:12:05,430 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [20371]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51787 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51791 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51816 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51817 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51828 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51830 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51854 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51855 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51866 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51868 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51884 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51886 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51895 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51896 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20371]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 14:13:52,144 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [20683]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51948 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51950 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51970 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51973 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51992 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51994 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52012 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52010 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52028 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52030 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52044 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52067 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52069 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52080 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52082 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52094 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52126 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52127 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52141 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52142 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52160 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52163 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52178 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52181 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52194 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52197 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52210 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52211 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52222 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52223 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52247 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52250 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52275 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52276 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52286 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52287 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52301 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52302 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52315 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52316 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52344 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52347 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52359 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52371 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52374 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52400 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52415 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52417 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52447 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52448 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52458 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52459 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52481 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52478 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20683]
+stable-diffusion-cpp-python not available. GGUF models will not work.
+Starting OllamaDiffuser API server...
+2026-03-20 14:21:39,538 - INFO - Starting server: http://127.0.0.1:8001
+INFO:     Started server process [21007]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52534 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52532 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52557 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52558 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52571 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52572 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52585 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52584 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52601 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52602 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52615 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52613 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52629 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52632 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52644 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52647 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52659 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52662 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52674 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52675 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52702 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52701 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52714 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52717 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52736 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52738 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52750 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52752 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52765 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52768 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52778 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52781 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52795 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52797 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52808 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52812 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52827 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52828 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52836 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52838 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52853 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52851 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52867 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52868 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52893 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52895 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52918 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52919 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52934 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52936 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52947 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52950 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52961 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52963 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52973 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52978 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53004 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53005 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53022 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53020 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53036 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53033 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53045 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53049 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53068 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53070 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53082 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53080 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53100 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53099 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53111 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53130 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53133 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53148 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53151 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53169 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53167 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53180 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53182 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53205 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53207 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53227 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53228 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53241 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53244 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53253 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53255 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53271 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53273 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53283 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53282 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53296 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53298 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53309 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53310 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53325 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53327 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53337 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53338 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53354 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53355 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53366 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53367 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53379 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53381 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53393 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53394 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53410 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53412 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53440 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53441 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53454 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53457 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53471 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53473 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53489 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53487 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53499 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53501 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53514 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53516 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53526 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53528 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53550 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53551 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53564 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53565 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53585 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53587 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53599 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53600 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53614 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53615 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53630 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53632 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53656 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53657 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53667 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53670 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53684 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53696 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53708 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53709 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53719 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53725 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53745 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53748 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53759 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53765 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53775 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53778 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53800 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53806 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53816 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53818 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53827 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53834 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53843 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53846 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53868 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53872 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53883 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53888 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53900 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53905 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53916 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53920 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53933 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53945 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53956 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53960 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53969 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53975 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53983 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53992 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54001 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54009 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54031 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54033 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54052 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54059 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54069 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54073 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54095 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54109 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54124 - "GET /api/models HTTP/1.1" 200 OK

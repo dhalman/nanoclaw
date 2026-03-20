@@ -1,7 +1,8 @@
 {
   "group": {
-    "translator_languages": [],
-    "organization_secretary": "Donna"
+    "translator_languages": [
+      "en"
+    ]
   },
   "users": {}
 }

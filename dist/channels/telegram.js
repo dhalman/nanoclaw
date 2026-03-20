@@ -487,39 +487,68 @@ export async function initJarvisBot(token, opts) {
             const emojiReactions = reactions
                 .filter((r) => r.type === 'emoji')
                 .map((r) => r.emoji);
-            // Sentiment feedback: reactions on Jarvis's messages are feedback
             const messageId = ctx.messageReaction?.message_id;
-            if (messageId &&
-                ctx.messageReaction?.user?.id !== jarvisBot?.botInfo?.id) {
-                const isOnBotMessage = ctx.messageReaction?.message_id != null; // We can't tell easily — log all for learning
-                const POSITIVE = [
-                    '👍',
-                    '❤',
-                    '🔥',
-                    '👏',
-                    '🎉',
-                    '🤩',
-                    '💯',
-                    '😍',
-                    '👌',
-                    '🙏',
-                ];
-                const NEGATIVE = ['👎', '🤮', '💩', '🤡', '😢', '🤬'];
-                const sentiment = emojiReactions.some((e) => POSITIVE.includes(e))
-                    ? 'positive'
-                    : emojiReactions.some((e) => NEGATIVE.includes(e))
-                        ? 'negative'
-                        : null;
-                if (sentiment) {
-                    logger.info({ chatJid, messageId, sentiment, emojis: emojiReactions }, 'Reaction sentiment on message');
-                    // Learn the user's emoji preferences
-                    const userId = ctx.messageReaction?.user?.id?.toString() || '';
-                    if (userId) {
-                        const { learnUserEmoji } = await import('../engagement.js');
-                        for (const e of emojiReactions)
-                            learnUserEmoji(chatJid, userId, e);
-                    }
+            // Contextual sentiment analysis: use NLP to interpret the emoji + message combo
+            if (messageId && emojiReactions.length > 0) {
+                const userId = ctx.messageReaction?.user?.id?.toString() || '';
+                // Learn user's emoji style
+                if (userId) {
+                    const { learnUserEmoji } = await import('../engagement.js');
+                    for (const e of emojiReactions)
+                        learnUserEmoji(chatJid, userId, e);
                 }
+                // Analyze sentiment in background (don't block translation)
+                (async () => {
+                    try {
+                        const { getMessageById } = await import('../db.js');
+                        const msg = getMessageById?.(chatJid, messageId.toString());
+                        const msgText = msg?.content?.slice(0, 200) || '(unknown message)';
+                        const emojis = emojiReactions.join(' ');
+                        // Ask gemma3:4b to interpret the reaction in context
+                        const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
+                        const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: 'gemma3:4b',
+                                messages: [
+                                    {
+                                        role: 'user',
+                                        content: `A user reacted with ${emojis} to this message: "${msgText}"\n\nWhat does this reaction mean in context? Reply with JSON only:\n{"sentiment":"positive|negative|neutral|mixed","meaning":"one sentence","actionable":true|false}`,
+                                    },
+                                ],
+                                keep_alive: -1,
+                                options: { num_ctx: 512, temperature: 0, num_predict: 60 },
+                                stream: false,
+                            }),
+                            signal: AbortSignal.timeout(3000),
+                        });
+                        if (resp.ok) {
+                            const data = (await resp.json());
+                            const raw = data.message.content
+                                .trim()
+                                .replace(/^```(?:json)?\s*/i, '')
+                                .replace(/\s*```$/i, '');
+                            try {
+                                const analysis = JSON.parse(raw.match(/\{[^{}]*\}/)?.[0] || raw);
+                                logger.info({
+                                    chatJid,
+                                    messageId,
+                                    emojis,
+                                    sentiment: analysis.sentiment,
+                                    meaning: analysis.meaning,
+                                    actionable: analysis.actionable,
+                                }, 'Reaction sentiment analyzed');
+                            }
+                            catch {
+                                logger.info({ chatJid, messageId, emojis }, 'Reaction logged (analysis parse failed)');
+                            }
+                        }
+                    }
+                    catch {
+                        /* background — ignore failures */
+                    }
+                })();
             }
             // 👀 as translate trigger
             const hasTranslateEmoji = emojiReactions.includes('👀');
