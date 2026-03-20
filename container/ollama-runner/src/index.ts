@@ -2922,14 +2922,16 @@ async function main(): Promise<void> {
       // Online status is sent by the host (index.ts) after bot init — not from the container.
       // This avoids the race where IPC arrives before the bot can send/pin.
 
-      // Warm the coordinator — it handles all first-message routing when secretary is disabled.
-      // When secretary is enabled, warm secretary instead (classify needs it warm).
-      const warmModel = process.env.DISABLE_SECRETARY === '1' ? MODELS.COORDINATOR : MODELS.SECRETARY;
-      fetch(`${OLLAMA_HOST}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: warmModel, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0, num_ctx: 1024 }, stream: false }),
-      }).then(() => log(`${warmModel} warmed`)).catch(() => {});
+      // Warm both models — secretary for classify/translate, coordinator for inference.
+      // Small num_ctx to avoid VRAM eviction. Host warm script already loaded both;
+      // this just ensures keep_alive is set from the container's perspective.
+      for (const wm of [MODELS.SECRETARY, MODELS.COORDINATOR]) {
+        fetch(`${OLLAMA_HOST}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: wm, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0, num_ctx: 512 }, stream: false }),
+        }).then(() => log(`${wm} warmed`)).catch(() => {});
+      }
 
       makeServiceMonitor(
         'Ollama',
