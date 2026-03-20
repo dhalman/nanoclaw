@@ -38,7 +38,7 @@ async function classifyIntent(
         options: { num_ctx: 512, temperature: 0.0, num_predict: 10 },
         stream: false,
       }),
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(1500),
     });
     if (!resp.ok) return null;
     const data = (await resp.json()) as { message: { content: string } };
@@ -261,21 +261,18 @@ export async function checkEngagement(
 
   const triggerMessages: NewMessage[] = [...ownerTriggers];
 
-  if (candidates.length > 0) {
-    const intents = await Promise.all(
-      candidates.map(async (m) => {
-        const intent = await classifyIntent(m.content.trim());
-        return { message: m, intent };
-      }),
-    );
-    for (const { message, intent } of intents) {
+  // Fast path: regex trigger matches are always engaged (no NLP needed)
+  // NLP is only for ambiguous cases where name is mentioned but regex doesn't match
+  for (const m of candidates) {
+    if (TRIGGER_PATTERN.test(m.content.trim())) {
+      // Clear regex match — engage immediately, no NLP cost
+      triggerMessages.push(m);
+    } else {
+      // Ambiguous: name mentioned but not in a clear trigger pattern
+      // Use NLP only here — and with a tight 2s timeout
+      const intent = await classifyIntent(m.content.trim());
       if (intent === 'engage') {
-        triggerMessages.push(message);
-      } else if (intent === null) {
-        // NLP failed — fall back to regex
-        if (TRIGGER_PATTERN.test(message.content.trim())) {
-          triggerMessages.push(message);
-        }
+        triggerMessages.push(m);
       }
     }
   }
