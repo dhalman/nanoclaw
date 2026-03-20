@@ -1,4 +1,11 @@
 {
+  "0.2.52": {
+    "date": "2026-03-19",
+    "title": "feat: add timestamp to online/stopped status messages",
+    "notes": [
+      "feat: add timestamp to online/stopped status messages"
+    ]
+  },
   "0.2.51": {
     "date": "2026-03-19",
     "title": "fix: add vertical whitespace between translation lines",
