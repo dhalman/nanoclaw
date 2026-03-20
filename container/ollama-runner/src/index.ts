@@ -664,6 +664,7 @@ const KEEP_ALIVE_SPECIALIST = '0'; // evict immediately — frees VRAM for other
 const MODEL_SIZE_GB: Record<string, number> = {
   [MODELS.SECRETARY]: 4, [MODELS.COORDINATOR]: 26, [MODELS.CODER]: 19,
   [MODELS.ARCHITECT]: 43, [MODELS.VISION]: 49, [MODELS.IMAGE]: 12,
+  'qwen2.5:3b': 3, // translator — separate from secretary
 };
 const LARGE_MODEL_THRESHOLD_GB = 30;
 const SLOT_TIMEOUT_MS = 30_000;
@@ -675,11 +676,17 @@ const largeModelWaiters: Array<() => void> = [];
 const modelSlots: Record<string, number> = {};
 const modelWaiters: Record<string, Array<() => void>> = {};
 
+// Slot allocation:
+// 4 secretary (gemma3:4b — classify, dispatch)
+// 2 translator (qwen2.5:3b — translations, called via callOllama in container)
+// 2 coordinator (qwen3.5:35b — main inference)
+// 2 coder/image (smaller specialists)
+// 1 shared for all >30GB (architect, vision — can't coexist)
 function getMaxSlots(model: string): number {
   if (model === MODELS.SECRETARY) return 4;
   const size = MODEL_SIZE_GB[model] || 20;
   if (size > LARGE_MODEL_THRESHOLD_GB) return 1; // shared slot
-  if (model === MODELS.COORDINATOR) return 1;
+  if (model === MODELS.COORDINATOR) return 2;
   return 2;
 }
 
