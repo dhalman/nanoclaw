@@ -1,4 +1,11 @@
 {
+  "0.2.40": {
+    "date": "2026-03-19",
+    "title": "feat: auto-pin status messages in Telegram chats",
+    "notes": [
+      "feat: auto-pin status messages in Telegram chats"
+    ]
+  },
   "0.2.39": {
     "date": "2026-03-19",
     "title": "fix: status message always edits in place, never sends new",
