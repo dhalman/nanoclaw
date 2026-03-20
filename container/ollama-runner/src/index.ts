@@ -3154,22 +3154,7 @@ async function main(): Promise<void> {
           ];
         }
       }
-      saveHistory(history);
-
-      // Compress history — synchronous if critically large, background otherwise
-      const { compressThreshold, keepRecent } = getHistoryConfig(model, thinking);
-      if (history.length > INFERENCE_MAX_MESSAGES) {
-        // Critical: history exceeds inference safety limit — compress NOW before next turn
-        try {
-          history = await compressHistory(history, compressThreshold, keepRecent);
-          log(`History force-compressed (was ${history.length + compressThreshold} msgs, now ${history.length})`);
-          saveHistory(history);
-        } catch { /* trimHistoryForInference will catch it at inference time */ }
-      } else if (history.length > compressThreshold) {
-        compressHistory(history, compressThreshold, keepRecent).then((h) => { compressedHistory = h; }).catch(() => {});
-      }
-
-      // Append stats to response: model, task type, elapsed time
+      // Send response FIRST — never let compression block the user
       const statsLine = `\n\n_(${model.replace(/:.*/, '')}${thinking ? '+think' : ''} · ${taskTypeRich} · ${(responseMs / 1000).toFixed(1)}s)_`;
       const responseWithStats = response ? response + statsLine : null;
 
@@ -3178,6 +3163,16 @@ async function main(): Promise<void> {
         result: responseWithStats,
         newSessionId: sessionId,
       });
+
+      saveHistory(history);
+
+      // Compress history — always background, never blocks response
+      const { compressThreshold, keepRecent } = getHistoryConfig(model, thinking);
+      if (history.length > compressThreshold) {
+        compressHistory(history, compressThreshold, keepRecent)
+          .then((h) => { compressedHistory = h; saveHistory(h); })
+          .catch(() => {});
+      }
 
       // Response translations handled on host side (reply-to the sent message)
 
