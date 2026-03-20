@@ -1,4 +1,9 @@
 {
+  "0.3.1": {
+    "date": "2026-03-19",
+    "title": "Build 0.3.1",
+    "notes": []
+  },
   "0.2.70": {
     "date": "2026-03-19",
     "title": "fix: classify by action verb + recipient, not modal verbs",

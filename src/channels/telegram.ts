@@ -313,12 +313,21 @@ export async function initJarvisBot(
         return;
       }
 
+      // Replying to Jarvis = direct interaction — prepend name so engagement triggers
+      const isReplyToJarvis =
+        ctx.message.reply_to_message &&
+        ctx.message.reply_to_message.from?.id === jarvisBot?.botInfo?.id;
+      const messageContent =
+        isReplyToJarvis && !text.includes(ASSISTANT_NAME)
+          ? `${ASSISTANT_NAME}, ${text}`
+          : text;
+
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
         sender,
         sender_name: senderName,
-        content: text,
+        content: messageContent,
         timestamp,
         is_from_me: false,
       });
@@ -545,11 +554,13 @@ export async function initJarvisBot(
 
       // Voice messages directed at Jarvis: prepend name so engagement triggers.
       // Skip if replying to another user's message (that's member-to-member).
-      const isReplyToOther = ctx.message.reply_to_message &&
+      const isReplyToOther =
+        ctx.message.reply_to_message &&
         ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
-      const triggerContent = isReplyToOther || content.includes(ASSISTANT_NAME)
-        ? content
-        : `${ASSISTANT_NAME}, ${content}`;
+      const triggerContent =
+        isReplyToOther || content.includes(ASSISTANT_NAME)
+          ? content
+          : `${ASSISTANT_NAME}, ${content}`;
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,

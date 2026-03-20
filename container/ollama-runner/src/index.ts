@@ -3143,12 +3143,26 @@ async function main(): Promise<void> {
       clearThinking();
       currentImages = undefined; // images consumed after first call
       log(`[PERF] response | model=${model} | task=${taskType} | think=${thinking} | prompt_chars=${prompt.length} | history_msgs=${history.length} | total_ms=${responseMs}${interrupts.length > 0 ? ` | mid_task_interrupts=${interrupts.length}` : ''}`);
+      const wasDissatisfied = detectDissatisfaction(prompt);
+      // PM-008: Feed user dissatisfaction back to secretary routing
+      if (wasDissatisfied && cls.usedSecretary) {
+        appendSecretaryFeedback({
+          at: Date.now(),
+          promptPreview: prompt.slice(0, 80),
+          routingGrade: 'wrong',
+          routingNote: `user dissatisfied — was routed to ${model} (${taskTypeRich})`,
+        });
+      }
       logPerf({
         type: 'response', buildId, timestamp: new Date().toISOString(),
         model, think: thinking, taskType, complexity: cls.complexity,
         promptChars: prompt.length, responseChars: response.length,
         responseMs, historyMsgs: history.length,
+        ...(wasDissatisfied ? { dissatisfied: true } : {}),
       });
+      if (wasDissatisfied) {
+        logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
+      }
 
       history = [...history, userMsg, { role: 'assistant', content: response }];
       // Inject any mid-task exchanges into history so the next turn has full context
@@ -3200,6 +3214,12 @@ async function main(): Promise<void> {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     log(`Error: ${errorMessage}`);
+    // Classify error for PM-005 taxonomy
+    const errCategory = errorMessage.includes('timed out') || errorMessage.includes('ECONNREFUSED') ? 'environmental'
+      : errorMessage.includes('parse') || errorMessage.includes('JSON') ? 'data_state'
+      : errorMessage.includes('ENOENT') || errorMessage.includes('permission') ? 'environmental'
+      : 'code';
+    logPerf({ type: 'error', buildId, timestamp: new Date().toISOString(), category: errCategory, error: errorMessage.slice(0, 200) });
     // Send error to chat so it never fails silently
     try {
       const ipcFile = path.join(IPC_MSG_DIR, `err-${Date.now()}.json`);

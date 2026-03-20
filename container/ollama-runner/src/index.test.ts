@@ -624,9 +624,10 @@ describe('classifyMessage (DISABLE_SECRETARY=1)', () => {
   });
 
   describe('think detection', () => {
-    it('detects "compare"', async () => {
+    it('"compare" alone does not trigger think (too broad — secretary handles it)', async () => {
       const cls = await classifyMessage('compare React and Vue', false);
-      expect(cls.think).toBe(true);
+      // With DISABLE_SECRETARY=1, regex no longer has "compare" as standalone trigger
+      expect(cls.think).toBe(false);
     });
 
     it('detects "pros and cons"', async () => {
