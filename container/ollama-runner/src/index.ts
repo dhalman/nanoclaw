@@ -1274,6 +1274,41 @@ async function trySecretaryDirect(
     return null;
   }
 
+  // Language registration: "register/add/set spanish, german for translation"
+  const LANG_REGISTER = /\b(?:register|add|set|enable|subscribe)\b.*\b(?:translat|language)/i;
+  if (LANG_REGISTER.test(userText)) {
+    // Extract language names from the message
+    const knownLangs: Record<string, string> = {
+      english: 'en', spanish: 'es', german: 'de', french: 'fr', italian: 'it',
+      portuguese: 'pt', russian: 'ru', chinese: 'zh', japanese: 'ja', korean: 'ko',
+      arabic: 'ar', hindi: 'hi', turkish: 'tr', dutch: 'nl', polish: 'pl',
+      swedish: 'sv', norwegian: 'no', danish: 'da', finnish: 'fi', greek: 'el',
+      czech: 'cs', romanian: 'ro', hungarian: 'hu', bulgarian: 'bg', croatian: 'hr',
+      serbian: 'sr', slovak: 'sk', slovenian: 'sl', ukrainian: 'uk', hebrew: 'he',
+      thai: 'th', vietnamese: 'vi', indonesian: 'id', malay: 'ms', tagalog: 'tl',
+      persian: 'fa', urdu: 'ur', bengali: 'bn', tamil: 'ta', telugu: 'te',
+      afrikaans: 'af', swahili: 'sw', catalan: 'ca', estonian: 'et', latvian: 'lv',
+      lithuanian: 'lt', macedonian: 'mk', albanian: 'sq',
+    };
+    const found: string[] = [];
+    const lower = userText.toLowerCase();
+    for (const [name, code] of Object.entries(knownLangs)) {
+      if (lower.includes(name)) found.push(code);
+    }
+    if (found.length > 0) {
+      // Merge with existing languages
+      const existing = getPref('translator_languages');
+      let current: string[] = [];
+      if (Array.isArray(existing)) current = existing.filter((l): l is string => typeof l === 'string');
+      else if (typeof existing === 'string') { try { current = JSON.parse(existing); } catch { /* */ } }
+      const merged = [...new Set([...current, ...found])];
+      setGroupPref('translator_languages', merged);
+      const names = merged.map((c) => knownLangs[Object.entries(knownLangs).find(([, v]) => v === c)?.[0] || ''] ? Object.entries(knownLangs).find(([, v]) => v === c)?.[0] || c : c);
+      log(`[secretary-direct] registered languages: ${merged.join(', ')}`);
+      return `Translation languages updated: ${names.join(', ')} (${merged.join(', ')})`;
+    }
+  }
+
   // Tool-direct: simple queries that map to a single tool call.
   // Check patterns BEFORE complexity gate — version/status/help are always direct.
   for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
