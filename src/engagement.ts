@@ -7,7 +7,7 @@ import { SenderAllowlistConfig, isTriggerAllowed } from './sender-allowlist.js';
 import { NewMessage, RegisteredGroup } from './types.js';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-const INTENT_MODEL = process.env.OLLAMA_MODEL_SECRETARY || 'qwen2.5:3b';
+const INTENT_MODEL = process.env.OLLAMA_MODEL_SECRETARY || 'gemma3:4b';
 
 // Fast regex: does the message mention the assistant name at all?
 const MENTION_PATTERN = new RegExp(

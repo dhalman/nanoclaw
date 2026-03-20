@@ -637,7 +637,7 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://host.docker.internal:1143
 export const MODELS = {
   // Always-on (pinned in VRAM)
   COORDINATOR:  process.env.OLLAMA_MODEL_COORDINATOR  || 'qwen3.5:35b',
-  SECRETARY:    process.env.OLLAMA_MODEL_SECRETARY     || 'qwen2.5:3b',
+  SECRETARY:    process.env.OLLAMA_MODEL_SECRETARY     || 'gemma3:4b',
 
   // Specialists (evict after idle)
   CODER:        process.env.OLLAMA_MODEL_CODER         || 'qwen3-coder:30b',
@@ -963,12 +963,6 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
       artist:    MODELS.COORDINATOR,
     };
     let model = MODEL_MAP[c.model] ?? MODELS.COORDINATOR;
-
-    // Guard: image/video/art mentions should never route to coder
-    if (model === MODELS.CODER && /\b(?:image|picture|photo|art|painting|video|film|animation)\b/i.test(text)) {
-      log(`[classify] override: coder→coordinator (creative keywords detected)`);
-      model = MODELS.COORDINATOR;
-    }
 
     let think = !!c.think || c.model === 'analyst';
     if (c.complexity === 'high' && (c.model === 'default' || !c.model)) {

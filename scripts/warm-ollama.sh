@@ -36,7 +36,8 @@ warm() {
     > /dev/null 2>&1 && echo "$MODEL loaded (keep_alive=$KEEP_ALIVE)" || echo "$MODEL failed"
 }
 
-# Secretary first (small, fast) — needed for classify + translations
+# Secretary (gemma3:4b for classification) + translator (qwen2.5:3b for translations)
+warm "gemma3:4b" "-1"
 warm "qwen2.5:3b" "-1"
 
 # Coordinator second (large) — staggered so secretary is ready first
