@@ -1231,8 +1231,8 @@ const DIRECT_PATTERNS: Array<{
     format: (r) => r,
   },
   {
-    // "help", "what can you do", "capabilities"
-    pattern: /\b(?:help|what can you do|capabilities|commands|features)\b/i,
+    // "help" as a standalone command, not "help you" or "help me with"
+    pattern: /^\s*(?:help|what can you do|capabilities|commands|features|menu)\s*[?!.]?\s*$/i,
     tool: 'get_help',
     args: () => ({}),
     format: (r) => r,
