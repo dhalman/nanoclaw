@@ -113,7 +113,10 @@ async function sendOrEditStatus(chatJid: string, text: string): Promise<void> {
     entries.set(chatJid, { messageId: sentId, lastWasStatus: true });
     saveStatusEntries();
     await pinJarvisMessage(chatJid, sentId);
-    logger.info({ chatJid, messageId: sentId }, 'Status message sent and pinned');
+    logger.info(
+      { chatJid, messageId: sentId },
+      'Status message sent and pinned',
+    );
   }
 }
 
@@ -267,6 +270,17 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   isMain ||
                   (targetGroup && targetGroup.folder === sourceGroup)
                 ) {
+                  // Clear orphaned thinking messages for this chat (container restarted)
+                  for (const [tid, entry] of thinkingMessages) {
+                    if (entry.chatJid === data.chatJid) {
+                      await deleteJarvisMessage(entry.chatJid, entry.messageId);
+                      thinkingMessages.delete(tid);
+                      logger.info(
+                        { chatJid: entry.chatJid, thinkingId: tid },
+                        'Cleared orphaned thinking message',
+                      );
+                    }
+                  }
                   await sendOrEditStatus(data.chatJid, data.text);
                 }
               } else if (
