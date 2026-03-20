@@ -1,4 +1,11 @@
 {
+  "0.3.21": {
+    "date": "2026-03-20",
+    "title": "feat: context-aware engagement via system prompt + <silent/> output",
+    "notes": [
+      "feat: context-aware engagement via system prompt + <silent/> output"
+    ]
+  },
   "0.3.20": {
     "date": "2026-03-20",
     "title": "fix: remove proactive mode \u2014 just engaged and not engaged",
