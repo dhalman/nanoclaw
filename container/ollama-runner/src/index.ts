@@ -279,7 +279,7 @@ These patterns keep you in control as orchestrator — use escalate only when th
         properties: {
           model: {
             type: 'string',
-            description: 'Model name or alias. Built-in aliases: "flux" → "x/flux2-klein:9b" (image generation), "vision" or "llama" → "qwen2.5vl:72b" (vision model), "coder" → "qwen3-coder:30b" (code specialist), "artist" → "qwen2.5vl:72b" (visual advice — use generate_art/generate_film for actual generation), "secretary" → "qwen3:4b". Any model name containing "flux", "stable-diffusion", "sdxl", or "dall-e" activates the image generation path; all other names use text chat. You can also use any model name from ollama_list_models directly.',
+            description: 'Model name or alias. Built-in aliases: "flux" → "x/flux2-klein:9b" (image generation), "vision" or "llama" → "qwen2.5vl:72b" (vision model), "coder" → "qwen3-coder:30b" (code specialist), "artist" → "qwen2.5vl:72b" (visual advice — use generate_art/generate_film for actual generation), "secretary" → "qwen2.5:3b". Any model name containing "flux", "stable-diffusion", "sdxl", or "dall-e" activates the image generation path; all other names use text chat. You can also use any model name from ollama_list_models directly.',
           },
           prompt: {
             type: 'string',
@@ -637,7 +637,7 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://host.docker.internal:1143
 export const MODELS = {
   // Always-on (pinned in VRAM)
   COORDINATOR:  process.env.OLLAMA_MODEL_COORDINATOR  || 'qwen3.5:35b',
-  SECRETARY:    process.env.OLLAMA_MODEL_SECRETARY     || 'qwen3:4b',
+  SECRETARY:    process.env.OLLAMA_MODEL_SECRETARY     || 'qwen2.5:3b',
 
   // Specialists (evict after idle)
   CODER:        process.env.OLLAMA_MODEL_CODER         || 'qwen3-coder:30b',
@@ -694,8 +694,12 @@ const CREATIVE_PATTERN = /(?:write|tell|create|compose|craft|generate|draw|paint
 const BRAINSTORM_PATTERN = /(?:brainstorm|ideas? for|suggest(?:ions)?|what if|alternatives?|possibilities|ways to|how (?:could|might|would|can)(?: (?:i|we))?|how can\b|give me \d+ |list \d+ )/im;
 const ANALYSIS_PATTERN = /(?:analyz|explain|summariz|describ|compar|what (?:is|are|does|do)|how does|why (?:is|does|do)|tell me about|define|difference between)/im;
 
-// Explicit user requests for deeper reasoning, or inherently complex tasks
-const THINK_PATTERN = /\bthink\b|\bthinking\b|\bsure\b|\bdetermine\b|\bcompare\b|\blearn\b|\bteach\b|\btry\b|(?:think (?:hard(?:er)?|carefully|deeper|step.by.step|it through|about this)|think(?:ing)? mode|reason(?:ing)? through|show (?:all |your |me )?(?:thinking|reasoning|thoughts?)|slow(?:ly)? (?:think|reason)|be (?:thorough|careful|precise)|use (?:your )?(?:full )?(?:thinking|reasoning)|(?:complex|difficult|hard|tricky|multi.step) (?:problem|question|task|reasoning)|(?:math|logic|proof|calcul|deriv|solv(?:e|ing))|step.by.step|work(?:ing)? (?:this )?out)/im;
+// Explicit escalation — user wants the heaviest model (deepseek-r1:70b)
+const ESCALATE_PATTERN = /\b(?:escalate|use (?:deepseek|reasoning model|architect|biggest model)|think (?:much )?harder|really think|maximum (?:reasoning|thinking|effort))\b/im;
+
+// Explicit user requests for deeper reasoning (think=true on coordinator)
+// Tightened to avoid false positives on casual words like "sure", "try", "learn"
+const THINK_PATTERN = /(?:think (?:hard(?:er)?|carefully|deeper|step.by.step|it through|about (?:this|it))|think(?:ing)? mode|reason(?:ing)? (?:through|mode)|show (?:all |your |me )?(?:thinking|reasoning|thoughts?)|slow(?:ly)? (?:think|reason)|be (?:thorough|careful|precise)|use (?:your )?(?:full )?(?:thinking|reasoning)|(?:complex|difficult|hard|tricky|multi.step) (?:problem|question|task)|(?:math|logic|proof|calcul|deriv|solv(?:e|ing))|step.by.step|work(?:ing)? (?:this )?out)/im;
 
 // Hard decisions only — casual recommendations and "which is better?" don't warrant thinking overhead
 const DECISION_PATTERN = /\bshould (?:i|we)\b|help me (?:decide|choose|figure out)\b|pros? and cons?\b|trade.?offs?\b/im;
@@ -705,8 +709,13 @@ export function shouldThinkFallback(text: string): boolean {
   return THINK_PATTERN.test(text) || DECISION_PATTERN.test(text);
 }
 
+export function shouldEscalateFallback(text: string): boolean {
+  return ESCALATE_PATTERN.test(text);
+}
+
 export function selectModelFallback(text: string, hasImages?: boolean): string {
   if (hasImages) return MODELS.VISION;
+  if (ESCALATE_PATTERN.test(text)) return MODELS.ARCHITECT;
   if (CODING_PATTERN.test(text)) return MODELS.CODER;
   return MODELS.COORDINATOR;
 }
@@ -793,6 +802,7 @@ export function buildRouteHint(text: string, hasImages: boolean): string {
   if (think) parts.push('complex reasoning — consider thinking mode or analyst tier');
   if (hasImages) parts.push('images attached — vision task');
   if (detectDissatisfaction(text)) parts.push('USER DISSATISFIED with previous response — escalate to a higher tier or change approach entirely');
+  if (shouldEscalateFallback(text)) parts.push('USER REQUESTS ESCALATION — use the escalate tool to route to deepseek-r1:70b immediately');
 
   return `[Route: ${parts.join(' · ')}]`;
 }
@@ -804,7 +814,7 @@ export interface MessageClassification {
   taskTypeRich: RichTaskType;
   temperature: number;
   complexity: 'low' | 'medium' | 'high';
-  usedSecretary: boolean;  // true = actual qwen3:4b call succeeded; false = image shortcut or regex fallback
+  usedSecretary: boolean;  // true = actual qwen2.5:3b call succeeded; false = image shortcut or regex fallback
   needsWeb?: boolean;      // true when question requires live/current data; secretary skips draft, coordinator primed to web_search
 }
 
@@ -846,7 +856,7 @@ function formatFeedbackForPrompt(grades: SecretaryGrade[]): string {
   return lines.length > 0 ? `\nRecent corrections — self-calibrate:\n${lines.map((l) => `• ${l}`).join('\n')}\n` : '';
 }
 
-/** Classify a message using the Secretary (qwen3:4b) for semantic routing.
+/** Classify a message using the Secretary (qwen2.5:3b) for semantic routing.
  * For low-complexity messages the secretary also drafts an answer — the coordinator
  * reviews it and either echoes it or steps in with their own response.
  * Falls back to regex classifiers if the call fails or times out. */
@@ -861,14 +871,16 @@ export async function classifyMessage(text: string, hasImages: boolean): Promise
   // The coordinator gets a route hint injected into context to act on.
   if (process.env.DISABLE_SECRETARY === '1') {
     const classifyStart = Date.now();
+    const escalate = shouldEscalateFallback(text);
     const model = selectModelFallback(text);
-    const think = shouldThinkFallback(text);
+    const think = shouldThinkFallback(text) || escalate;
     const taskType = detectTaskType(text);
     const taskTypeRich = detectRichTaskType(text);
-    const complexity = estimateComplexity(text);
+    const complexity = escalate ? 'high' as const : estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
     const dissatisfied = detectDissatisfaction(text);
     logPerf({ type: 'classify', buildId, timestamp: new Date().toISOString(), classifyMs: Date.now() - classifyStart, classifyMethod: 'keyword' });
+    if (escalate) logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_escalation' });
     if (dissatisfied) logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
     return { model, think: think || dissatisfied, taskType, taskTypeRich, temperature: getTemperature(text), complexity: dissatisfied ? 'high' : complexity, needsWeb, usedSecretary: false };
   }
@@ -936,11 +948,12 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
     return { model, think, taskType, taskTypeRich, temperature, complexity, needsWeb, usedSecretary: true };
   } catch (err) {
     log(`[classify] fallback to regex: ${err instanceof Error ? err.message : String(err)}`);
+    const escalate = shouldEscalateFallback(text);
     const model = selectModelFallback(text);
-    const think = shouldThinkFallback(text);
+    const think = shouldThinkFallback(text) || escalate;
     const taskType = detectTaskType(text);
     const taskTypeRich = detectRichTaskType(text);
-    const complexity = estimateComplexity(text);
+    const complexity = escalate ? 'high' as const : estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
     return { model, think, taskType, taskTypeRich, temperature: getTemperature(text), complexity, needsWeb, usedSecretary: false };
   }
@@ -1044,7 +1057,7 @@ function getHistoryConfig(model: string, think: boolean): { compressThreshold: n
     : { compressThreshold: HISTORY_COMPRESS_THRESHOLD, keepRecent: HISTORY_KEEP_RECENT };
 }
 
-/** Compress older history into a summary using qwen3:4b (secretary — fast, low cost). */
+/** Compress older history into a summary using qwen2.5:3b (secretary — fast, low cost). */
 async function compressHistory(history: Message[], compressThreshold = HISTORY_COMPRESS_THRESHOLD, keepRecent = HISTORY_KEEP_RECENT): Promise<Message[]> {
   if (history.length <= compressThreshold) return history;
 
@@ -1150,6 +1163,227 @@ function splitBySender(prompt: string): Array<{ sender: string; prompt: string }
   });
 }
 
+// --- Secretary Direct Execution ---
+// Simple queries that map to a single tool call bypass the coordinator entirely.
+// The secretary (qwen2.5:3b) classifies, we pattern-match the intent to a tool,
+// execute it, and format a brief response — ~300ms total vs ~5-8s through coordinator.
+
+const DIRECT_PATTERNS: Array<{
+  pattern: RegExp;
+  tool: string;
+  args: (match: RegExpMatchArray, text: string) => Record<string, unknown>;
+  format: (result: string) => string;
+}> = [
+  {
+    // "status", "are you online", "service status", "check services", "health check"
+    pattern: /\b(?:status|health|services?|backends?|are you (?:online|running|alive|up|ok|working))\b/i,
+    tool: 'service_status',
+    args: () => ({}),
+    format: (r) => r,
+  },
+  {
+    // "version", "what version", "build", "build id"
+    pattern: /\b(?:version|build\s*(?:id|number)?|what (?:version|build))\b/i,
+    tool: 'get_changelog',
+    args: () => ({}),
+    format: (r) => {
+      const lines = r.split('\n').slice(0, 5);
+      return lines.join('\n');
+    },
+  },
+  {
+    // "help", "what can you do", "capabilities"
+    pattern: /\b(?:help|what can you do|capabilities|commands|features)\b/i,
+    tool: 'get_help',
+    args: () => ({}),
+    format: (r) => r,
+  },
+  {
+    // "perf", "performance", "how fast", "response time", "benchmarks"
+    pattern: /\b(?:perf(?:ormance)?|benchmarks?|response time|how fast|speed|latency)\b/i,
+    tool: 'perf_summary',
+    args: () => ({}),
+    format: (r) => r,
+  },
+];
+
+// Patterns for queries that should go straight to web_search
+const WEB_DIRECT_PATTERN = /\b(?:weather|temperature|forecast|(?:what|how) (?:is|much|many|far|old|tall|long) (?:the |a )?(?:price|cost|population|distance|height|time|date|score)|stock price|exchange rate|current (?:time|date|weather|temperature|price|score))\b/i;
+
+/**
+ * Try to handle a message directly via the secretary path.
+ * Returns the response string if handled, or null if the coordinator should take over.
+ * Only fires for low-complexity, non-thinking, default-model messages.
+ */
+async function trySecretaryDirect(
+  prompt: string,
+  cls: MessageClassification,
+  chatJid: string,
+  groupFolder: string,
+): Promise<string | null> {
+  // Extract the actual user text from XML prompt (strip <context> and <messages> wrappers)
+  const textMatch = prompt.match(/<message[^>]*>([\s\S]*?)<\/message>\s*$/);
+  const userText = textMatch ? textMatch[1].trim() : prompt;
+  if (!userText || userText.length > 300) return null;
+
+  // Web-direct: simple factual queries that just need a search
+  if (cls.needsWeb && WEB_DIRECT_PATTERN.test(userText) && !cls.think) {
+    try {
+      const start = Date.now();
+      const searchResult = await handleToolCall('web_search', { query: userText }, chatJid, groupFolder);
+      if (searchResult && searchResult.length > 10) {
+        // Use secretary to summarize the search result into a brief answer
+        const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: MODELS.SECRETARY,
+            messages: [
+              { role: 'system', content: 'Answer the question in 1-2 sentences using the search results. Be direct.' },
+              { role: 'user', content: `Question: ${userText}\n\nSearch results:\n${searchResult.slice(0, 2000)}` },
+            ],
+            keep_alive: KEEP_ALIVE_SPECIALIST,
+            options: { num_ctx: 4096, temperature: 0.1, num_predict: 200 },
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (resp.ok) {
+          const data = await resp.json() as OllamaResponse;
+          const answer = extractContent(data.message.content).trim();
+          if (answer) {
+            log(`[secretary-direct] web_search+summarize → ${Date.now() - start}ms (bypassed coordinator)`);
+            return answer;
+          }
+        }
+      }
+    } catch (err) {
+      log(`[secretary-direct] web_search failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+    }
+    return null;
+  }
+
+  // Tool-direct: simple queries that map to a single tool call
+  if (cls.complexity !== 'low' || cls.think || cls.model !== MODELS.COORDINATOR) return null;
+
+  for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
+    const match = userText.match(pattern);
+    if (!match) continue;
+
+    try {
+      const start = Date.now();
+      const result = await handleToolCall(tool, args(match, userText), chatJid, groupFolder);
+      const response = format(result);
+      log(`[secretary-direct] ${tool} → ${Date.now() - start}ms (bypassed coordinator)`);
+      return response;
+    } catch (err) {
+      log(`[secretary-direct] ${tool} failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// --- Background Chat Translation ---
+// For chat-type messages, translate to all registered listener languages.
+// Runs in parallel with coordinator inference — fire-and-forget via IPC.
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  af: 'Afrikaans', ar: 'Arabic', bg: 'Bulgarian', bn: 'Bengali', ca: 'Catalan',
+  cs: 'Czech', da: 'Danish', de: 'German', el: 'Greek', en: 'English',
+  es: 'Spanish', et: 'Estonian', fa: 'Persian', fi: 'Finnish', fr: 'French',
+  he: 'Hebrew', hi: 'Hindi', hr: 'Croatian', hu: 'Hungarian', id: 'Indonesian',
+  it: 'Italian', ja: 'Japanese', ko: 'Korean', nl: 'Dutch', no: 'Norwegian',
+  pl: 'Polish', pt: 'Portuguese', ro: 'Romanian', ru: 'Russian', sv: 'Swedish',
+  th: 'Thai', tl: 'Tagalog', tr: 'Turkish', uk: 'Ukrainian', vi: 'Vietnamese',
+  zh: 'Chinese',
+};
+
+function getLanguageNameLocal(code: string): string {
+  return LANGUAGE_NAMES[code] || code;
+}
+
+/**
+ * Translate a chat message to all registered listener languages in parallel.
+ * Sends each translation as a separate IPC message. Fire-and-forget.
+ */
+async function translateForListeners(
+  userText: string,
+  senderName: string,
+  chatJid: string,
+): Promise<void> {
+  let rawLangs = getPref('translator_languages');
+  // Handle double-serialized values (stored as string instead of array)
+  if (typeof rawLangs === 'string') {
+    try { rawLangs = JSON.parse(rawLangs); } catch { return; }
+  }
+  const langs = rawLangs as string[] | undefined;
+  if (!langs || !Array.isArray(langs) || langs.length === 0) return;
+
+  // Short messages aren't worth translating
+  if (userText.length < 5) return;
+
+  const translationStart = Date.now();
+
+  // All languages in a single secretary call — uses separate model so it
+  // doesn't block coordinator inference. 35B is used only for on-demand translations.
+  const langList = langs.map((l) => getLanguageNameLocal(l)).join(', ');
+  const translations: Array<{ lang: string; name: string; text: string }> = [];
+  try {
+    const resp = await fetch(`${OLLAMA_HOST}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODELS.SECRETARY,
+        messages: [
+          { role: 'system', content: `Translate the text to each language listed. Verbatim — preserve tone, slang, intent. Return one translation per line, format: LANG: translation\nNo other text.` },
+          { role: 'user', content: `Languages: ${langList}\n\nText: ${userText}` },
+        ],
+        keep_alive: KEEP_ALIVE_SPECIALIST,
+        options: { num_ctx: 2048, temperature: 0.1, num_predict: 500 },
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (resp.ok) {
+      const data = await resp.json() as OllamaResponse;
+      const output = extractContent(data.message.content).trim();
+      // Parse "Language: translation" lines
+      for (const line of output.split('\n')) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx === -1) continue;
+        const langName = line.slice(0, colonIdx).trim();
+        const text = line.slice(colonIdx + 1).trim();
+        if (!text) continue;
+        // Match back to language code
+        const matchedLang = langs.find(
+          (l) => getLanguageNameLocal(l).toLowerCase() === langName.toLowerCase(),
+        );
+        if (matchedLang && text.toLowerCase() !== userText.trim().toLowerCase()) {
+          translations.push({ lang: matchedLang, name: getLanguageNameLocal(matchedLang), text });
+        }
+      }
+    }
+  } catch {
+    // Translation failed — no output
+  }
+
+  if (translations.length === 0) return;
+
+  // Format matching host-side UX: italic lines with [Language] prefix
+  const translationMsg = translations
+    .map((t) => `_🌐 [${t.name}] ${t.text}_`)
+    .join('\n');
+
+  try {
+    const ipcFile = path.join(IPC_MSG_DIR, `translate-${Date.now()}.json`);
+    fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
+    fs.writeFileSync(ipcFile, JSON.stringify({ type: 'message', chatJid, text: translationMsg }));
+    log(`[translate] ${translations.length} languages in ${Date.now() - translationStart}ms`);
+  } catch { /* best effort */ }
+}
+
 /** Extract a plain string from Ollama message content (handles string, array, or schema object). */
 export function extractContent(raw: unknown): string {
   if (typeof raw === 'string') return raw;
@@ -1198,7 +1432,7 @@ export function getSystemPrompt(assistantName: string, groupFolder?: string): st
 
 *Your team:*
 
-• *Secretary (qwen3:4b)* — fast classifier. Routes every message to the right model and tier before you see it. Also compresses conversation history in the background to keep context fresh. Never used for reasoning or complex tasks.
+• *Secretary (qwen2.5:3b)* — fast classifier. Routes every message to the right model and tier before you see it. Also compresses conversation history in the background to keep context fresh. Never used for reasoning or complex tasks.
 • *You (${assistantName} · qwen3.5:35b)* — team lead and coordinator. Strong across reasoning, analysis, writing, planning, and conversation. You route tasks to the right specialist and handle general conversation directly. When a task has a clear specialist fit (code → coder, images → artist, hard reasoning → analyst), delegate immediately rather than attempting it yourself first.
 • *Coder (qwen3-coder:30b)* — software development expert. Auto-assigned for coding tasks: writing, debugging, reviewing, and refactoring code. Evicts from VRAM immediately after use to free space.
 • *Artist / Cinematographer (qwen2.5vl:72b)* — visual expert and creative director. Sees reference images directly. Crafts expert image and video generation prompts, selects the best backend, and executes generation end-to-end. Use generate_art for images, generate_film for videos. Consult via ollama_generate with model "artist" for visual advice without generating. Evicts from VRAM immediately after use.
@@ -2703,6 +2937,21 @@ async function main(): Promise<void> {
       const cls = await classifyMessage(prompt, !!currentImages?.length);
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
+
+      // Text translations are handled on the host side (telegram.ts) using
+      // the same translateToMultiple path as voice messages, for consistent UX.
+
+      // Secretary direct execution: simple queries bypass the coordinator
+      const directResult = await trySecretaryDirect(prompt, cls, chatJid, groupFolder);
+      if (directResult) {
+        const userMsg: Message = { role: 'user', content: prompt };
+        history = [...history, userMsg, { role: 'assistant', content: directResult }];
+        saveHistory(history);
+        writeOutput({ status: 'success', result: directResult, newSessionId: sessionId });
+        writeOutput({ status: 'success', result: null, newSessionId: sessionId });
+        continue; // skip coordinator, go to next sender or wait for IPC
+      }
+
       const userMsg: Message = { role: 'user', content: prompt };
       // Inject routing hint — zero-inference classification that primes the coordinator
       // to delegate, search, or enable thinking before starting inference
@@ -2859,6 +3108,11 @@ async function main(): Promise<void> {
         result: response || null,
         newSessionId: sessionId,
       });
+
+      // Auto-translate Jarvis's chat responses (not commands/tasks)
+      if (taskTypeRich === 'chat' && response && response.length > 4) {
+        translateForListeners(response, assistantName, chatJid).catch(() => {});
+      }
 
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });

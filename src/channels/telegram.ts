@@ -43,7 +43,15 @@ function getUserPreferredLanguages(
 
 /** Get translator languages for a group — only what's explicitly subscribed. */
 function getTranslatorLanguages(groupFolder: string): string[] {
-  const raw = getGroupPref(groupFolder, 'translator_languages');
+  let raw = getGroupPref(groupFolder, 'translator_languages');
+  // Handle double-serialized values (stored as string instead of array)
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
   return Array.isArray(raw)
     ? raw.filter((l): l is string => typeof l === 'string')
     : [];
@@ -223,6 +231,68 @@ export async function initJarvisBot(
 
       const text = ctx.message.text;
 
+      // On-demand or improved translation: reply to any message with "translate",
+      // or reply to a translation with dissatisfaction to get a 35B re-translation.
+      const TRANSLATE_CMD = /^\s*(?:translate|translation|🌐)\s*$/i;
+      const TRANSLATE_DISSATISFIED =
+        /\b(?:bad|wrong|incorrect|not (?:right|correct|accurate)|inaccurate|poor|terrible|awful|horrible|mistranslat|not quite|better translation|translate (?:again|better|properly|correctly)|re-?translate|fix (?:the )?translat)\b/i;
+      const isTranslateRequest = TRANSLATE_CMD.test(text);
+      const isTranslateComplaint =
+        TRANSLATE_DISSATISFIED.test(text) &&
+        ctx.message.reply_to_message?.text?.includes('🌐');
+      if (
+        isGroup &&
+        ctx.message.reply_to_message &&
+        (isTranslateRequest || isTranslateComplaint)
+      ) {
+        // For complaints about translations, get the original message being
+        // replied to (the translation's reply_to). For direct "translate", use the reply target.
+        let sourceText: string | undefined;
+        let replyTarget = ctx.message.reply_to_message!.message_id;
+
+        if (isTranslateComplaint) {
+          // The replied-to message is a translation — find the original it was replying to
+          const origReply = (ctx.message.reply_to_message as any)
+            ?.reply_to_message;
+          sourceText = origReply?.text || origReply?.caption;
+          if (origReply?.message_id) replyTarget = origReply.message_id;
+          // Fall back to stripping 🌐 lines from the translation message itself
+          if (!sourceText) {
+            const transText = ctx.message.reply_to_message.text || '';
+            // Not recoverable — just re-translate the translation message
+            sourceText = transText.replace(/_?🌐\s*\[[^\]]*\]\s*/g, '').trim();
+          }
+        } else {
+          sourceText =
+            ctx.message.reply_to_message.text ||
+            (ctx.message.reply_to_message as any).caption;
+        }
+
+        if (sourceText) {
+          const targetLangs = getTranslatorLanguages(group.folder);
+          // Use 35B for complaints/re-translations, 3B for standard requests
+          const useHighQuality = isTranslateComplaint;
+          const model = useHighQuality ? 'qwen3.5:35b' : undefined;
+          if (targetLangs.length > 0) {
+            translateToMultiple(sourceText, 'auto', targetLangs, model)
+              .then((translations) => {
+                if (translations.length > 0) {
+                  const prefix = useHighQuality ? '_🔄 improved:_\n' : '';
+                  const echo =
+                    prefix +
+                    translations
+                      .map((t) => `_🌐 [${t.targetName}] ${t.text}_`)
+                      .join('\n');
+                  sendJarvisMessage(chatJid, echo, replyTarget).catch(() => {});
+                }
+              })
+              .catch(() => {});
+          }
+        }
+        // Don't store or process the translate/complaint command itself
+        return;
+      }
+
       opts.onMessage(chatJid, {
         id: ctx.message.message_id.toString(),
         chat_jid: chatJid,
@@ -241,7 +311,10 @@ export async function initJarvisBot(
         ctx.message.reply_to_message &&
         ctx.message.reply_to_message.from?.id !== jarvisBot?.botInfo?.id;
       const isDirectedAtJarvis = mentionsJarvis && !isReplyToOther;
-      if (isGroup && !isDirectedAtJarvis) {
+      // Skip auto-translate for messages that are already translations
+      const isTranslationOutput =
+        /^_?🌐\s*\[/.test(text) || /^_?🎙\s/.test(text) || /^_?💬\s/.test(text);
+      if (isGroup && !isDirectedAtJarvis && !isTranslationOutput) {
         const targetLangs = getTranslatorLanguages(group.folder);
         if (targetLangs.length > 0 && text.length > 2) {
           translateToMultiple(text, 'auto', targetLangs)
@@ -443,7 +516,9 @@ export async function initJarvisBot(
                   content += `\n[${t.targetName}: ${t.text}]`;
                 }
               }
-              sendJarvisMessage(chatJid, echo).catch(() => {});
+              sendJarvisMessage(chatJid, echo, ctx.message.message_id).catch(
+                () => {},
+              );
             } else {
               content = '[Voice message - transcription unavailable]';
             }
@@ -626,6 +701,24 @@ export async function deleteJarvisMessage(
     logger.debug(
       { chatId, messageId, err },
       'deleteJarvisMessage failed (ignored)',
+    );
+  }
+}
+
+export async function pinJarvisMessage(
+  chatId: string,
+  messageId: number,
+): Promise<void> {
+  if (!jarvisApi) return;
+  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  try {
+    await jarvisApi.pinChatMessage(numericId, messageId, {
+      disable_notification: true,
+    });
+  } catch (err) {
+    logger.debug(
+      { chatId, messageId, err },
+      'pinJarvisMessage failed (ignored)',
     );
   }
 }

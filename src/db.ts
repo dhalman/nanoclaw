@@ -487,9 +487,9 @@ export function updateTask(
   if (fields.length === 0) return;
 
   values.push(id);
-  stmt(
-    `UPDATE scheduled_tasks SET ${fields.join(', ')} WHERE id = ?`,
-  ).run(...values);
+  stmt(`UPDATE scheduled_tasks SET ${fields.join(', ')} WHERE id = ?`).run(
+    ...values,
+  );
 }
 
 export function deleteTask(id: string): void {
@@ -552,9 +552,10 @@ export function getRouterState(key: string): string | undefined {
 }
 
 export function setRouterState(key: string, value: string): void {
-  stmt(
-    'INSERT OR REPLACE INTO router_state (key, value) VALUES (?, ?)',
-  ).run(key, value);
+  stmt('INSERT OR REPLACE INTO router_state (key, value) VALUES (?, ?)').run(
+    key,
+    value,
+  );
 }
 
 // --- Session accessors ---

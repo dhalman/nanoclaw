@@ -28,10 +28,7 @@ import {
   getChannelFactory,
   getRegisteredChannelNames,
 } from './channels/registry.js';
-import {
-  ContainerOutput,
-  runContainerAgent,
-} from './container-runner.js';
+import { ContainerOutput, runContainerAgent } from './container-runner.js';
 import {
   cleanupOrphans,
   ensureContainerRuntimeRunning,
@@ -75,7 +72,6 @@ import { Channel, NewMessage, RegisteredGroup } from './types.js';
 import { cancelVideoBackends } from './video-cancel.js';
 import { logger } from './logger.js';
 
-
 let lastTimestamp = '';
 let sessions: Record<string, string> = {};
 let registeredGroups: Record<string, RegisteredGroup> = {};
@@ -84,7 +80,6 @@ let messageLoopRunning = false;
 
 // Tracks the last trigger message ID per chatJid for reply-to in groups
 const lastTriggerMessageId: Record<string, number> = {};
-
 
 // Pending images per chatJid (base64). Accumulated from incoming photo messages,
 // consumed (and cleared) when an agent is spawned for that chatJid.

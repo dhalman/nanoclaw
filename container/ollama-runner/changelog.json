@@ -1,4 +1,105 @@
 {
+  "0.2.41": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.41",
+    "notes": []
+  },
+  "0.2.40": {
+    "date": "2026-03-19",
+    "title": "feat: auto-pin status messages in Telegram chats",
+    "notes": [
+      "feat: auto-pin status messages in Telegram chats"
+    ]
+  },
+  "0.2.39": {
+    "date": "2026-03-19",
+    "title": "fix: status message always edits in place, never sends new",
+    "notes": [
+      "fix: status message always edits in place, never sends new"
+    ]
+  },
+  "0.2.38": {
+    "date": "2026-03-19",
+    "title": "feat: secretary-direct web search for simple factual queries",
+    "notes": [
+      "feat: secretary-direct web search for simple factual queries"
+    ]
+  },
+  "0.2.37": {
+    "date": "2026-03-19",
+    "title": "Build 0.2.37",
+    "notes": []
+  },
+  "0.2.36": {
+    "date": "2026-03-19",
+    "title": "feat: 35B re-translation on dissatisfaction with translation quality",
+    "notes": [
+      "feat: 35B re-translation on dissatisfaction with translation quality"
+    ]
+  },
+  "0.2.35": {
+    "date": "2026-03-19",
+    "title": "fix: use 3B for all auto-translations, 35B only on direct request",
+    "notes": [
+      "fix: use 3B for all auto-translations, 35B only on direct request"
+    ]
+  },
+  "0.2.34": {
+    "date": "2026-03-19",
+    "title": "fix: unify all translations to 35B model with consistent format",
+    "notes": [
+      "fix: unify all translations to 35B model with consistent format"
+    ]
+  },
+  "0.2.33": {
+    "date": "2026-03-19",
+    "title": "fix: skip auto-translate for messages already in translation format",
+    "notes": [
+      "fix: skip auto-translate for messages already in translation format"
+    ]
+  },
+  "0.2.32": {
+    "date": "2026-03-19",
+    "title": "fix: translate command now translates the replied-to message, not itself",
+    "notes": [
+      "fix: translate command now translates the replied-to message, not itself"
+    ]
+  },
+  "0.2.31": {
+    "date": "2026-03-19",
+    "title": "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call",
+    "notes": [
+      "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call"
+    ]
+  },
+  "0.2.30": {
+    "date": "2026-03-19",
+    "title": "feat: auto-translate Jarvis chat responses, skip command responses",
+    "notes": [
+      "feat: auto-translate Jarvis chat responses, skip command responses"
+    ]
+  },
+  "0.2.29": {
+    "date": "2026-03-19",
+    "title": "fix: clean translation UX \u2014 reply-to, no sender duplication, on-demand",
+    "notes": [
+      "fix: clean translation UX \u2014 reply-to, no sender duplication, on-demand",
+      "fix: unify text and voice translation UX with sender names",
+      "fix: single-call multi-language translation via secretary",
+      "perf: use coordinator (35B) for translations instead of secretary (3B)",
+      "fix: translator_languages double-serialized as string instead of array",
+      "feat: auto-translate chat messages to registered listener languages",
+      "feat: explicit escalation detection in classifier",
+      "feat: secretary direct execution for simple tool queries"
+    ]
+  },
+  "0.2.28": {
+    "date": "2026-03-19",
+    "title": "perf: swap secretary from qwen3:4b to qwen2.5:3b",
+    "notes": [
+      "perf: swap secretary from qwen3:4b to qwen2.5:3b"
+    ]
+  },
   "0.2.27": {
     "date": "2026-03-19",
     "title": "fix: improve regex classifier fallback for creative, research, debug tasks",

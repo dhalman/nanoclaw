@@ -1,12 +1,16 @@
 /**
  * Translate text using a local Ollama model.
- * Uses the secretary model (qwen3:4b) for fast, cheap translation.
+ * Uses qwen2.5:3b (secretary) for auto-translations — runs on a separate
+ * model from the coordinator so translations don't queue/timeout.
+ * On-demand translations (👀 reaction, "translate" reply) use the same
+ * model for consistency. Users can ask Jarvis directly for a more
+ * accurate translation which will use the coordinator (35B).
  */
 
 import { logger } from './logger.js';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL || 'qwen3:4b';
+const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL || 'qwen2.5:3b';
 const TRANSLATE_TIMEOUT_MS = 15_000;
 
 // ISO 639-1 → display name
@@ -90,6 +94,7 @@ export async function translateText(
   text: string,
   sourceLanguage: string,
   targetLanguage: string,
+  modelOverride?: string,
 ): Promise<string | null> {
   if (sourceLanguage === targetLanguage) return null;
 
@@ -104,7 +109,7 @@ export async function translateText(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: TRANSLATE_MODEL,
+        model: modelOverride || TRANSLATE_MODEL,
         messages: [
           {
             role: 'system',
@@ -171,6 +176,7 @@ export async function translateToMultiple(
   text: string,
   sourceLanguage: string,
   targetLanguages: string[],
+  modelOverride?: string,
 ): Promise<TranslationResult[]> {
   // Dedupe and skip source language
   const targets = [...new Set(targetLanguages)].filter(
@@ -180,7 +186,7 @@ export async function translateToMultiple(
 
   const results = await Promise.allSettled(
     targets.map(async (targetLang) => {
-      const translated = await translateText(text, sourceLanguage, targetLang);
+      const translated = await translateText(text, sourceLanguage, targetLang, modelOverride);
       if (!translated) throw new Error(`Translation to ${targetLang} failed`);
       return {
         targetLanguage: targetLang,
