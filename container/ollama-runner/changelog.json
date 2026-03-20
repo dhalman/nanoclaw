@@ -1,9 +1,9 @@
 {
   "0.3.22": {
     "date": "2026-03-20",
-    "title": "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt",
+    "title": "feat: instant 👀 reaction acknowledgment on message receipt",
     "notes": [
-      "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt"
+      "feat: instant 👀 reaction acknowledgment on message receipt"
     ]
   },
   "0.3.21": {
@@ -15,16 +15,16 @@
   },
   "0.3.20": {
     "date": "2026-03-20",
-    "title": "fix: remove proactive mode \u2014 just engaged and not engaged",
+    "title": "fix: remove proactive mode  -  just engaged and not engaged",
     "notes": [
-      "fix: remove proactive mode \u2014 just engaged and not engaged"
+      "fix: remove proactive mode  -  just engaged and not engaged"
     ]
   },
   "0.3.19": {
     "date": "2026-03-20",
-    "title": "feat: nuanced engagement \u2014 attentive when engaged, proactive when skilled",
+    "title": "feat: nuanced engagement  -  attentive when engaged, proactive when skilled",
     "notes": [
-      "feat: nuanced engagement \u2014 attentive when engaged, proactive when skilled"
+      "feat: nuanced engagement  -  attentive when engaged, proactive when skilled"
     ]
   },
   "0.3.18": {
@@ -43,9 +43,9 @@
   },
   "0.3.16": {
     "date": "2026-03-20",
-    "title": "fix: stop re-pinning on status update \u2014 just edit silently",
+    "title": "fix: stop re-pinning on status update  -  just edit silently",
     "notes": [
-      "fix: stop re-pinning on status update \u2014 just edit silently"
+      "fix: stop re-pinning on status update  -  just edit silently"
     ]
   },
   "0.3.15": {
@@ -123,9 +123,9 @@
   },
   "0.3.2": {
     "date": "2026-03-19",
-    "title": "feat: v0.3.0 \u2014 Translation pipeline, NLP router, optimized routines",
+    "title": "feat: v0.3.0  -  Translation pipeline, NLP router, optimized routines",
     "notes": [
-      "feat: v0.3.0 \u2014 Translation pipeline, NLP router, optimized routines",
+      "feat: v0.3.0  -  Translation pipeline, NLP router, optimized routines",
       "fix: classify by action verb + recipient, not modal verbs",
       "fix: voice replies to other users don't trigger Jarvis"
     ]
@@ -158,9 +158,9 @@
   },
   "0.2.67": {
     "date": "2026-03-19",
-    "title": "fix: send response before compression \u2014 was blocking on sync compress",
+    "title": "fix: send response before compression  -  was blocking on sync compress",
     "notes": [
-      "fix: send response before compression \u2014 was blocking on sync compress"
+      "fix: send response before compression  -  was blocking on sync compress"
     ]
   },
   "0.2.66": {
@@ -250,7 +250,7 @@
     "title": "fix: unpinChatMessage takes messageId directly, not options object",
     "notes": [
       "fix: unpinChatMessage takes messageId directly, not options object",
-      "fix: unpin \u2192 edit \u2192 re-pin status message on update"
+      "fix: unpin → edit → re-pin status message on update"
     ]
   },
   "0.2.54": {
@@ -413,9 +413,9 @@
   },
   "0.2.31": {
     "date": "2026-03-19",
-    "title": "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call",
+    "title": "perf: use coordinator (35B) for chat translations  -  single multi-lang call",
     "notes": [
-      "perf: use coordinator (35B) for chat translations \u2014 single multi-lang call"
+      "perf: use coordinator (35B) for chat translations  -  single multi-lang call"
     ]
   },
   "0.2.30": {
@@ -427,9 +427,9 @@
   },
   "0.2.29": {
     "date": "2026-03-19",
-    "title": "fix: clean translation UX \u2014 reply-to, no sender duplication, on-demand",
+    "title": "fix: clean translation UX  -  reply-to, no sender duplication, on-demand",
     "notes": [
-      "fix: clean translation UX \u2014 reply-to, no sender duplication, on-demand",
+      "fix: clean translation UX  -  reply-to, no sender duplication, on-demand",
       "fix: unify text and voice translation UX with sender names",
       "fix: single-call multi-language translation via secretary",
       "perf: use coordinator (35B) for translations instead of secretary (3B)",
@@ -583,9 +583,9 @@
   },
   "0.2.1": {
     "date": "2026-03-19",
-    "title": "feat: NanoClaw v0.0.1 \u2014 Personal AI assistant via Telegram",
+    "title": "feat: NanoClaw v0.0.1  -  Personal AI assistant via Telegram",
     "notes": [
-      "feat: NanoClaw v0.0.1 \u2014 Personal AI assistant via Telegram"
+      "feat: NanoClaw v0.0.1  -  Personal AI assistant via Telegram"
     ]
   },
   "0.2.0": {
@@ -593,24 +593,24 @@
     "title": "Autonomous Operations & Self-Healing Infrastructure",
     "notes": [
       "feat: zero-inference keyword classifier with route hints replaces LLM-based secretary",
-      "feat: adaptive performance tiers \u2014 context windows and sampling scale with task complexity",
+      "feat: adaptive performance tiers  -  context windows and sampling scale with task complexity",
       "feat: user dissatisfaction detection with automatic escalation to higher reasoning tiers",
-      "feat: artist/cinematographer feedback-first workflow \u2014 creative plan before generation",
-      "feat: runtime model management \u2014 pull, remove, search, install across all backends",
-      "feat: service self-healing \u2014 start/restart backends via IPC without manual intervention",
+      "feat: artist/cinematographer feedback-first workflow  -  creative plan before generation",
+      "feat: runtime model management  -  pull, remove, search, install across all backends",
+      "feat: service self-healing  -  start/restart backends via IPC without manual intervention",
       "feat: preferences system with per-group defaults and per-user overrides",
       "feat: voice transcription with multi-language auto-translation subscriptions",
       "feat: per-user engagement tracking in group chats with disengage protocol",
       "feat: performance metrics logging with version-over-version comparison",
       "feat: event-driven IPC via fs.watch replaces 100ms polling",
-      "feat: source bind-mount \u2014 code changes apply without container rebuild",
+      "feat: source bind-mount  -  code changes apply without container rebuild",
       "feat: post-build image verification with automatic buildkit cache recovery",
-      "feat: container version gating \u2014 stale containers exit on startup",
+      "feat: container version gating  -  stale containers exit on startup",
       "feat: stuck-loop detection replaces hard tool-round cap (local = no cost limits)",
-      "fix: SearXNG preserved across builds \u2014 only nanoclaw containers killed",
+      "fix: SearXNG preserved across builds  -  only nanoclaw containers killed",
       "fix: web_search returns clear 'do not retry' on backend failure",
       "fix: mid-task replies use coordinator, not disabled secretary",
-      "fix: all backend catch blocks log errors \u2014 no silent failures",
+      "fix: all backend catch blocks log errors  -  no silent failures",
       "test: 468 tests covering routing, classification, escalation, tools, and preferences"
     ]
   },
@@ -619,20 +619,20 @@
     "title": "Intelligent Routing & Creative Pipeline",
     "notes": [
       "feat: semantic message classification via qwen3:4b secretary with coordinator review",
-      "feat: self-improving routing \u2014 coordinator grades decisions, corrections feed back into classifier",
+      "feat: self-improving routing  -  coordinator grades decisions, corrections feed back into classifier",
       "feat: 4-tier escalation ladder with auto-escalation on model failure detection",
       "feat: web search via local SearXNG metasearch (privacy-first, no external tracking)",
-      "feat: task scheduling \u2014 once, interval, and cron expressions via IPC",
-      "feat: proactive memory \u2014 updates personal notes on corrections and preferences",
-      "feat: image generation \u2014 FLUX via ComfyUI and OllamaDiffuser with auto-backend selection",
-      "feat: video generation \u2014 LTX-Video and HunyuanVideo with I2V support",
+      "feat: task scheduling  -  once, interval, and cron expressions via IPC",
+      "feat: proactive memory  -  updates personal notes on corrections and preferences",
+      "feat: image generation  -  FLUX via ComfyUI and OllamaDiffuser with auto-backend selection",
+      "feat: video generation  -  LTX-Video and HunyuanVideo with I2V support",
       "feat: artist and cinematographer creative directors powered by qwen2.5vl:72b",
-      "feat: mid-task chat \u2014 respond to users while processing long-running tasks",
-      "feat: background history compression \u2014 runs between turns, not during inference",
+      "feat: mid-task chat  -  respond to users while processing long-running tasks",
+      "feat: background history compression  -  runs between turns, not during inference",
       "feat: voice transcription via local faster-whisper (no API key required)",
       "feat: Telegram integration with bot pool, typing indicators, and thinking status",
-      "perf: adaptive context windows \u2014 8k to 64k based on model and task complexity",
-      "perf: specialist models evict immediately after use \u2014 coordinator stays pinned"
+      "perf: adaptive context windows  -  8k to 64k based on model and task complexity",
+      "perf: specialist models evict immediately after use  -  coordinator stays pinned"
     ]
   },
   "0.0.1": {
@@ -643,6 +643,83 @@
       "feat: ollama runner container for local model inference on Apple Silicon",
       "feat: Jarvis bot registration with per-group container isolation",
       "feat: Docker-based sandboxing with credential proxy"
+    ]
+  },
+  "0.3.0": {
+    "date": "2026-03-20",
+    "title": "Translation Pipeline, NLP Router, Instant Commands",
+    "notes": [
+      "Auto-translate group messages. Secretary-direct commands bypass the coordinator (~2ms). Complete engagement overhaul. 520 tests passing.",
+      "Secretary swap to qwen2.5:3b (15x faster). Secretary-direct for version/status/help/restart. Native language tags. On-demand translation via 👀 or reply."
+    ]
+  },
+  "0.3.26": {
+    "date": "2026-03-20",
+    "title": "Inference Pool and Model Cleanup",
+    "notes": [
+      "Per-model thread pool prevents memory overload. Old model workarounds removed. Each specialist gets their own system prompt.",
+      "Semaphore pool: secretary 4 slots, large models 1 slot, others 2. 125GB memory budget, 30s timeout. Removed llama3.2-vision workaround. Specialist personality injection."
+    ]
+  },
+  "0.3.27": {
+    "date": "2026-03-20",
+    "title": "Task Scheduling Security",
+    "notes": [
+      "Group chats can only create reminders (text notifications). Execution tasks like config changes, code runs, or service commands require a private DM.",
+      "Group task gate checks for reminder keywords (remind/notify/alert/ping). Non-reminder tasks return a clear error directing the user to DM. Prevents social engineering of scheduled execution tasks in group chats."
+    ]
+  },
+  "0.3.28": {
+    "date": "2026-03-20",
+    "title": "Task Permissions and Friendly Help",
+    "notes": [
+      "Only DJ can schedule execution tasks. Anyone can set reminders. Friendlier help menu with all current features including translation, shortcuts, and voice.",
+      "Task scheduling gated by owner ID (365278370). Reminder keywords bypass the gate. get_help rewritten with warm tone, organized by what users actually want to do, includes translation/shortcuts/tags."
+    ]
+  },
+  "0.3.29": {
+    "date": "2026-03-20",
+    "title": "Fix help trigger false positive",
+    "notes": [
+      "\"help\" in a sentence like \"help you learn\" was triggering the help menu. Now only matches \"help\" as a standalone command (full-line match), not as a verb in conversation."
+    ]
+  },
+  "0.3.30": {
+    "date": "2026-03-20",
+    "title": "Direct art and video generation",
+    "notes": [
+      "\"Create an image of...\" and \"Generate a video of...\" now go straight to the Artist/Cinematographer, bypassing the coordinator entirely. No more 5-10s wait for the coordinator to decide to delegate.",
+      "Secretary-direct paths added for generate_art and generate_film. Pattern matches obvious create/generate/draw/paint + image/video keywords. Falls through to coordinator on failure."
+    ]
+  },
+  "0.3.31": {
+    "date": "2026-03-20",
+    "title": "Guard against coder misrouting creative tasks",
+    "notes": [
+      "\"Retry image request\" was misclassified as code by the secretary. Added a guard: if the message mentions image/picture/art/video/film, never route to the coder regardless of secretary classification. Falls back to coordinator which has conversation history to handle retries."
+    ]
+  },
+  "0.3.32": {
+    "date": "2026-03-20",
+    "title": "Swap secretary to gemma3:4b, NLP-first classification",
+    "notes": [
+      "Replaced qwen2.5:3b with gemma3:4b for message classification. Benchmarked 12/12 accuracy (was 11/12). ~630ms vs 210ms but accuracy matters more than speed for task routing.",
+      "Removed regex guard for creative→coder misrouting  -  gemma3 handles it correctly. qwen2.5:3b stays for translations (lighter, sufficient). Warm script loads both gemma3:4b + qwen2.5:3b + coordinator."
+    ]
+  },
+  "0.3.33": {
+    "date": "2026-03-20",
+    "title": "Shared inference slot for large models",
+    "notes": [
+      "Models over 30GB (architect at 43GB, vision at 49GB) now share a single concurrency slot. Only one can run at a time  -  they can't coexist in VRAM. Prevents OOM and model eviction.",
+      "Slot allocation: secretary 4, coordinator 1, coder/image 2, all >30GB models share 1. 30s timeout with clear error instead of hanging. Pool gate wraps callOllama with acquire/release in finally block."
+    ]
+  },
+  "0.3.34": {
+    "date": "2026-03-20",
+    "title": "Correct pool allocation",
+    "notes": [
+      "4 secretary, 2 translator, 2 coordinator, 2 coder/image, 1 shared architect/vision. Coordinator was incorrectly capped at 1 slot (now 2). Translator model added to size tracking."
     ]
   }
 }
