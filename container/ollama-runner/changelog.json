@@ -1,4 +1,11 @@
 {
+  "0.3.86": {
+    "date": "2026-03-20",
+    "title": "perf: eliminate cold-start penalty, reduce fixed latency overheads",
+    "notes": [
+      "perf: eliminate cold-start penalty, reduce fixed latency overheads"
+    ]
+  },
   "0.3.85": {
     "date": "2026-03-20",
     "title": "Build 0.3.85",
