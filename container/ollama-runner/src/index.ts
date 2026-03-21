@@ -1387,9 +1387,9 @@ const DIRECT_PATTERNS: Array<{
   format: (result: string) => string;
 }> = [
   {
-    // "version", "what version", "build", "what's new", "changelog", "release notes"
-    // Must be before status — "what version are you running" contains "running"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|what changed|(?:last|recent|latest)\s+\d*\s*updates?)\b/i,
+    // Standalone commands only: "version", "log", "changelog", "what's new"
+    // Anything more complex (e.g. "what version of python") should go to the coordinator.
+    pattern: /^\s*(?:version|log|changelog|what(?:'s| is) new|release notes?)\s*[?]?\s*$/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
@@ -3318,6 +3318,10 @@ async function main(): Promise<void> {
       // This must complete BEFORE we accept messages — otherwise the first real request
       // pays the full prompt-processing cost (~8s for the coordinator's 6KB system + 473-line tools).
       // Subsequent requests reuse the cached KV prefix and only process incremental tokens.
+      // Warm with the exact payload the first real request will use (low-complexity path).
+      // Ollama caches KV states per model based on the prompt prefix — if the warm-up
+      // matches the production prefix (system prompt + tools), the first real request
+      // reuses the cached KV and only processes the new user message tokens.
       const warmups = [MODELS.SECRETARY, MODELS.COORDINATOR].map(async (wm) => {
         const isCoord = wm === MODELS.COORDINATOR;
         const warmStart = Date.now();

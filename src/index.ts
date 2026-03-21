@@ -419,12 +419,6 @@ async function runAgent(
 
 let shuttingDown = false;
 
-// Track restart message IDs so we can update 🫡→👍 when the container comes back
-const pendingRestartReactions: Record<
-  string,
-  { chatJid: string; msgId: number }
-> = {};
-
 /**
  * Pre-spawn a persistent ollama-runner container at startup.
  * The container runs startBackgroundInit() immediately, then waits in its IPC loop.
@@ -437,6 +431,12 @@ const pendingRestartReactions: Record<
 const prespawnFailures: Record<string, { count: number; lastError: string }> =
   {};
 const MAX_PRESPAWN_RETRIES = 3;
+
+// Track restart message IDs so we can update 🫡→👍 when the container comes back
+const pendingRestartReactions: Record<
+  string,
+  { chatJid: string; msgId: number }
+> = {};
 
 function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
   if (shuttingDown) return;
@@ -461,13 +461,13 @@ function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
       },
       (proc, containerName) =>
         queue.registerProcess(chatJid, proc, containerName, group.folder),
-      async (output) => {
-        if (output.newSessionId) {
-          sessions[group.folder] = output.newSessionId;
-          setSession(group.folder, output.newSessionId);
+      async (out) => {
+        if (out.newSessionId) {
+          sessions[group.folder] = out.newSessionId;
+          setSession(group.folder, out.newSessionId);
         }
-        if (output.result) {
-          const text = output.result
+        if (out.result) {
+          const text = out.result
             .replace(/<internal>[\s\S]*?<\/internal>/g, '')
             .trim();
           if (text) {
@@ -676,7 +676,7 @@ async function startMessageLoop(): Promise<void> {
                 };
               }
             }
-            // React 🙏 on the pending trigger message (if mid-task)
+            // React ⏳ on the pending trigger message (if mid-task)
             const pendingIds = pendingTriggerMessageIds[chatJid];
             if (pendingIds?.length) {
               for (const pid of pendingIds) {
