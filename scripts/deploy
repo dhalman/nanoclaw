@@ -1,0 +1,63 @@
+#!/bin/bash
+# Deploy NanoClaw — restart an instance to pick up its current build
+#
+# Usage:
+#   ./scripts/deploy staging     # restart Jarvis Stage (picks up builds/staging/)
+#   ./scripts/deploy live        # restart Jarvis Live + Botski (picks up builds/live/)
+#   ./scripts/deploy all         # restart both instances
+
+set -e
+
+TARGET="${1:-}"
+
+if [ -z "$TARGET" ]; then
+  echo "Usage: ./scripts/deploy <staging|live|all>"
+  exit 1
+fi
+
+restart_staging() {
+  echo "Deploying staging..."
+  # Kill staging container — host prespawn loop will respawn with new code
+  CONTAINERS=$(docker ps -q --filter 'name=nanoclaw-staging-' 2>/dev/null)
+  if [ -n "$CONTAINERS" ]; then
+    echo "$CONTAINERS" | xargs docker stop -t 2 2>/dev/null || true
+    docker wait $CONTAINERS 2>/dev/null || true
+    echo "Staging container stopped. Host will respawn."
+  else
+    echo "No staging container running. Restarting host..."
+    launchctl kickstart -k gui/$(id -u)/com.nanoclaw 2>/dev/null || true
+  fi
+}
+
+restart_live() {
+  echo "Deploying live..."
+  CONTAINERS=$(docker ps -q --filter 'name=nanoclaw-live-' 2>/dev/null)
+  if [ -n "$CONTAINERS" ]; then
+    echo "$CONTAINERS" | xargs docker stop -t 2 2>/dev/null || true
+    docker wait $CONTAINERS 2>/dev/null || true
+    echo "Live containers stopped. Host will respawn."
+  else
+    echo "No live containers running. Restarting host..."
+    launchctl kickstart -k gui/$(id -u)/com.nanoclaw.live 2>/dev/null || true
+  fi
+}
+
+case "$TARGET" in
+  staging|stage)
+    restart_staging
+    ;;
+  live)
+    restart_live
+    ;;
+  all)
+    restart_staging
+    restart_live
+    ;;
+  *)
+    echo "Unknown target: $TARGET"
+    echo "Usage: ./scripts/deploy <staging|live|all>"
+    exit 1
+    ;;
+esac
+
+echo "Done."

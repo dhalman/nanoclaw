@@ -652,9 +652,10 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://host.docker.internal:1143
 // Current request trace ID — set before each request, used by tool calls for perf logging
 let currentTraceId: string | undefined;
 
-// Admin identity — only admin's DM allows system-level changes (shell, config, behavior)
-const ADMIN_JID = 'tg-j:365278370';
-function isAdminChat(chatJid: string): boolean { return chatJid === ADMIN_JID; }
+// Set during init from container input — determines admin privileges
+let containerChatJid = '';
+let containerIsMain = false;
+function isAdminChat(chatJid: string): boolean { return !isGroupChat(chatJid) && containerIsMain; }
 function isGroupChat(chatJid: string): boolean { return chatJid.includes('-'); }
 
 // ---------------------------------------------------------------------------
@@ -2655,10 +2656,7 @@ Respond with ONLY valid JSON, no explanation, no markdown:
       // - Only admin can schedule execution tasks
       const isReminder = /\b(?:remind|reminder|notify|alert|ping|tell\s+me|let\s+me\s+know)\b/i.test(prompt);
       if (!isReminder) {
-        // Check if the current user is admin — extract sender from the prompt XML
-        const senderMatch = prompt.match(/<message\s+sender="([^"]*)"/);
-        const senderId = senderMatch ? senderMatch[1] : '';
-        if (senderId !== '365278370' && !isAdminChat(chatJid)) {
+        if (!isAdminChat(chatJid)) {
           return 'Only reminders can be scheduled by group members. For execution tasks, ask the admin to set it up.';
         }
       }
@@ -3232,7 +3230,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const { chatJid, groupFolder, assistantName = 'Andy' } = containerInput;
+  const { chatJid, groupFolder, assistantName = 'Jarvis' } = containerInput;
+  containerChatJid = chatJid;
+  containerIsMain = containerInput.isMain === true;
 
   fs.mkdirSync(IPC_INPUT_DIR, { recursive: true });
   try { fs.unlinkSync(IPC_INPUT_CLOSE_SENTINEL); } catch { /* ignore */ }
@@ -3281,13 +3281,13 @@ async function main(): Promise<void> {
           if (nowOnline !== state) {
             state = nowOnline;
             const text = nowOnline ? onUp : onDown;
-            if (text) sendIpc(`health-${Date.now()}.json`, { type: 'message', chatJid, text });
+            if (text && !isGroupChat(chatJid)) sendIpc(`health-${Date.now()}.json`, { type: 'message', chatJid, text });
             log(`${name} state changed: ${nowOnline ? 'online' : 'offline'}`);
           }
         } catch {
           if (state) {
             state = false;
-            sendIpc(`health-${Date.now()}.json`, { type: 'message', chatJid, text: onDown });
+            if (!isGroupChat(chatJid)) sendIpc(`health-${Date.now()}.json`, { type: 'message', chatJid, text: onDown });
             log(`${name} became unreachable`);
           }
         }

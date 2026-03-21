@@ -1,0 +1,44 @@
+#!/bin/bash
+# Tail NanoClaw logs
+#
+# Usage:
+#   ./scripts/logs staging       # tail staging host log
+#   ./scripts/logs live          # tail live host log
+#   ./scripts/logs staging -c    # tail staging container log
+#   ./scripts/logs live -c       # tail live container log (first match)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+TARGET="${1:-}"
+CONTAINER_MODE=false
+if [ "$2" = "-c" ]; then CONTAINER_MODE=true; fi
+
+if [ -z "$TARGET" ]; then
+  echo "Usage: ./scripts/logs <staging|live> [-c]"
+  exit 1
+fi
+
+case "$TARGET" in
+  staging|stage)
+    if [ "$CONTAINER_MODE" = "true" ]; then
+      CONTAINER=$(docker ps --filter name=nanoclaw-staging --format '{{.Names}}' | head -1)
+      [ -n "$CONTAINER" ] && docker logs -f "$CONTAINER" || echo "No staging container running"
+    else
+      tail -f "$PROJECT_ROOT/stage/logs/nanoclaw.log"
+    fi
+    ;;
+  live)
+    if [ "$CONTAINER_MODE" = "true" ]; then
+      CONTAINER=$(docker ps --filter name=nanoclaw-live-telegram-ollama --format '{{.Names}}' | head -1)
+      [ -n "$CONTAINER" ] && docker logs -f "$CONTAINER" || echo "No live ollama container running"
+    else
+      tail -f "$PROJECT_ROOT/live/logs/nanoclaw.log"
+    fi
+    ;;
+  *)
+    echo "Unknown target: $TARGET"
+    echo "Usage: ./scripts/logs <staging|live> [-c]"
+    exit 1
+    ;;
+esac

@@ -1,0 +1,56 @@
+#!/bin/bash
+# Build NanoClaw — compile host + ollama-runner, run tests
+# Produces a staged build in builds/staging/ ready for deploy or promote.
+#
+# Usage:
+#   ./scripts/build             # compile + test
+#   ./scripts/build --quick     # compile only, skip tests
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILDS_DIR="$PROJECT_ROOT/builds"
+STAGING_DIR="$BUILDS_DIR/staging"
+
+SKIP_TESTS=false
+if [ "$1" = "--quick" ]; then SKIP_TESTS=true; fi
+
+# 1. Compile host TypeScript
+echo "Compiling host..."
+cd "$PROJECT_ROOT"
+/opt/homebrew/bin/npm run build
+
+# 2. Compile ollama-runner to staging
+echo "Compiling ollama-runner..."
+rm -rf "$STAGING_DIR"
+mkdir -p "$STAGING_DIR"
+cd "$PROJECT_ROOT/container/ollama-runner"
+/opt/homebrew/bin/npx tsc --outDir "$STAGING_DIR/dist"
+
+# 3. Stamp with version + git hash
+VERSION=$(/opt/homebrew/bin/node -p "require('$PROJECT_ROOT/package.json').version" 2>/dev/null || echo "0.0.0")
+HASH=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+echo "${VERSION}-${HASH}" > "$STAGING_DIR/build-id.txt"
+cp "$PROJECT_ROOT/container/ollama-runner/changelog.json" "$STAGING_DIR/" 2>/dev/null || true
+
+# 4. Run tests
+if [ "$SKIP_TESTS" = "true" ]; then
+  echo "Tests skipped."
+else
+  echo "Running tests..."
+  cd "$PROJECT_ROOT"
+  CONTAINER_OUTPUT=$(cd container/ollama-runner && /opt/homebrew/bin/npx vitest run 2>&1)
+  CONTAINER_CLEAN=$(echo "$CONTAINER_OUTPUT" | sed 's/\x1B\[[0-9;]*m//g')
+  if echo "$CONTAINER_CLEAN" | grep -q "failed"; then
+    echo "$CONTAINER_OUTPUT"
+    echo "Tests FAILED — build aborted."
+    exit 1
+  fi
+  PASS=$(echo "$CONTAINER_CLEAN" | grep "Tests" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "0")
+  echo "Tests passed ($PASS)."
+fi
+
+echo ""
+echo "Build ready: $STAGING_DIR"
+echo "Version: $(cat "$STAGING_DIR/build-id.txt")"

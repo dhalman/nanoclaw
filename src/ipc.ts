@@ -178,11 +178,11 @@ export async function sendStoppedStatus(
         minute: '2-digit',
         hour12: true,
       });
-      const isGroup = chatJid.includes('-100');
+      const isGroup = chatJid.includes('-');
       await sendOrEditStatus(
         chatJid,
         `_${assistantName} stopped — ${stopTime}_`,
-        !isGroup, // groups: edit only, never send new
+        !isGroup,
       );
     } catch (err) {
       logger.debug({ chatJid, err }, 'Failed to send stopped status');
@@ -275,11 +275,8 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   isMain ||
                   (targetGroup && targetGroup.folder === sourceGroup)
                 ) {
-                  if (
-                    sourceGroup === 'telegram_ollama' &&
-                    (data.chatJid.startsWith('tg:') ||
-                      data.chatJid.startsWith('tg-j:'))
-                  ) {
+                  const sourceIsOllama = registeredGroups[data.chatJid]?.containerConfig?.ollamaRunner === true;
+                  if (sourceIsOllama && data.chatJid.startsWith('tg-j:')) {
                     await sendJarvisMessage(data.chatJid, data.text);
                   } else {
                     await deps.sendMessage(data.chatJid, data.text);

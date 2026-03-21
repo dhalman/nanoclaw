@@ -1,0 +1,50 @@
+#!/bin/bash
+# Promote staging build to live
+# Copies builds/staging/ to builds/<version>/ and updates builds/live symlink.
+# Does NOT restart anything — use ./scripts/deploy live after promoting.
+#
+# Usage:
+#   ./scripts/promote           # promote current staging build to live
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILDS_DIR="$PROJECT_ROOT/builds"
+STAGING_DIR="$BUILDS_DIR/staging"
+
+if [ ! -f "$STAGING_DIR/build-id.txt" ]; then
+  echo "No staging build found. Run ./scripts/build first."
+  exit 1
+fi
+
+STAGING_VERSION=$(cat "$STAGING_DIR/build-id.txt")
+echo "Promoting: $STAGING_VERSION"
+
+# Version bump for live (clean version, no hash)
+CURRENT_VERSION=$(/opt/homebrew/bin/node -p "require('$PROJECT_ROOT/package.json').version" 2>/dev/null || echo "0.0.0")
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+BUILD_ID="${MAJOR}.${MINOR}.$((PATCH + 1))"
+
+# Copy to versioned directory
+VERSION_DIR="$BUILDS_DIR/$BUILD_ID"
+rm -rf "$VERSION_DIR"
+cp -R "$STAGING_DIR" "$VERSION_DIR"
+echo "$BUILD_ID" > "$VERSION_DIR/build-id.txt"
+
+# Update live symlink
+rm -f "$BUILDS_DIR/live"
+ln -sfn "$VERSION_DIR" "$BUILDS_DIR/live"
+
+# Update package.json version
+/opt/homebrew/bin/npm version "$BUILD_ID" --no-git-tag-version --prefix "$PROJECT_ROOT" > /dev/null 2>&1
+
+# Clean old builds (keep last 5)
+cd "$BUILDS_DIR"
+ls -dt [0-9]*.* 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+
+echo ""
+echo "Promoted to v${BUILD_ID}"
+echo "Live symlink: $(readlink "$BUILDS_DIR/live")"
+echo ""
+echo "Run ./scripts/deploy live to restart with the new version."
