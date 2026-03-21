@@ -32,6 +32,7 @@ export interface ContainerConfig {
   timeout?: number; // Default: 300000 (5 minutes)
   ollamaRunner?: boolean; // Use Ollama runner instead of Claude Code
   assistantName?: string; // Override global ASSISTANT_NAME for this group
+  buildVersion?: string; // Pin to a specific ollama-runner build (e.g. "0.3.90"). Default: "live"
 }
 
 export interface RegisteredGroup {

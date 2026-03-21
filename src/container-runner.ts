@@ -230,51 +230,24 @@ function buildVolumeMounts(
     readonly: false,
   });
 
-  // Mount ollama-runner source from host so code changes don't require an image rebuild.
-  // The container entrypoint recompiles TypeScript on every start.
-  const ollamaRunnerSrc = path.join(
-    projectRoot,
-    'container',
-    'ollama-runner',
-    'src',
-  );
-  const ollamaRunnerBuildId = path.join(
-    projectRoot,
-    'container',
-    'ollama-runner',
-    'build-id.txt',
-  );
-  const ollamaRunnerChangelog = path.join(
-    projectRoot,
-    'container',
-    'ollama-runner',
-    'changelog.json',
-  );
-  const ollamaRunnerTsConfig = path.join(
-    projectRoot,
-    'container',
-    'ollama-runner',
-    'tsconfig.json',
-  );
-  if (fs.existsSync(ollamaRunnerSrc)) {
+  // Mount pre-compiled ollama-runner from builds/live/ (or per-group version override).
+  // The build script compiles TS to builds/<version>/ and symlinks builds/live.
+  // No runtime TSC — container runs the pre-compiled JS directly.
+  const groupBuildVersion = group.containerConfig?.buildVersion;
+  const buildDir = groupBuildVersion
+    ? path.join(projectRoot, 'builds', groupBuildVersion)
+    : path.join(projectRoot, 'builds', 'live');
+  if (fs.existsSync(buildDir)) {
+    // Mount the entire build directory (dist/, build-id.txt, changelog.json)
     mounts.push({
-      hostPath: ollamaRunnerSrc,
-      containerPath: '/app/ollama-runner/src',
+      hostPath: fs.realpathSync(buildDir), // resolve symlink for Docker
+      containerPath: '/app/ollama-build',
       readonly: true,
     });
-  }
-  for (const [hostFile, containerFile] of [
-    [ollamaRunnerBuildId, '/app/ollama-runner/build-id.txt'],
-    [ollamaRunnerChangelog, '/app/ollama-runner/changelog.json'],
-    [ollamaRunnerTsConfig, '/app/ollama-runner/tsconfig.json'],
-  ] as const) {
-    if (fs.existsSync(hostFile)) {
-      mounts.push({
-        hostPath: hostFile,
-        containerPath: containerFile,
-        readonly: true,
-      });
-    }
+  } else {
+    logger.warn(
+      `Build directory not found: ${buildDir} — container will use baked-in image code`,
+    );
   }
 
   // Additional mounts validated against external allowlist (tamper-proof from containers)
@@ -294,6 +267,7 @@ function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
   ollamaRunner?: boolean,
+  buildVersion?: string,
 ): string[] {
   const args: string[] = ['run', '-i', '--rm', '--name', containerName];
 
@@ -367,12 +341,20 @@ function buildContainerArgs(
       : `http://host.docker.internal:${SEARXNG_PORT}`;
     args.push('-e', `SEARXNG_HOST=${searxHost}`);
     try {
-      const expectedBuildId = fs
-        .readFileSync(
-          path.join(process.cwd(), 'container/ollama-runner/build-id.txt'),
-          'utf-8',
-        )
-        .trim();
+      // Read expected build ID from the group's actual build directory
+      // (staging groups use builds/staging, live groups use builds/live)
+      const buildBase = path.join(
+        process.cwd(),
+        'builds',
+        buildVersion || 'live',
+      );
+      const resolvedDir = fs.existsSync(buildBase)
+        ? fs.realpathSync(buildBase)
+        : null;
+      const buildIdPath = resolvedDir
+        ? path.join(resolvedDir, 'build-id.txt')
+        : path.join(process.cwd(), 'container/ollama-runner/build-id.txt');
+      const expectedBuildId = fs.readFileSync(buildIdPath, 'utf-8').trim();
       if (expectedBuildId)
         args.push('-e', `EXPECTED_BUILD_ID=${expectedBuildId}`);
     } catch {
@@ -401,7 +383,12 @@ export async function runContainerAgent(
   const safeName = group.folder.replace(/[^a-zA-Z0-9-]/g, '-');
   const containerName = `nanoclaw-${safeName}-${Date.now()}`;
   const ollamaRunner = group.containerConfig?.ollamaRunner === true;
-  const containerArgs = buildContainerArgs(mounts, containerName, ollamaRunner);
+  const containerArgs = buildContainerArgs(
+    mounts,
+    containerName,
+    ollamaRunner,
+    group.containerConfig?.buildVersion,
+  );
 
   logger.debug(
     {

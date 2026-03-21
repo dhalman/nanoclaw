@@ -62,13 +62,12 @@ RUN mkdir -p /workspace/group /workspace/global /workspace/extra /workspace/ipc/
 # Follow-up messages arrive via IPC files in /workspace/ipc/input/
 RUN printf '#!/bin/bash\nset -e\ncd /app && npx tsc --outDir /tmp/dist 2>&1 >&2\nln -s /app/node_modules /tmp/dist/node_modules\nchmod -R a-w /tmp/dist\ncat > /tmp/input.json\nnode /tmp/dist/index.js < /tmp/input.json\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
-# Ollama runner: source is bind-mounted from the host at runtime so code
-# changes take effect without rebuilding the image.  The entrypoint compiles
-# TypeScript on every start (< 1s) to pick up the latest source.
-# COPY is kept as a fallback — if nothing is mounted, the baked-in source is used.
+# Ollama runner: pre-compiled JS is bind-mounted from builds/live/ at runtime.
+# No runtime TSC — the build script compiles, tests, and promotes before deploy.
+# COPY is kept as a fallback — if nothing is mounted, the baked-in build is used.
 COPY ollama-runner/ /app/ollama-runner/
 RUN cd /app/ollama-runner && /app/node_modules/.bin/tsc
-RUN printf '#!/bin/bash\nset -e\n# Compile from mounted source (or baked-in fallback)\ncd /app/ollama-runner && /app/node_modules/.bin/tsc --outDir /tmp/ollama-dist 2>&1 >&2\n# Version gate: if EXPECTED_BUILD_ID is set, verify compiled source matches\nif [ -n "$EXPECTED_BUILD_ID" ] && [ -f /app/ollama-runner/build-id.txt ]; then\n  COMPILED_ID=$(cat /app/ollama-runner/build-id.txt 2>/dev/null || echo "unknown")\n  if [ "$COMPILED_ID" != "$EXPECTED_BUILD_ID" ]; then\n    echo "[nanoclaw] FATAL: Source version mismatch — compiled $COMPILED_ID but expected $EXPECTED_BUILD_ID" >&2\n    exit 1\n  fi\nfi\ncat > /tmp/ollama-input.json\nnode /tmp/ollama-dist/index.js < /tmp/ollama-input.json\n' > /app/ollama-entrypoint.sh && chmod +x /app/ollama-entrypoint.sh
+RUN printf '#!/bin/bash\nset -e\n# Use pre-compiled build from host mount (preferred) or baked-in fallback\nif [ -d /app/ollama-build/dist ]; then\n  DIST_DIR=/app/ollama-build/dist\n  BUILD_ID_FILE=/app/ollama-build/build-id.txt\nelse\n  DIST_DIR=/app/ollama-runner/dist\n  BUILD_ID_FILE=/app/ollama-runner/build-id.txt\nfi\n# Version gate: verify build matches expected version\nif [ -n "$EXPECTED_BUILD_ID" ] && [ -f "$BUILD_ID_FILE" ]; then\n  COMPILED_ID=$(cat "$BUILD_ID_FILE" 2>/dev/null || echo "unknown")\n  if [ "$COMPILED_ID" != "$EXPECTED_BUILD_ID" ]; then\n    echo "[nanoclaw] FATAL: Build version mismatch — found $COMPILED_ID but expected $EXPECTED_BUILD_ID" >&2\n    exit 1\n  fi\nfi\ncat > /tmp/ollama-input.json\nNODE_PATH=/app/node_modules node "$DIST_DIR/index.js" < /tmp/ollama-input.json\n' > /app/ollama-entrypoint.sh && chmod +x /app/ollama-entrypoint.sh
 
 # Set ownership to node user (non-root) for writable directories
 RUN chown -R node:node /workspace && chmod 777 /home/node
