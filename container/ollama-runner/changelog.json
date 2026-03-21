@@ -1,4 +1,9 @@
 {
+  "0.3.83": {
+    "date": "2026-03-20",
+    "title": "Build 0.3.83",
+    "notes": []
+  },
   "0.3.82": {
     "date": "2026-03-20",
     "title": "feat: webhook infrastructure + polling watchdog",
