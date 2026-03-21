@@ -64,6 +64,10 @@ interface OllamaResponse {
     tool_calls?: ToolCall[];
   };
   done: boolean;
+  prompt_eval_count?: number;
+  prompt_eval_duration?: number; // nanoseconds
+  eval_count?: number;
+  eval_duration?: number; // nanoseconds
 }
 
 const OLLAMA_TOOLS = [
@@ -540,6 +544,15 @@ context_mode:
   },
 ];
 
+// Low-complexity requests use a minimal tool set for faster prompt processing
+const LOW_COMPLEXITY_TOOL_NAMES = new Set([
+  'web_search', 'fetch_url', 'set_status', 'get_help', 'get_changelog',
+  'ollama_generate', 'escalate', 'service_status', 'preferences',
+]);
+const OLLAMA_TOOLS_LOW = OLLAMA_TOOLS.filter((t) =>
+  LOW_COMPLEXITY_TOOL_NAMES.has((t as { function: { name: string } }).function.name),
+);
+
 // run_command is intentionally NOT in OLLAMA_TOOLS — offering it as a structured tool causes
 // llama3.2 to call it proactively (e.g. `git status` before every response). It is still
 // available via text-encoded tool calls (parseTextToolCall) for explicit user requests.
@@ -613,8 +626,14 @@ function setUserPref(userId: string, key: string, value: unknown): void {
   else prefs.users[userId][key] = value;
   savePreferences(prefs);
 }
-const BUILD_ID_FILE         = path.join(CONTAINER_APP, 'build-id.txt');
-const CHANGELOG_FILE        = path.join(CONTAINER_APP, 'changelog.json');
+// Prefer build-id from the host mount (/app/ollama-build/) over baked-in (/app/ollama-runner/)
+const OLLAMA_BUILD_DIR      = '/app/ollama-build';
+const BUILD_ID_FILE         = fs.existsSync(path.join(OLLAMA_BUILD_DIR, 'build-id.txt'))
+  ? path.join(OLLAMA_BUILD_DIR, 'build-id.txt')
+  : path.join(CONTAINER_APP, 'build-id.txt');
+const CHANGELOG_FILE        = fs.existsSync(path.join(OLLAMA_BUILD_DIR, 'changelog.json'))
+  ? path.join(OLLAMA_BUILD_DIR, 'changelog.json')
+  : path.join(CONTAINER_APP, 'changelog.json');
 
 const buildId = (() => {
   try { return fs.readFileSync(BUILD_ID_FILE, 'utf-8').trim(); } catch { return '??????'; }
@@ -655,7 +674,7 @@ export const MODELS = {
 } as const;
 
 // Set of models that support tool-calling (vision models do not)
-const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION, MODELS.SECRETARY]);
+const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION, MODELS.SECRETARY, MODELS.ARCHITECT]);
 
 // Only coordinator supports think: true — secretary is classification-only
 const MODELS_WITH_THINK = new Set([MODELS.COORDINATOR]);
@@ -2858,11 +2877,7 @@ async function _callOllamaInner(
     // Vision and secretary models don't support tools. Low-complexity: minimal tools for speed.
     ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : {
       tools: isLowComplexity
-        ? OLLAMA_TOOLS.filter((t) => {
-            const n = (t as { function: { name: string } }).function.name;
-            return ['web_search', 'fetch_url', 'set_status', 'get_help', 'get_changelog',
-                    'ollama_generate', 'escalate', 'service_status', 'preferences'].includes(n);
-          })
+        ? OLLAMA_TOOLS_LOW
         : OLLAMA_TOOLS,
     }),
     options: modelOpts,
@@ -2903,6 +2918,12 @@ async function _callOllamaInner(
 
   const data = await response.json() as OllamaResponse;
   roundTimings.push(Date.now() - perfStart);
+  // Log Ollama's internal timing: prompt_eval = time processing input tokens, eval = time generating output tokens
+  if (data.prompt_eval_duration || data.eval_duration) {
+    const pe = data.prompt_eval_duration ? Math.round(data.prompt_eval_duration / 1e6) : 0;
+    const ev = data.eval_duration ? Math.round(data.eval_duration / 1e6) : 0;
+    log(`[PERF] ollama_timing | model=${model} | prompt_eval=${pe}ms (${data.prompt_eval_count ?? '?'} tokens) | eval=${ev}ms (${data.eval_count ?? '?'} tokens)`);
+  }
   let msg = data.message;
   // Running message context for follow-up calls (no images after first round)
   let currentMessages = messages;
@@ -3280,17 +3301,39 @@ async function main(): Promise<void> {
       // Online status is sent by the host (index.ts) after bot init — not from the container.
       // This avoids the race where IPC arrives before the bot can send/pin.
 
-      // Warm both models — secretary for classify/translate, coordinator for inference.
-      // Small num_ctx to avoid VRAM eviction. Host warm script already loaded both;
-      // this just ensures keep_alive is set from the container's perspective.
-      for (const wm of [MODELS.SECRETARY, MODELS.COORDINATOR]) {
-        fetch(`${OLLAMA_HOST}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // Warm with the same num_ctx used in production — Ollama re-allocates KV cache on ctx change
-          body: JSON.stringify({ model: wm, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 1, num_ctx: wm === MODELS.COORDINATOR ? 8192 : 1024 }, stream: false }),
-        }).then(() => log(`${wm} warmed`)).catch(() => {});
-      }
+      // Pre-fill Ollama's KV cache with the exact production payload (system prompt + tools).
+      // This must complete BEFORE we accept messages — otherwise the first real request
+      // pays the full prompt-processing cost (~8s for the coordinator's 6KB system + 473-line tools).
+      // Subsequent requests reuse the cached KV prefix and only process incremental tokens.
+      // Warm with the exact payload the first real request will use (low-complexity path).
+      // Ollama caches KV states per model based on the prompt prefix — if the warm-up
+      // matches the production prefix (system prompt + tools), the first real request
+      // reuses the cached KV and only processes the new user message tokens.
+      const warmups = [MODELS.SECRETARY, MODELS.COORDINATOR].map(async (wm) => {
+        const isCoord = wm === MODELS.COORDINATOR;
+        const warmStart = Date.now();
+        try {
+          const r = await fetch(`${OLLAMA_HOST}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: wm,
+              messages: [
+                { role: 'system', content: isCoord ? getSystemPrompt(assistantName, groupFolder, chatJid) : 'classify' },
+                { role: 'user', content: 'hi' },
+              ],
+              ...(isCoord && !MODELS_WITHOUT_TOOLS.has(wm) ? { tools: OLLAMA_TOOLS_LOW } : {}),
+              keep_alive: KEEP_ALIVE_PINNED,
+              options: { num_predict: 1, num_ctx: isCoord ? 8192 : 1024 },
+              stream: false,
+            }),
+          });
+          const d = await r.json() as OllamaResponse;
+          const pe = d.prompt_eval_duration ? Math.round(d.prompt_eval_duration / 1e6) : '?';
+          log(`${wm} warmed (${Date.now() - warmStart}ms, prompt_eval=${pe}ms, ${d.prompt_eval_count ?? '?'} tokens)`);
+        } catch { log(`${wm} warm failed (${Date.now() - warmStart}ms)`); }
+      });
+      await Promise.all(warmups);
 
       makeServiceMonitor(
         'Ollama',
