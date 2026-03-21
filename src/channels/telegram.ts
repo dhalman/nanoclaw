@@ -335,9 +335,18 @@ export async function initJarvisBot(
       // Auto-translate all group messages (skip messages that are already translations)
       const isTranslationOutput =
         /^_?🌐\s*\[/.test(text) || /^_?🎙\s/.test(text) || /^_?💬\s/.test(text);
-      if (isGroup && !isTranslationOutput) {
+      const isNojar = /\(nojar\)/i.test(text);
+      if (isGroup && !isTranslationOutput && !isNojar) {
         const targetLangs = getTranslatorLanguages(group.folder);
-        if (targetLangs.length > 0 && text.length > 2) {
+        // Skip translation if only target is English and text is Latin-script
+        const onlyEnglish = targetLangs.length === 1 && targetLangs[0] === 'en';
+        const isLatinText =
+          /^[\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\s\p{P}\p{S}\d]+$/u.test(text);
+        if (
+          targetLangs.length > 0 &&
+          text.length > 2 &&
+          !(onlyEnglish && isLatinText)
+        ) {
           translateToMultiple(text, 'auto', targetLangs)
             .then((translations) => {
               if (translations.length > 0) {
@@ -678,6 +687,56 @@ export async function initJarvisBot(
         })();
       }
 
+      // 👎 on a Jarvis message — ask what went wrong
+      if (emojiReactions.includes('👎') && messageId) {
+        const { getMessageById, storeMessage } = await import('../db.js');
+        const { engageUser } = await import('../engagement.js');
+        const msg = getMessageById?.(chatJid, messageId.toString());
+        if (msg?.is_from_me) {
+          const userId =
+            (ctx.messageReaction as any)?.user?.id?.toString() || '';
+          const userName =
+            (ctx.messageReaction as any)?.user?.first_name || 'User';
+          const excerpt = (msg.content || '').slice(0, 200);
+          // Inject a synthetic feedback message so Jarvis sees the context
+          const syntheticId = `feedback-${Date.now()}`;
+          storeMessage({
+            id: syntheticId,
+            chat_jid: chatJid,
+            sender: userId,
+            sender_name: userName,
+            content: `[${userName} reacted 👎 to your message: "${excerpt}"${msg.content.length > 200 ? '...' : ''}"]`,
+            timestamp: new Date().toISOString(),
+          });
+          // Engage the user so Jarvis processes the feedback
+          if (userId) engageUser(chatJid, userId);
+          // Log feedback to group's perf-log for learning
+          try {
+            const { GROUPS_DIR } = await import('../config.js');
+            const perfLogPath = path.join(
+              GROUPS_DIR,
+              group.folder,
+              '.perf-log.jsonl',
+            );
+            const entry = JSON.stringify({
+              type: 'feedback',
+              feedbackType: 'negative_reaction',
+              timestamp: new Date().toISOString(),
+              userId,
+              feedbackContext: excerpt.slice(0, 200),
+              chatJid,
+            });
+            fs.appendFileSync(perfLogPath, entry + '\n');
+          } catch {
+            /* best effort */
+          }
+          logger.info(
+            { chatJid, messageId, userId },
+            'Negative reaction on Jarvis message — feedback injected',
+          );
+        }
+      }
+
       // 👀 as translate trigger
       const hasTranslateEmoji = emojiReactions.includes('👀');
       if (!hasTranslateEmoji) return;
@@ -809,16 +868,18 @@ export async function deleteJarvisMessage(
 export async function pinJarvisMessage(
   chatId: string,
   messageId: number,
-): Promise<void> {
-  if (!jarvisApi) return;
+): Promise<boolean> {
+  if (!jarvisApi) return false;
   const numericId = chatId.replace(/^tg(-j)?:/, '');
   try {
     await jarvisApi.pinChatMessage(numericId, messageId, {
       disable_notification: true,
     });
     logger.info({ chatId, messageId }, 'Message pinned');
+    return true;
   } catch (err) {
     logger.warn({ chatId, messageId, err }, 'pinJarvisMessage failed');
+    return false;
   }
 }
 
@@ -827,14 +888,23 @@ export async function reactToMessage(
   messageId: number,
   emoji: string = '👀',
 ): Promise<void> {
-  if (!jarvisApi) return;
-  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  // Reactions only work via the Jarvis bot (tg-j: prefix)
+  if (!chatId.startsWith('tg-j:')) return;
+  if (!jarvisApi) {
+    logger.warn(
+      { chatId, messageId, emoji },
+      'reactToMessage: jarvisApi not initialized',
+    );
+    return;
+  }
+  const numericId = chatId.replace(/^tg-j:/, '');
   try {
     await jarvisApi.setMessageReaction(numericId, messageId, [
       { type: 'emoji', emoji: emoji as any },
     ]);
-  } catch {
-    /* ignore — reactions may not be available in all chats */
+    logger.debug({ chatId, messageId, emoji }, 'Reacted to message');
+  } catch (err) {
+    logger.warn({ chatId, messageId, emoji, err }, 'reactToMessage failed');
   }
 }
 
@@ -842,12 +912,13 @@ export async function removeReaction(
   chatId: string,
   messageId: number,
 ): Promise<void> {
-  if (!jarvisApi) return;
-  const numericId = chatId.replace(/^tg(-j)?:/, '');
+  if (!chatId.startsWith('tg-j:') || !jarvisApi) return;
+  const numericId = chatId.replace(/^tg-j:/, '');
   try {
     await jarvisApi.setMessageReaction(numericId, messageId, []);
-  } catch {
-    /* ignore */
+    logger.debug({ chatId, messageId }, 'Reaction removed');
+  } catch (err) {
+    logger.debug({ chatId, messageId, err }, 'removeReaction failed');
   }
 }
 
@@ -1188,9 +1259,20 @@ export class TelegramChannel implements Channel {
             `  Send /chatid to the bot to get a chat's registration ID\n`,
           );
           // Ensure the bot's display name in Telegram matches ASSISTANT_NAME
-          this.bot!.api.setMyName(ASSISTANT_NAME).catch((err: unknown) => {
-            logger.warn({ err }, 'Failed to set bot name in Telegram');
-          });
+          // Only call setMyName if it doesn't already match (avoid rate limit)
+          this.bot!.api.getMyName()
+            .then((result: { name: string }) => {
+              if (result.name !== ASSISTANT_NAME) {
+                logger.info(
+                  { current: result.name, target: ASSISTANT_NAME },
+                  'Bot name mismatch, updating',
+                );
+                return this.bot!.api.setMyName(ASSISTANT_NAME);
+              }
+            })
+            .catch((err: unknown) => {
+              logger.warn({ err }, 'Failed to check/set bot name in Telegram');
+            });
           resolve();
         },
       });

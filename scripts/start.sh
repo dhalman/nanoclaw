@@ -1,6 +1,10 @@
 #!/bin/bash
 # Ensures Docker Desktop, ComfyUI, and OllamaDiffuser are running before starting NanoClaw.
 # Safe to run multiple times — deduplicates all services before starting.
+#
+# This script is the RUNTIME entrypoint — it does NOT rebuild.
+# Use ./container/build.sh to compile, test, build, and deploy.
+# This script only recompiles TypeScript as a safety net (fast, ~1s).
 
 PROJECT_ROOT="/Users/lytic/software/ai/nanoclaw"
 COMFYUI_PYTHON="/Users/lytic/software/ai/ComfyUI/.venv/bin/python"
@@ -17,6 +21,22 @@ MAX_WAIT=60
 mkdir -p "$LOGS_DIR"
 
 # ---------------------------------------------------------------------------
+# Log rotation — keep last 3 log files, rotate if current exceeds 5MB
+# ---------------------------------------------------------------------------
+for logfile in "$LOGS_DIR/nanoclaw.log" "$LOGS_DIR/nanoclaw.error.log"; do
+  if [ -f "$logfile" ]; then
+    size=$(stat -f%z "$logfile" 2>/dev/null || echo 0)
+    if [ "$size" -gt 5242880 ]; then
+      [ -f "${logfile}.3" ] && rm "${logfile}.3"
+      [ -f "${logfile}.2" ] && mv "${logfile}.2" "${logfile}.3"
+      [ -f "${logfile}.1" ] && mv "${logfile}.1" "${logfile}.2"
+      mv "$logfile" "${logfile}.1"
+      echo "Log rotated: $(basename "$logfile") ($(( size / 1024 ))KB)"
+    fi
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # Kill any existing NanoClaw node process (prevents duplicates)
 # ---------------------------------------------------------------------------
 EXISTING=$(pgrep -f "nanoclaw/dist/index.js" 2>/dev/null || true)
@@ -24,6 +44,15 @@ if [ -n "$EXISTING" ]; then
   echo "Stopping existing NanoClaw process(es): $EXISTING"
   echo "$EXISTING" | xargs kill 2>/dev/null || true
   sleep 1
+fi
+
+# ---------------------------------------------------------------------------
+# Kill leftover agent containers from previous run
+# ---------------------------------------------------------------------------
+ORPHANS=$(docker ps --filter name=nanoclaw- --format '{{.Names}}' 2>/dev/null || true)
+if [ -n "$ORPHANS" ]; then
+  echo "Stopping leftover containers: $ORPHANS"
+  echo "$ORPHANS" | xargs docker stop -t 2 2>/dev/null || true
 fi
 
 # ---------------------------------------------------------------------------
@@ -42,13 +71,6 @@ if ! docker info &>/dev/null; then
     fi
   done
   [ $waited -lt $MAX_WAIT ] && echo "Docker ready after ${waited}s"
-fi
-
-# Stop any leftover agent containers
-ORPHANS=$(docker ps --filter name=nanoclaw- --format '{{.Names}}' 2>/dev/null || true)
-if [ -n "$ORPHANS" ]; then
-  echo "Stopping leftover containers: $ORPHANS"
-  echo "$ORPHANS" | xargs docker stop -t 2 2>/dev/null || true
 fi
 
 # ---------------------------------------------------------------------------
@@ -148,19 +170,18 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# NanoClaw
+# NanoClaw — recompile TypeScript as safety net (fast, no container rebuild)
 # ---------------------------------------------------------------------------
 cd "$PROJECT_ROOT"
-echo "Building NanoClaw..."
+echo "Compiling TypeScript..."
 /opt/homebrew/bin/npm run build
-echo "Rebuilding agent container..."
-BUILD_STATUS_FILE="$PROJECT_ROOT/.build-status.json"
-if NANOCLAW_MANAGED=1 ./container/build.sh; then
-  printf '{"status":"ok","at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$BUILD_STATUS_FILE"
-else
-  printf '{"status":"failed","at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$BUILD_STATUS_FILE"
-  echo "WARNING: Container build failed — NanoClaw will start with stale agent image (see logs/)"
-fi
+
+# Rebuild native modules if needed (Node version mismatch guard)
+/opt/homebrew/bin/node -e "require('better-sqlite3')" 2>/dev/null || {
+  echo "Rebuilding native modules for Node $(/opt/homebrew/bin/node --version)..."
+  PATH="/opt/homebrew/bin:$PATH" /opt/homebrew/bin/npm rebuild better-sqlite3
+}
+
 # Start web console if not already running
 if ! pgrep -f "ttyd.*tmux attach" >/dev/null 2>&1; then
   echo "Starting web console..."

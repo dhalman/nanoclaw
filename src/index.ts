@@ -59,7 +59,13 @@ import {
   sendStoppedStatus,
   startIpcWatcher,
 } from './ipc.js';
-import { findChannel, formatMessages, formatOutbound } from './router.js';
+import {
+  findChannel,
+  formatMessages,
+  formatOutbound,
+  isGroupChatJid,
+  stripReasoning,
+} from './router.js';
 import {
   getAvailableGroups as getAvailableGroupsFromSnapshots,
   prepareAndWriteSnapshots,
@@ -86,8 +92,9 @@ let registeredGroups: Record<string, RegisteredGroup> = {};
 let lastAgentTimestamp: Record<string, string> = {};
 let messageLoopRunning = false;
 
-// Tracks the last trigger message ID per chatJid for reply-to in groups
-const lastTriggerMessageId: Record<string, number> = {};
+// Tracks trigger message IDs per chatJid for reply-to and reaction clearing
+// Multiple messages can arrive before a response — all need reactions cleared
+const pendingTriggerMessageIds: Record<string, number[]> = {};
 
 // Pending images per chatJid (base64). Accumulated from incoming photo messages,
 // consumed (and cleared) when an agent is spawned for that chatJid.
@@ -255,36 +262,38 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
         .trim();
       logger.info({ group: group.name }, `Agent output: ${raw.slice(0, 200)}`);
 
-      // In group chats: strip reasoning, forward to DJ's DM
-      const isGroupChat = chatJid.includes('-');
-      const DJ_DM = 'tg-j:365278370';
-      if (isGroupChat && text) {
-        const reasoningMatch = text.match(
-          /💭\s*\*Reasoning:\*\n([\s\S]*?)(?=\n\n|$)/,
-        );
-        if (reasoningMatch) {
-          const reasoning = reasoningMatch[1].trim();
-          text = text
-            .replace(/💭\s*\*Reasoning:\*\n[\s\S]*?(?=\n\n|$)/, '')
-            .trim();
-          // Forward reasoning to DJ's DM
-          sendJarvisMessage(
-            DJ_DM,
-            `_🧠 [${group.name}] reasoning:_\n${reasoning}`,
-          ).catch(() => {});
+      // Safety net: strip any reasoning blocks that leak through (container should not inject them)
+      if (text) {
+        const { text: stripped, reasoning } = stripReasoning(text);
+        if (reasoning) {
+          text = stripped;
+          logger.info(
+            { group: group.name, chars: reasoning.length },
+            'Stripped leaked reasoning block',
+          );
         }
       }
 
       if (text) {
         let sentMsgId: number | null = null;
         if (group.containerConfig?.ollamaRunner) {
-          // Reply to the trigger message for the first response only
-          const replyTo = !outputSentToUser
-            ? lastTriggerMessageId[chatJid]
-            : undefined;
+          // Reply to the oldest pending trigger message for the first response only
+          const pending = pendingTriggerMessageIds[chatJid];
+          const replyTo =
+            !outputSentToUser && pending?.length ? pending[0] : undefined;
           sentMsgId = await sendJarvisMessage(chatJid, text, replyTo);
-          // Remove 👀 reaction now that response is sent
-          if (replyTo) removeReaction(chatJid, replyTo).catch(() => {});
+          // Remove reactions from ALL pending trigger messages
+          if (pending?.length) {
+            for (const msgId of pending) {
+              removeReaction(chatJid, msgId).catch((err) =>
+                logger.warn(
+                  { chatJid, msgId, err },
+                  'Failed to remove reaction',
+                ),
+              );
+            }
+            pendingTriggerMessageIds[chatJid] = [];
+          }
         } else {
           await channel.sendMessage(chatJid, text);
         }
@@ -295,6 +304,15 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
     }
 
     if (result.status === 'success') {
+      // If agent completed without sending any text, salute to acknowledge the action
+      if (!outputSentToUser && !result.result) {
+        const pending = pendingTriggerMessageIds[chatJid];
+        if (pending?.length) {
+          reactToMessage(chatJid, pending[pending.length - 1], '🫡').catch(
+            () => {},
+          );
+        }
+      }
       queue.notifyIdle(chatJid);
     }
 
@@ -438,12 +456,24 @@ function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
             .replace(/<internal>[\s\S]*?<\/internal>/g, '')
             .trim();
           if (text) {
+            const pending = pendingTriggerMessageIds[chatJid];
             await sendJarvisMessage(
               chatJid,
               text,
-              lastTriggerMessageId[chatJid],
+              pending?.length ? pending[0] : undefined,
             );
-            delete lastTriggerMessageId[chatJid]; // only reply-to on first response
+            // Remove reactions from ALL pending trigger messages
+            if (pending?.length) {
+              for (const msgId of pending) {
+                removeReaction(chatJid, msgId).catch((err) =>
+                  logger.warn(
+                    { chatJid, msgId, err },
+                    'Failed to remove reaction after prespawn response',
+                  ),
+                );
+              }
+              pendingTriggerMessageIds[chatJid] = [];
+            }
           }
         }
       },
@@ -549,9 +579,16 @@ async function startMessageLoop(): Promise<void> {
           if (lastUserMsg?.id) {
             const numId = parseInt(lastUserMsg.id, 10);
             if (!isNaN(numId)) {
-              lastTriggerMessageId[chatJid] = numId;
-              // Instant acknowledgment reaction
-              reactToMessage(chatJid, numId, '🧐').catch(() => {});
+              if (!pendingTriggerMessageIds[chatJid])
+                pendingTriggerMessageIds[chatJid] = [];
+              pendingTriggerMessageIds[chatJid].push(numId);
+              // Instant acknowledgment reaction (must be from Telegram's allowed set)
+              reactToMessage(chatJid, numId, '👀').catch((err) =>
+                logger.debug(
+                  { chatJid, numId, err },
+                  'Acknowledgment reaction failed',
+                ),
+              );
             }
           }
 
@@ -866,6 +903,8 @@ async function main(): Promise<void> {
     },
     getAvailableGroups: () => getAvailableGroupsFromSnapshots(registeredGroups),
     writeGroupsSnapshot,
+    getLastTriggerMessageId: (chatJid: string) =>
+      pendingTriggerMessageIds[chatJid]?.[0],
   });
   queue.setProcessMessagesFn(processGroupMessages);
 

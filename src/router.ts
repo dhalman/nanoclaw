@@ -50,3 +50,25 @@ export function findChannel(
 ): Channel | undefined {
   return channels.find((c) => c.ownsJid(jid));
 }
+
+/**
+ * Strip reasoning block from response text.
+ * Returns { text: stripped response, reasoning: extracted reasoning or null }.
+ */
+export function stripReasoning(text: string): {
+  text: string;
+  reasoning: string | null;
+} {
+  const match = text.match(/💭\s*\*Reasoning:\*\n([\s\S]+?)(?:\n\n(?=\S)|$)/);
+  if (!match) return { text, reasoning: null };
+  const reasoning = match[1].trim();
+  const stripped = text
+    .replace(/💭\s*\*Reasoning:\*\n[\s\S]+?(?:\n\n(?=\S)|$)/, '')
+    .trim();
+  return { text: stripped, reasoning: reasoning || null };
+}
+
+/** Is this a group chat JID? (negative Telegram supergroup IDs or WhatsApp group suffix) */
+export function isGroupChatJid(chatJid: string): boolean {
+  return /^tg-j:-/.test(chatJid) || chatJid.includes('@g.us');
+}

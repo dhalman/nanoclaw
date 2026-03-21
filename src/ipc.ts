@@ -14,6 +14,8 @@ import {
   deleteJarvisMessage,
   pinJarvisMessage,
   unpinJarvisMessage,
+  reactToMessage,
+  removeReaction,
 } from './channels/telegram.js';
 import { AvailableGroup } from './snapshots.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
@@ -32,6 +34,7 @@ export interface IpcDeps {
     isMain: boolean,
     availableGroups: AvailableGroup[],
   ) => void;
+  getLastTriggerMessageId?: (chatJid: string) => number | undefined;
 }
 
 let ipcWatcherRunning = false;
@@ -101,17 +104,24 @@ export async function sendOrEditStatus(
   if (entry?.messageId) {
     try {
       await editJarvisMessage(chatJid, entry.messageId, text);
-      logger.info(
-        { chatJid, messageId: entry.messageId },
-        'Status message updated',
-      );
-      return;
+      // Re-pin to ensure it stays pinned
+      const pinned = await pinJarvisMessage(chatJid, entry.messageId);
+      if (pinned) {
+        logger.info(
+          { chatJid, messageId: entry.messageId },
+          'Status message updated',
+        );
+        return;
+      }
+      // Pin failed (message exists but can't be pinned) — delete and recreate
+      logger.info({ chatJid }, 'Pin failed on existing status, recreating');
+      await deleteJarvisMessage(chatJid, entry.messageId).catch(() => {});
     } catch (err) {
       logger.warn(
         { chatJid, messageId: entry.messageId, err },
-        'Could not edit/pin status, replacing',
+        'Could not edit status, replacing',
       );
-      await deleteJarvisMessage(chatJid, entry.messageId);
+      await deleteJarvisMessage(chatJid, entry.messageId).catch(() => {});
     }
   }
 
@@ -275,6 +285,18 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   } else {
                     await deps.sendMessage(data.chatJid, data.text);
                   }
+                  // Safety net: clear reaction if it wasn't already removed by stdout handler
+                  const triggerMsg = deps.getLastTriggerMessageId?.(
+                    data.chatJid,
+                  );
+                  if (triggerMsg) {
+                    removeReaction(data.chatJid, triggerMsg).catch((err) =>
+                      logger.warn(
+                        { chatJid: data.chatJid, triggerMsg, err },
+                        'Failed to remove reaction via IPC fallback',
+                      ),
+                    );
+                  }
                   logger.info(
                     { chatJid: data.chatJid, sourceGroup },
                     'IPC message sent',
@@ -382,12 +404,46 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   );
                 }
               } else if (
+                data.type === 'reasoning' &&
+                data.chatJid &&
+                data.reasoning
+              ) {
+                // Log reasoning for async review — not sent to chat
+                logger.debug(
+                  {
+                    chatJid: data.chatJid,
+                    model: data.model,
+                    chars: (data.reasoning as string).length,
+                  },
+                  'Reasoning recorded',
+                );
+              } else if (
+                data.type === 'reaction_update' &&
+                data.chatJid &&
+                data.emoji
+              ) {
+                // Update the acknowledgment reaction to reflect the model handling the request
+                const triggerMsgId = deps.getLastTriggerMessageId?.(
+                  data.chatJid,
+                );
+                if (triggerMsgId) {
+                  reactToMessage(data.chatJid, triggerMsgId, data.emoji).catch(
+                    () => {},
+                  );
+                }
+              } else if (
                 data.type === 'thinking_start' &&
                 data.chatJid &&
                 data.thinkingId &&
                 data.text
               ) {
-                const msgId = await sendJarvisMessage(data.chatJid, data.text);
+                // Reply to the trigger message so the status visually links to the request
+                const replyTo = deps.getLastTriggerMessageId?.(data.chatJid);
+                const msgId = await sendJarvisMessage(
+                  data.chatJid,
+                  data.text,
+                  replyTo,
+                );
                 if (msgId !== null) {
                   thinkingMessages.set(data.thinkingId, {
                     chatJid: data.chatJid,

@@ -178,6 +178,109 @@ describe('IPC file race condition handling', () => {
   });
 });
 
+// --- Prespawn response: reaction removal ---
+
+describe('prespawn onOutput reaction removal', () => {
+  it('removes reactions from all pending trigger messages', () => {
+    // Simulates the prespawn onOutput callback pattern from index.ts prespawnGroup()
+    const pendingTriggerMessageIds: Record<string, number[]> = {
+      'tg-j:-100123': [42, 55, 67],
+    };
+    const removeReactionCalls: Array<{ chatJid: string; msgId: number }> = [];
+    const removeReaction = (chatJid: string, msgId: number) => {
+      removeReactionCalls.push({ chatJid, msgId });
+    };
+
+    const output = {
+      result: 'Hey! How can I help you today?\n\n_(qwen3.5 · chat · 3.5s)_',
+    };
+    const chatJid = 'tg-j:-100123';
+
+    if (output.result) {
+      const text = output.result
+        .replace(/<internal>[\s\S]*?<\/internal>/g, '')
+        .trim();
+      if (text) {
+        const pending = pendingTriggerMessageIds[chatJid];
+        // sendJarvisMessage would reply to pending[0]
+        if (pending?.length) {
+          for (const msgId of pending) {
+            removeReaction(chatJid, msgId);
+          }
+          pendingTriggerMessageIds[chatJid] = [];
+        }
+      }
+    }
+
+    expect(removeReactionCalls).toHaveLength(3);
+    expect(removeReactionCalls[0]).toEqual({ chatJid, msgId: 42 });
+    expect(removeReactionCalls[1]).toEqual({ chatJid, msgId: 55 });
+    expect(removeReactionCalls[2]).toEqual({ chatJid, msgId: 67 });
+    expect(pendingTriggerMessageIds[chatJid]).toEqual([]);
+  });
+
+  it('does not call removeReaction when no trigger messages pending', () => {
+    const pendingTriggerMessageIds: Record<string, number[]> = {};
+    const removeReactionCalls: Array<{ chatJid: string; msgId: number }> = [];
+    const removeReaction = (chatJid: string, msgId: number) => {
+      removeReactionCalls.push({ chatJid, msgId });
+    };
+
+    const output = { result: 'Hello!' };
+    const chatJid = 'tg-j:-100123';
+
+    if (output.result) {
+      const text = output.result
+        .replace(/<internal>[\s\S]*?<\/internal>/g, '')
+        .trim();
+      if (text) {
+        const pending = pendingTriggerMessageIds[chatJid];
+        if (pending?.length) {
+          for (const msgId of pending) {
+            removeReaction(chatJid, msgId);
+          }
+          pendingTriggerMessageIds[chatJid] = [];
+        }
+      }
+    }
+
+    expect(removeReactionCalls).toHaveLength(0);
+  });
+
+  it('does not remove reaction when result is null (session update)', () => {
+    const pendingTriggerMessageIds: Record<string, number[]> = {
+      'tg-j:-100123': [42],
+    };
+    const removeReactionCalls: Array<{ chatJid: string; msgId: number }> = [];
+    const removeReaction = (chatJid: string, msgId: number) => {
+      removeReactionCalls.push({ chatJid, msgId });
+    };
+
+    const output = { result: null as string | null };
+    const chatJid = 'tg-j:-100123';
+
+    if (output.result) {
+      const text = output.result
+        .replace(/<internal>[\s\S]*?<\/internal>/g, '')
+        .trim();
+      if (text) {
+        const pending = pendingTriggerMessageIds[chatJid];
+        if (pending?.length) {
+          for (const msgId of pending) {
+            removeReaction(chatJid, msgId);
+          }
+          pendingTriggerMessageIds[chatJid] = [];
+        }
+      }
+    }
+
+    // Should NOT have called removeReaction — null result is a session update
+    expect(removeReactionCalls).toHaveLength(0);
+    // Trigger messages should still be pending
+    expect(pendingTriggerMessageIds[chatJid]).toEqual([42]);
+  });
+});
+
 // --- Build ID filtering ---
 
 describe('IPC build ID filtering', () => {

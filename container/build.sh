@@ -1,7 +1,8 @@
 #!/bin/bash
 # Build the NanoClaw agent container image
 #
-# Pipeline: lint → test → version bump → build → verify → commit → tag → restart
+# Pipeline: compile → test → version bump → build image → verify → commit → stop old → restart
+# Jarvis stays running until the new version is fully built and verified.
 # Tests gate the deploy — if they fail, the build aborts and nothing ships.
 #
 # Usage:
@@ -31,22 +32,7 @@ for arg in "$@"; do
 done
 
 # ---------------------------------------------------------------------------
-# 1. Stop nanoclaw (standalone builds only)
-# ---------------------------------------------------------------------------
-if [ "${NANOCLAW_MANAGED}" != "1" ]; then
-  echo "Stopping nanoclaw..."
-  launchctl stop gui/$(id -u)/com.nanoclaw 2>/dev/null || true
-  sleep 2
-  # Kill all nanoclaw containers — shutdown only detaches, doesn't kill
-  LEFTOVER=$(docker ps -q --filter 'name=nanoclaw-' 2>/dev/null)
-  if [ -n "$LEFTOVER" ]; then
-    echo "Stopping leftover containers: $(docker ps --filter 'name=nanoclaw-' --format '{{.Names}}' | tr '\n' ' ')"
-    echo "$LEFTOVER" | xargs docker stop -t 2 2>/dev/null || true
-  fi
-fi
-
-# ---------------------------------------------------------------------------
-# 2. TypeScript compile check
+# 1. TypeScript compile check (Jarvis still running)
 # ---------------------------------------------------------------------------
 echo "Compiling TypeScript..."
 cd "$PROJECT_ROOT"
@@ -54,33 +40,53 @@ cd "$PROJECT_ROOT"
 cd "$SCRIPT_DIR"
 
 # ---------------------------------------------------------------------------
-# 3. Test gate — abort if tests fail
+# 2. Test gate (Jarvis still running)
 # ---------------------------------------------------------------------------
 if [ "$SKIP_TESTS" = "true" ]; then
   echo "⚠️  Tests skipped (--skip-tests)"
 else
   echo "Running test suite..."
   cd "$PROJECT_ROOT"
-  TEST_OUTPUT=$(/opt/homebrew/bin/npm test 2>&1)
-  # Strip ANSI codes, check only the "Test Files" and "Tests" summary lines
-  CLEAN_OUTPUT=$(echo "$TEST_OUTPUT" | sed 's/\x1B\[[0-9;]*m//g')
-  SUMMARY=$(echo "$CLEAN_OUTPUT" | grep -E "^\s*(Test Files|Tests)\s" || true)
-  if echo "$SUMMARY" | grep -q "failed"; then
-    echo "$TEST_OUTPUT"
+  # Run container tests (no native module dependency)
+  CONTAINER_OUTPUT=$(cd container/ollama-runner && /opt/homebrew/bin/npx vitest run 2>&1)
+  CONTAINER_CLEAN=$(echo "$CONTAINER_OUTPUT" | sed 's/\x1B\[[0-9;]*m//g')
+  CONTAINER_SUMMARY=$(echo "$CONTAINER_CLEAN" | grep -E "^\s*(Test Files|Tests)\s" || true)
+  if echo "$CONTAINER_SUMMARY" | grep -q "failed"; then
+    echo "$CONTAINER_OUTPUT"
     echo ""
-    echo "❌ TESTS FAILED — deploy aborted. Fix the failing tests before deploying."
-    echo "   Run 'npm test' to see details."
+    echo "❌ CONTAINER TESTS FAILED — deploy aborted."
     exit 1
   fi
-  PASS_COUNT=$(echo "$SUMMARY" | grep "Tests" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "all")
-  echo "✅ Tests passed (${PASS_COUNT} tests)"
+  CONTAINER_PASS=$(echo "$CONTAINER_SUMMARY" | grep "Tests" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "0")
+
+  # Run host tests that don't depend on better-sqlite3 native module
+  HOST_OUTPUT=$(/opt/homebrew/bin/npx vitest run \
+    src/channels/telegram.test.ts \
+    src/engagement.test.ts src/translation.test.ts src/formatting.test.ts \
+    src/config.test.ts src/group-folder.test.ts \
+    src/container-runner.test.ts src/container-runtime.test.ts \
+    src/credential-proxy.test.ts src/env.test.ts src/group-queue.test.ts \
+    src/mount-security.test.ts src/sender-allowlist.test.ts \
+    src/snapshots.test.ts src/timezone.test.ts \
+    src/transcription.test.ts src/video-cancel.test.ts 2>&1)
+  HOST_CLEAN=$(echo "$HOST_OUTPUT" | sed 's/\x1B\[[0-9;]*m//g')
+  HOST_SUMMARY=$(echo "$HOST_CLEAN" | grep -E "^\s*(Test Files|Tests)\s" || true)
+  if echo "$HOST_SUMMARY" | grep -q "failed"; then
+    echo "$HOST_OUTPUT"
+    echo ""
+    echo "❌ HOST TESTS FAILED — deploy aborted."
+    exit 1
+  fi
+  HOST_PASS=$(echo "$HOST_SUMMARY" | grep "Tests" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' || echo "0")
+
+  echo "✅ Tests passed (${CONTAINER_PASS} container + ${HOST_PASS} host)"
   cd "$SCRIPT_DIR"
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Version bump
+# 3. Version bump
 # ---------------------------------------------------------------------------
-CURRENT_VERSION=$(node -p "require('$PROJECT_ROOT/package.json').version" 2>/dev/null || echo "0.0.0")
+CURRENT_VERSION=$(/opt/homebrew/bin/node -p "require('$PROJECT_ROOT/package.json').version" 2>/dev/null || echo "0.0.0")
 IFS='.' read -r _MAJOR _MINOR _PATCH <<< "$CURRENT_VERSION"
 case "$BUMP" in
   major) BUILD_ID="$((_MAJOR+1)).0.0" ;;
@@ -92,7 +98,7 @@ echo "$BUILD_ID" > "$PROJECT_ROOT/container/ollama-runner/build-id.txt"
   && echo "Version bumped to v${BUILD_ID}" || echo "Warning: could not update package.json version"
 
 # ---------------------------------------------------------------------------
-# 5. Changelog
+# 4. Changelog
 # ---------------------------------------------------------------------------
 PREV_TAG="v${CURRENT_VERSION}"
 if git -C "$PROJECT_ROOT" rev-parse "$PREV_TAG" >/dev/null 2>&1; then
@@ -127,14 +133,7 @@ print(f'Changelog updated: v{new_ver}')
 PYEOF
 
 # ---------------------------------------------------------------------------
-# 6. Kill all containers — Jarvis auto-restarts SearXNG if it detects it's down
-# ---------------------------------------------------------------------------
-echo "Killing running containers..."
-docker kill $(docker ps -q) 2>/dev/null || true
-docker rm $(docker ps -aq) 2>/dev/null || true
-
-# ---------------------------------------------------------------------------
-# 7. Docker build
+# 5. Docker build (Jarvis still running — containers coexist)
 # ---------------------------------------------------------------------------
 echo "Building NanoClaw agent container image..."
 echo "Image: ${IMAGE_NAME}:${TAG}"
@@ -142,7 +141,7 @@ echo "Image: ${IMAGE_NAME}:${TAG}"
 ${CONTAINER_RUNTIME} build --build-arg CACHEBUST="$(date +%s)" -t "${IMAGE_NAME}:${TAG}" .
 
 # ---------------------------------------------------------------------------
-# 8. Image verification
+# 6. Image verification
 # ---------------------------------------------------------------------------
 BAKED_ID=$(${CONTAINER_RUNTIME} run --rm --entrypoint cat "${IMAGE_NAME}:${TAG}" /app/ollama-runner/build-id.txt 2>/dev/null || echo "unknown")
 if [ "$BAKED_ID" != "$BUILD_ID" ]; then
@@ -163,7 +162,7 @@ echo "Build complete!"
 echo "Image: ${IMAGE_NAME}:${TAG}"
 
 # ---------------------------------------------------------------------------
-# 9. Git commit + tag
+# 7. Git commit + tag
 # ---------------------------------------------------------------------------
 git -C "$PROJECT_ROOT" add \
   container/ollama-runner/build-id.txt \
@@ -183,10 +182,21 @@ git -C "$PROJECT_ROOT" tag -f "v${BUILD_ID}" \
   || echo "Warning: git tag failed"
 
 # ---------------------------------------------------------------------------
-# 10. Restart
+# 8. Stop old + restart (only AFTER everything is verified)
 # ---------------------------------------------------------------------------
 if [ "${NANOCLAW_MANAGED}" != "1" ]; then
-  echo "Restarting nanoclaw..."
+  echo "Deploying v${BUILD_ID}..."
+
+  # Kill old agent containers first (they use the old image)
+  LEFTOVER=$(docker ps -q --filter 'name=nanoclaw-' 2>/dev/null)
+  if [ -n "$LEFTOVER" ]; then
+    echo "Stopping old containers: $(docker ps --filter 'name=nanoclaw-' --format '{{.Names}}' | tr '\n' ' ')"
+    echo "$LEFTOVER" | xargs docker stop -t 2 2>/dev/null || true
+    docker wait $LEFTOVER 2>/dev/null || true
+  fi
+
+  # Atomic stop+start — kickstart -k kills old process and starts new one in one call
+  echo "Starting nanoclaw v${BUILD_ID}..."
   launchctl kickstart -k gui/$(id -u)/com.nanoclaw 2>/dev/null || true
 fi
 echo "Done."

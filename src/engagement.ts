@@ -57,7 +57,9 @@ const engagedUsers: Record<string, Set<string>> = {};
 
 // Track emoji usage per user — learn their style to mirror back
 const userEmojiHistory: Record<string, Record<string, number>> = {};
+// Validated against Telegram Bot API (2026-03-20) — exhaustive test of each emoji
 const TELEGRAM_EMOJI = [
+  // Original set
   '👍',
   '👎',
   '❤',
@@ -80,7 +82,47 @@ const TELEGRAM_EMOJI = [
   '🌚',
   '💯',
   '🫡',
-  '👋',
+  '👀',
+  // Extended valid set
+  '🥴',
+  '❤‍🔥',
+  '🦄',
+  '💊',
+  '🙊',
+  '🙉',
+  '😎',
+  '🆒',
+  '💘',
+  '😭',
+  '🤓',
+  '🍓',
+  '🍌',
+  '🏆',
+  '💔',
+  '🤨',
+  '😐',
+  '☃',
+  '✍',
+  '⚡',
+  '🕊',
+  '🤝',
+  '🎃',
+  '💅',
+  '🤬',
+  '🤗',
+  '🤪',
+  '😇',
+  '🎅',
+  '🎄',
+  '🙈',
+  '😡',
+  '💩',
+  '🤮',
+  '😈',
+  '😴',
+  '🖕',
+  '💋',
+  '🍾',
 ];
 
 /** Record emojis a user sends so we can mirror their style. */
@@ -212,6 +254,10 @@ export async function checkEngagement(
       emoji: '❤',
     },
     {
+      pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i,
+      emoji: '🫡',
+    },
+    {
       // Multi-word praise that mentions the assistant — "Impressive Jarvis!", "Good job Jarvis"
       pattern: new RegExp(
         `^\\s*(?:impressive|proud|well done|good job|nice work|great job|love it|bravo)\\b[^.?]*$`,
@@ -219,15 +265,11 @@ export async function checkEngagement(
       ),
       emoji: '❤',
     },
-    {
-      pattern: /^\s*(?:good\s*job|well\s*done|nailed\s*it|bravo)\s*[!.]?\s*$/i,
-      emoji: '🫡',
-    },
     { pattern: /^\s*(?:lol|lmao|haha|😂|🤣|😆)\s*$/i, emoji: '😁' },
     {
       pattern:
         /^\s*(?:bye|goodbye|go away|later|peace|cya|see\s*ya)\s*[!.]?\s*$/i,
-      emoji: '👋',
+      emoji: '🤝',
     },
     {
       pattern:
@@ -263,16 +305,31 @@ export async function checkEngagement(
     (m) => m.is_from_me && TRIGGER_PATTERN.test(m.content.trim()),
   );
 
+  // Force-route tags are explicit engagement — (think), (coder), (art), (analyst), etc.
+  const FORCE_ROUTE_PATTERN =
+    /\((?:secretary|jarvis|coder|think|deep|art|fast|analyst|architect|vision|noskip)\)/i;
+  const forceRouteMessages = messages.filter(
+    (m) =>
+      !m.is_from_me &&
+      !engaged.has(m.sender) &&
+      FORCE_ROUTE_PATTERN.test(m.content.trim()) &&
+      isTriggerAllowed(chatJid, m.sender, allowlistCfg),
+  );
+
   // New triggers: mention check → NLP intent (only for non-engaged users)
   const candidates = messages.filter(
     (m) =>
       !m.is_from_me &&
       !engaged.has(m.sender) &&
+      !FORCE_ROUTE_PATTERN.test(m.content.trim()) &&
       MENTION_PATTERN.test(m.content.trim()) &&
       isTriggerAllowed(chatJid, m.sender, allowlistCfg),
   );
 
-  const triggerMessages: NewMessage[] = [...ownerTriggers];
+  const triggerMessages: NewMessage[] = [
+    ...ownerTriggers,
+    ...forceRouteMessages,
+  ];
 
   if (candidates.length > 0) {
     const intents = await Promise.all(

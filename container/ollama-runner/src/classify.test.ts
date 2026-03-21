@@ -386,11 +386,11 @@ describe('classifyMessage', () => {
     expect(cls.usedSecretary).toBe(true);
   });
 
-  it('uses qwen2.5:3b as the classifier model', async () => {
+  it('uses the configured secretary model as the classifier', async () => {
     mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
     await classifyMessage('hello world', false);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.model).toBe('qwen2.5:3b');
+    expect(body.model).toBe('gemma3:4b');
   });
 
   it('sends classify call with low temperature and small context', async () => {
@@ -523,10 +523,61 @@ describe('handleToolCall — get_help', () => {
     expect(result).toMatch(/image/i);
     expect(result).toMatch(/video/i);
     expect(result).toMatch(/code/i);
-    expect(result).toMatch(/memory/i);
+    expect(result).toMatch(/remind/i);
   });
 });
 
+
+// ---------------------------------------------------------------------------
+// Model-tool compatibility
+// ---------------------------------------------------------------------------
+
+describe('MODELS_WITHOUT_TOOLS', () => {
+  it('secretary model is excluded from tool use', async () => {
+    // gemma3:4b does not support structured tool calling — sending tools causes 400
+    const { MODELS } = await import('./index.js');
+    const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION, MODELS.SECRETARY]);
+    expect(MODELS_WITHOUT_TOOLS.has(MODELS.SECRETARY)).toBe(true);
+    expect(MODELS_WITHOUT_TOOLS.has(MODELS.VISION)).toBe(true);
+    // Coordinator and coder DO support tools
+    expect(MODELS_WITHOUT_TOOLS.has(MODELS.COORDINATOR)).toBe(false);
+    expect(MODELS_WITHOUT_TOOLS.has(MODELS.CODER)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Admin-only restrictions
+// ---------------------------------------------------------------------------
+
+describe('admin-only tool restrictions', () => {
+  it('blocks run_command from group chats', async () => {
+    const { handleToolCall } = await import('./index.js');
+    const result = await handleToolCall('run_command', { command: 'ls' }, 'tg-j:-1003897457831', 'group');
+    expect(result).toContain('admin');
+    expect(result).toContain('Error');
+  });
+
+  it('blocks run_command from non-admin DMs', async () => {
+    const { handleToolCall } = await import('./index.js');
+    const result = await handleToolCall('run_command', { command: 'ls' }, 'tg-j:999999', 'group');
+    expect(result).toContain('admin');
+  });
+
+  it('get_help shows admin section only for admin chat', async () => {
+    const { handleToolCall } = await import('./index.js');
+    const adminResult = await handleToolCall('get_help', {}, 'tg-j:365278370', 'group');
+    const groupResult = await handleToolCall('get_help', {}, 'tg-j:-1003897457831', 'group');
+    expect(adminResult).toContain('Admin only');
+    expect(groupResult).not.toContain('Admin only');
+  });
+
+  it('system prompt excludes shell commands for non-admin chats', () => {
+    const adminPrompt = getSystemPrompt('Jarvis', 'test_group', 'tg-j:365278370');
+    const groupPrompt = getSystemPrompt('Jarvis', 'test_group', 'tg-j:-1003897457831');
+    expect(adminPrompt).toContain('run_command');
+    expect(groupPrompt).not.toContain('run_command');
+  });
+});
 
 // ---------------------------------------------------------------------------
 // PM-011 · Memory Quality — getSystemPrompt memory directives
@@ -727,5 +778,234 @@ describe('callOllama — context coherence across escalation (PM-012)', () => {
     // Must escalate to 35b+think (analyst), not deepseek
     expect(escalatedBody.model).toBe('qwen3.5:35b');
     expect(escalatedBody.think).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Routing handoff — force tags, secretary classification, and art pipeline
+// ---------------------------------------------------------------------------
+
+describe('routing handoffs', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockFetch.mockReset();
+  });
+
+  // --- Force-route tags ---
+
+  it('(think) tag routes to coordinator+think', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(think) explain quantum computing', false);
+    expect(cls.model).toBe('qwen3.5:35b');
+    expect(cls.think).toBe(true);
+    expect(cls.usedSecretary).toBe(false); // force tag bypasses secretary
+  });
+
+  it('(analyst) tag routes to coordinator+think', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(analyst) compare these approaches', false);
+    expect(cls.model).toBe('qwen3.5:35b');
+    expect(cls.think).toBe(true);
+  });
+
+  it('(coder) tag routes to coder model', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(coder) write a function', false);
+    expect(cls.model).toBe('qwen3-coder:30b');
+    expect(cls.think).toBe(false);
+  });
+
+  it('(architect) tag routes to architect+think', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(architect) design the system', false);
+    expect(cls.model).toBe('deepseek-r1:70b');
+    expect(cls.think).toBe(true);
+  });
+
+  it('(deep) tag routes to architect', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(deep) think about this really hard', false);
+    expect(cls.model).toBe('deepseek-r1:70b');
+    expect(cls.think).toBe(true);
+  });
+
+  it('(fast) tag routes to secretary model', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(fast) what time is it', false);
+    expect(cls.model).toBe('gemma3:4b');
+    expect(cls.think).toBe(false);
+  });
+
+  it('force tags are case insensitive', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
+    const cls = await classifyMessage('(THINK) explain this', false);
+    expect(cls.think).toBe(true);
+  });
+
+  // --- Secretary routing ---
+
+  it('secretary artist classification does NOT enable think mode', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(
+      classifyJson({ model: 'artist', think: true, task_type: 'creative' }),
+    ));
+    const cls = await classifyMessage('draw me a sunset', false);
+    expect(cls.model).toBe('qwen3.5:35b'); // coordinator handles art delegation
+    expect(cls.think).toBe(false); // art doesn't need reasoning overhead
+  });
+
+  it('secretary coder classification routes to coder model', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(
+      classifyJson({ model: 'coder', task_type: 'code' }),
+    ));
+    const cls = await classifyMessage('write a Python function to sort a list', false);
+    expect(cls.model).toBe('qwen3-coder:30b');
+  });
+
+  it('secretary analyst classification enables think mode', async () => {
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(
+      classifyJson({ model: 'analyst', task_type: 'analysis', complexity: 'high' }),
+    ));
+    const cls = await classifyMessage('analyze the tradeoffs between React and Vue', false);
+    expect(cls.model).toBe('qwen3.5:35b');
+    expect(cls.think).toBe(true);
+  });
+
+  // --- Vague vs detailed creative requests ---
+
+  it('vague art request does NOT match CREATIVE_PATTERN (routes to chat)', async () => {
+    // Secretary fallback path — CREATIVE_PATTERN should NOT match bare requests
+    const { detectRichTaskType } = await import('./index.js');
+    expect(detectRichTaskType('draw me a picture')).not.toBe('creative');
+    expect(detectRichTaskType('can you make an image please')).not.toBe('creative');
+    expect(detectRichTaskType('generate an image for me')).not.toBe('creative');
+  });
+
+  it('detailed art request DOES match CREATIVE_PATTERN', async () => {
+    const { detectRichTaskType } = await import('./index.js');
+    expect(detectRichTaskType('draw a picture of a sunset over the ocean')).toBe('creative');
+    expect(detectRichTaskType('generate an image of a cat wearing a hat')).toBe('creative');
+    expect(detectRichTaskType('write a poem about love and loss')).toBe('creative');
+  });
+
+  // --- Image routing should NOT use images for non-vision force tags ---
+
+  it('images route to vision model regardless of text', async () => {
+    const cls = await classifyMessage('just a random message', true);
+    expect(cls.model).toBe('qwen2.5vl:72b');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildRouteHint — verify routing hints for coordinator
+// ---------------------------------------------------------------------------
+
+describe('buildRouteHint', () => {
+  it('creative tasks include generate_art instruction', async () => {
+    const { buildRouteHint } = await import('./index.js');
+    const hint = buildRouteHint('draw a picture of a sunset over the ocean', false);
+    expect(hint).toContain('generate_art');
+    expect(hint).toContain('creative');
+  });
+
+  it('code tasks suggest coder delegation', async () => {
+    const { buildRouteHint } = await import('./index.js');
+    const hint = buildRouteHint('write a function to sort arrays', false);
+    expect(hint).toContain('coder');
+  });
+
+  it('web-needing tasks include web_search instruction', async () => {
+    const { buildRouteHint } = await import('./index.js');
+    const hint = buildRouteHint('what is the weather in Tokyo today', false);
+    expect(hint).toContain('web_search');
+  });
+
+  it('image attachments flag vision task', async () => {
+    const { buildRouteHint } = await import('./index.js');
+    const hint = buildRouteHint('describe this', true);
+    expect(hint).toContain('vision');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// callOllama — tool call completion (ensure follow-through)
+// ---------------------------------------------------------------------------
+
+describe('callOllama — tool call follow-through', () => {
+  const chatJid = 'tg-j:test';
+  const groupFolder = 'test_group';
+
+  beforeEach(() => {
+    mockFetch.mockReset();
+    vi.mocked(fs.writeFileSync).mockReset();
+    vi.mocked(fs.mkdirSync).mockReset();
+    vi.mocked(fs.readFileSync).mockReturnValue('[]');
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+  });
+
+  it('executes tool calls and feeds results back to model for a complete response', async () => {
+    const messages = [{ role: 'user' as const, content: 'draw a picture of a sunset over the ocean' }];
+
+    // Round 1: model returns a tool call
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        message: {
+          role: 'assistant',
+          content: '',
+          tool_calls: [{
+            function: {
+              name: 'generate_art',
+              arguments: { request: 'a sunset over the ocean' },
+            },
+          }],
+        },
+      }),
+    });
+
+    // Tool execution (generate_art calls the artist model)
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(
+      JSON.stringify({ prompt: 'golden sunset over a calm ocean', backend: 'comfyui', use_reference: false }),
+    ));
+
+    // Round 2: model gets tool result and produces final response
+    mockFetch.mockResolvedValueOnce(ollamaTextResp(
+      'Here is the Artist\'s plan for your sunset image...',
+    ));
+
+    const result = await callOllama('qwen3.5:35b', messages, chatJid, groupFolder);
+
+    // Must have made 3 calls: initial → tool execution → follow-up with tool result
+    expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(result).toContain('Artist');
+  });
+
+  it('returns final response even when tool call errors', async () => {
+    const messages = [{ role: 'user' as const, content: 'what is 2+2' }];
+
+    // Round 1: model calls a tool that will fail
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        message: {
+          role: 'assistant',
+          content: '',
+          tool_calls: [{
+            function: {
+              name: 'web_search',
+              arguments: { query: 'test' },
+            },
+          }],
+        },
+      }),
+    });
+
+    // web_search backend call fails
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => 'error' });
+
+    // Follow-up: model gets tool error and responds anyway
+    mockFetch.mockResolvedValueOnce(ollamaTextResp('The answer is 4.'));
+
+    const result = await callOllama('qwen3.5:35b', messages, chatJid, groupFolder);
+    expect(result).toContain('4');
   });
 });

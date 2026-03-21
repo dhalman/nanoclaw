@@ -124,43 +124,38 @@ describe('checkEngagement', () => {
   it('returns true for main group (no trigger required)', async () => {
     const group = makeGroup({ isMain: true });
     const msgs = [makeMsg({ content: 'random message' })];
-    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(
-      true,
-    );
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.shouldProcess).toBe(true);
   });
 
   it('returns true when requiresTrigger is false', async () => {
     const group = makeGroup({ requiresTrigger: false });
     const msgs = [makeMsg({ content: 'random message' })];
-    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(
-      true,
-    );
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.shouldProcess).toBe(true);
   });
 
   it('returns false when no trigger and no engaged users', async () => {
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'random message' })];
-    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(
-      false,
-    );
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.shouldProcess).toBe(false);
   });
 
   it('returns true on direct address (NLP falls back to regex in test)', async () => {
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'Jarvis, help me' })];
     // NLP call will timeout in test env — falls back to regex which matches
-    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(
-      true,
-    );
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.shouldProcess).toBe(true);
   });
 
   it('returns false for follow-up without direct address (no engagement persistence)', async () => {
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'follow up question' })];
     // Direct-address-only mode: no persistent engagement
-    expect(await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST)).toBe(
-      false,
-    );
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.shouldProcess).toBe(false);
   });
 
   it('respects sender allowlist for triggers', async () => {
@@ -172,9 +167,13 @@ describe('checkEngagement', () => {
     const group = makeGroup();
     // Denied user triggers — should not engage
     const msgs = [makeMsg({ sender: 'denied_user', content: 'Jarvis, help' })];
-    expect(
-      await checkEngagement('tg:123', group, msgs, restrictedAllowlist),
-    ).toBe(false);
+    const result = await checkEngagement(
+      'tg:123',
+      group,
+      msgs,
+      restrictedAllowlist,
+    );
+    expect(result.shouldProcess).toBe(false);
     expect(isEngaged('tg:123', 'denied_user')).toBe(false);
   });
 
@@ -186,8 +185,102 @@ describe('checkEngagement', () => {
     };
     const group = makeGroup();
     const msgs = [makeMsg({ content: 'Jarvis, test', is_from_me: true })];
-    expect(
-      await checkEngagement('tg:123', group, msgs, restrictedAllowlist),
-    ).toBe(true);
+    const result = await checkEngagement(
+      'tg:123',
+      group,
+      msgs,
+      restrictedAllowlist,
+    );
+    expect(result.shouldProcess).toBe(true);
+  });
+});
+
+// --- Dismissal emoji reactions ---
+
+describe('dismissal emoji reactions', () => {
+  beforeEach(() => {
+    disengageAll('tg:123');
+  });
+
+  it('returns dismissal with emoji when engaged user sends trivial message', async () => {
+    engageUser('tg:123', 'user1');
+    const group = makeGroup();
+    const msgs = [makeMsg({ sender: 'user1', content: 'thanks' })];
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    // Trivial "thanks" should disengage and return emoji dismissal
+    expect(result.dismissals.length).toBe(1);
+    expect(result.dismissals[0].emoji).toBe('🙏');
+    expect(isEngaged('tg:123', 'user1')).toBe(false);
+  });
+
+  it('returns correct emoji for different dismissal types', async () => {
+    const testCases = [
+      { content: 'thanks', expectedEmoji: '🙏' },
+      { content: 'ok', expectedEmoji: '👍' },
+      { content: 'awesome', expectedEmoji: '🔥' },
+      { content: 'lol', expectedEmoji: '😁' },
+      { content: 'bye', expectedEmoji: '🤝' },
+      { content: 'stop', expectedEmoji: '👍' },
+      { content: 'good job', expectedEmoji: '🫡' }, // salute
+      { content: '👍', expectedEmoji: '👍' },
+    ];
+
+    for (const { content, expectedEmoji } of testCases) {
+      engageUser('tg:123', 'user1');
+      const group = makeGroup();
+      const msgs = [makeMsg({ sender: 'user1', content })];
+      const result = await checkEngagement(
+        'tg:123',
+        group,
+        msgs,
+        OPEN_ALLOWLIST,
+      );
+      expect(result.dismissals.length).toBe(1);
+      expect(result.dismissals[0].emoji).toBe(expectedEmoji);
+      // Cleanup for next iteration
+      disengageAll('tg:123');
+    }
+  });
+
+  it('does not dismiss non-engaged users', async () => {
+    const group = makeGroup();
+    const msgs = [makeMsg({ sender: 'user1', content: 'thanks' })];
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.dismissals.length).toBe(0);
+  });
+
+  it('does not dismiss for non-trivial messages', async () => {
+    engageUser('tg:123', 'user1');
+    const group = makeGroup();
+    const msgs = [
+      makeMsg({
+        sender: 'user1',
+        content: 'can you help me with something else?',
+      }),
+    ];
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.dismissals.length).toBe(0);
+    // User should still be engaged
+    expect(isEngaged('tg:123', 'user1')).toBe(true);
+  });
+
+  it('handles (nojar) messages — skips entirely', async () => {
+    const group = makeGroup();
+    const msgs = [makeMsg({ content: '(nojar) secret message' })];
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.shouldProcess).toBe(false);
+    expect(result.dismissals.length).toBe(0);
+  });
+
+  it('dismissal still processes remaining trigger messages', async () => {
+    engageUser('tg:123', 'user1');
+    const group = makeGroup();
+    const msgs = [
+      makeMsg({ sender: 'user1', content: 'thanks' }), // dismiss user1
+      makeMsg({ sender: 'user2', content: 'Jarvis, help me' }), // trigger user2
+    ];
+    const result = await checkEngagement('tg:123', group, msgs, OPEN_ALLOWLIST);
+    expect(result.dismissals.length).toBe(1);
+    expect(result.shouldProcess).toBe(true); // user2 triggered
   });
 });

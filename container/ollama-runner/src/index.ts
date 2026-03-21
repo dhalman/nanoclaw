@@ -22,7 +22,7 @@ import path from 'path';
 
 import { generateVideo, getReferenceImages, hasReferenceVideo, listComfyVideoModels, listOllamaDiffuserVideoModels } from './video.js';
 import { generateImage, loadReferenceImages, type ImageBackend } from './image.js';
-import { logPerf, summarizePerf } from './perf-log.js';
+import { logPerf, summarizePerf, newTraceId, getRecentTraces, formatTrace } from './perf-log.js';
 
 interface ContainerInput {
   prompt: string;
@@ -630,6 +630,14 @@ if (expectedBuildId && expectedBuildId !== buildId) {
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://host.docker.internal:11434';
 
+// Current request trace ID — set before each request, used by tool calls for perf logging
+let currentTraceId: string | undefined;
+
+// Admin identity — only admin's DM allows system-level changes (shell, config, behavior)
+const ADMIN_JID = 'tg-j:365278370';
+function isAdminChat(chatJid: string): boolean { return chatJid === ADMIN_JID; }
+function isGroupChat(chatJid: string): boolean { return chatJid.includes('-'); }
+
 // ---------------------------------------------------------------------------
 // Model registry — all model names in one place.
 // Override coordinator/secretary via env vars to switch without a code change.
@@ -647,7 +655,7 @@ export const MODELS = {
 } as const;
 
 // Set of models that support tool-calling (vision models do not)
-const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION]);
+const MODELS_WITHOUT_TOOLS = new Set([MODELS.VISION, MODELS.SECRETARY]);
 
 // Only coordinator supports think: true — secretary is classification-only
 const MODELS_WITH_THINK = new Set([MODELS.COORDINATOR]);
@@ -764,7 +772,9 @@ const AUTO_ESCALATE_PATTERN = /\bI apologize\b|\bmy apologies\b|(?:I'?m|I am) so
 //   — unambiguous coding verbs: implement, refactor, debug
 //   — action verb + code artifact noun (function, class, script, API, SQL, regex, etc.)
 const CODING_PATTERN = /`[^`\n]+`|```|\b(?:implement|refactor|debug)\b|\b\w+\.[jt]sx?|\.py|\.go|\.rs|\.rb|\.sh\b|\b(?:write|create|generate|build|fix|add|update|edit|change|run|execute|test|read|look at|review|check|inspect|examine|find|open|show)\s+(?:(?:a|an|the|my|some|this|your|that)\s+)?(?:function|class|method|script|module|component|endpoint|api\b|sql\b|query|regex|regexp|algorithm|program\b|snippet|codebase|test(?:s)?|spec(?:s)?|cli\b|source|file|repo|repository|package|library|import|dependency|config|dockerfile|workflow)/im;
-const CREATIVE_PATTERN = /(?:write|tell|create|compose|craft|generate|draw|paint|sketch|design|make)\s+(?:(?:a|an|me|us)\s+)?(?:story|poem|song|script|narrative|fiction|tale|essay|joke|haiku|limerick|creative|picture|image|photo|illustration|art|painting|portrait|video|film|animation|clip)/im;
+// Creative pattern — must have descriptive content AFTER the verb+noun, not just "draw me a picture"
+// Bare requests like "draw me a picture" should route to chat so Jarvis asks for details first
+const CREATIVE_PATTERN = /(?:write|tell|create|compose|craft|generate|draw|paint|sketch|design|make)\s+(?:(?:a|an|me|us)\s+)?(?:story|poem|song|script|narrative|fiction|tale|essay|joke|haiku|limerick|creative|picture|image|photo|illustration|art|painting|portrait|video|film|animation|clip)\s+(?:of|about|with|showing|featuring|depicting|where|that)\s/im;
 const BRAINSTORM_PATTERN = /(?:brainstorm|ideas? for|suggest(?:ions)?|what if|alternatives?|possibilities|ways to|how (?:could|might|would|can)(?: (?:i|we))?|how can\b|give me \d+ |list \d+ )/im;
 const ANALYSIS_PATTERN = /(?:analyz|explain|summariz|describ|compar|what (?:is|are|does|do)|how does|why (?:is|does|do)|tell me about|define|difference between)/im;
 
@@ -866,7 +876,7 @@ export function buildRouteHint(text: string, hasImages: boolean): string {
   const parts: string[] = [];
 
   if (taskType === 'code') parts.push('code task — consider delegating to coder for implementation');
-  else if (taskType === 'creative') parts.push('creative task');
+  else if (taskType === 'creative') parts.push('creative task — use generate_art for images, generate_film for video. Do NOT use ollama_generate directly for art.');
   else if (taskType === 'brainstorm') parts.push('brainstorm');
   else parts.push('general');
 
@@ -946,23 +956,34 @@ const FORCE_ROUTE_TAGS: Array<{ pattern: RegExp; model: string; think: boolean; 
   { pattern: /\(vision\)/i,     model: MODELS.VISION,      think: false, label: 'vision' },
   { pattern: /\(art\)/i,        model: MODELS.VISION,      think: false, label: 'artist' },
   { pattern: /\(fast\)/i,       model: MODELS.SECRETARY,   think: false, label: 'fast' },
+  { pattern: /\(analyst\)/i,   model: MODELS.COORDINATOR, think: true,  label: 'analyst' },
+  { pattern: /\(architect\)/i, model: MODELS.ARCHITECT,   think: true,  label: 'architect' },
 ];
 
-export async function classifyMessage(text: string, hasImages: boolean): Promise<MessageClassification> {
+export async function classifyMessage(text: string, hasImages: boolean, traceId?: string): Promise<MessageClassification> {
   // Force-routing tags override all classification
   for (const tag of FORCE_ROUTE_TAGS) {
     if (tag.pattern.test(text)) {
       log(`[classify] force-routed via (${tag.label}) tag`);
-      return {
+      const cls = {
         model: tag.model,
         think: tag.think,
-        taskType: tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis',
-        taskTypeRich: tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis',
+        taskType: (tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis') as TaskType,
+        taskTypeRich: (tag.model === MODELS.CODER ? 'code' : tag.model === MODELS.VISION ? 'creative' : 'analysis') as RichTaskType,
         temperature: 0.3,
-        complexity: tag.think ? 'high' : 'medium',
+        complexity: (tag.think ? 'high' : 'medium') as MessageClassification['complexity'],
         needsWeb: false,
         usedSecretary: false,
       };
+      logPerf({
+        type: 'classify', traceId, buildId, timestamp: new Date().toISOString(),
+        classifyMs: 0, classifyMethod: 'keyword',
+        routingModel: 'force_tag',
+        routedTo: cls.model + (cls.think ? '+think' : ''),
+        routingReason: `(${tag.label}) tag`,
+        promptExcerpt: text.replace(/<[^>]+>/g, '').trim().slice(0, 120),
+      });
+      return cls;
     }
   }
 
@@ -984,22 +1005,33 @@ export async function classifyMessage(text: string, hasImages: boolean): Promise
     const complexity = escalate ? 'high' as const : estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
     const dissatisfied = detectDissatisfaction(text);
-    logPerf({ type: 'classify', buildId, timestamp: new Date().toISOString(), classifyMs: Date.now() - classifyStart, classifyMethod: 'keyword' });
-    if (escalate) logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_escalation' });
-    if (dissatisfied) logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
-    return { model, think: think || dissatisfied, taskType, taskTypeRich, temperature: getTemperature(text), complexity: dissatisfied ? 'high' : complexity, needsWeb, usedSecretary: false };
+    const finalThink = think || dissatisfied;
+    const finalModel = model + (finalThink ? '+think' : '');
+    logPerf({
+      type: 'classify', traceId, buildId, timestamp: new Date().toISOString(),
+      classifyMs: Date.now() - classifyStart, classifyMethod: 'keyword',
+      routingModel: 'keyword',
+      routedTo: finalModel,
+      routingReason: `task=${taskTypeRich} complexity=${complexity}${escalate ? ' escalated' : ''}${dissatisfied ? ' dissatisfied' : ''}${needsWeb ? ' needs_web' : ''}`,
+      promptExcerpt: text.replace(/<[^>]+>/g, '').trim().slice(0, 120),
+    });
+    if (escalate) logPerf({ type: 'escalation', traceId, buildId, timestamp: new Date().toISOString(), reason: 'user_escalation' });
+    if (dissatisfied) logPerf({ type: 'escalation', traceId, buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
+    return { model, think: finalThink, taskType, taskTypeRich, temperature: getTemperature(text), complexity: dissatisfied ? 'high' : complexity, needsWeb, usedSecretary: false };
   }
 
   // LLM-based classification (when secretary is enabled)
+  const classifyStart = Date.now();
   const feedbackHint = formatFeedbackForPrompt(loadSecretaryFeedback());
   const classifyPrompt = `Classify this message. Identify the ACTION VERB and RECIPIENT to determine intent.${feedbackHint}
 Return JSON only, no explanation:
 {"model":"default|coder|analyst|architect|artist","think":true|false,"complexity":"low|medium|high","task_type":"chat|code|creative|analysis|decision|debug|research","needs_web":true|false}
 
 Rules:
-- model: choose based on the PRIMARY ACTION VERB, not modal verbs (can/could/would)
-  - "default" — general chat, greetings, questions, opinions, casual conversation
-  - "coder" — ONLY when the action verb is code-specific: write/debug/refactor/implement/deploy code
+- WHO is acting? If the USER is describing their own actions ("I'm fixing...", "I'm working on..."), use "default" — they're informing, not requesting.
+- model: choose based on what the user is ASKING the assistant to do:
+  - "default" — chat, greetings, opinions, status updates, user describing their own actions
+  - "coder" — ONLY when explicitly asking to write/debug/refactor/implement code
   - "analyst" — complex reasoning, trade-offs, multi-step analysis
   - "architect" — hardest problems requiring deep expertise
   - "artist" — image/video generation (draw, paint, generate image/video)
@@ -1033,11 +1065,14 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
       coder:     MODELS.CODER,
       analyst:   MODELS.COORDINATOR,
       architect: MODELS.ARCHITECT,
-      artist:    MODELS.COORDINATOR,
+      artist:    MODELS.COORDINATOR, // coordinator calls generate_art tool
     };
     let model = MODEL_MAP[c.model] ?? MODELS.COORDINATOR;
 
+    // Think mode: only for analyst or high-complexity non-creative tasks
+    // Art/creative requests don't need thinking overhead — coordinator just calls generate_art
     let think = !!c.think || c.model === 'analyst';
+    if (c.model === 'artist') think = false; // art doesn't need reasoning
     if (c.complexity === 'high' && (c.model === 'default' || !c.model)) {
       think = true;
     }
@@ -1056,6 +1091,14 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
     const needsWeb = !!c.needs_web;
 
     log(`[classify] ${c.model}→${model} think=${think} complexity=${complexity} task=${taskTypeRich}${needsWeb ? ' [needs_web]' : ''}`);
+    logPerf({
+      type: 'classify', traceId, buildId, timestamp: new Date().toISOString(),
+      classifyMs: Date.now() - classifyStart, classifyMethod: 'secretary',
+      routingModel: MODELS.SECRETARY,
+      routedTo: model + (think ? '+think' : ''),
+      routingReason: `task=${taskTypeRich} complexity=${complexity}${needsWeb ? ' needs_web' : ''} secretary_said=${c.model}`,
+      promptExcerpt: text.replace(/<[^>]+>/g, '').trim().slice(0, 120),
+    });
     return { model, think, taskType, taskTypeRich, temperature, complexity, needsWeb, usedSecretary: true };
   } catch (err) {
     log(`[classify] fallback to regex: ${err instanceof Error ? err.message : String(err)}`);
@@ -1066,6 +1109,14 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
     const taskTypeRich = detectRichTaskType(text);
     const complexity = escalate ? 'high' as const : estimateComplexity(text);
     const needsWeb = detectNeedsWeb(text);
+    logPerf({
+      type: 'classify', traceId, buildId, timestamp: new Date().toISOString(),
+      classifyMs: 0, classifyMethod: 'regex_fallback',
+      routingModel: 'regex_fallback',
+      routedTo: model + (think ? '+think' : ''),
+      routingReason: `task=${taskTypeRich} complexity=${complexity} (secretary failed)`,
+      promptExcerpt: text.replace(/<[^>]+>/g, '').trim().slice(0, 120),
+    });
     return { model, think, taskType, taskTypeRich, temperature: getTemperature(text), complexity, needsWeb, usedSecretary: false };
   }
 }
@@ -1088,8 +1139,18 @@ function writeOutput(output: ContainerOutput): void {
   console.log(OUTPUT_END_MARKER);
 }
 
+const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+const LOG_LEVELS: Record<string, number> = { error: 0, warn: 1, info: 2, debug: 3, verbose: 4 };
+const CURRENT_LOG_LEVEL = LOG_LEVELS[LOG_LEVEL] ?? 2;
+
 function log(message: string): void {
   console.error(`[ollama-runner] ${message}`);
+}
+function logDebug(message: string): void {
+  if (CURRENT_LOG_LEVEL >= 3) console.error(`[ollama-runner] [debug] ${message}`);
+}
+function logVerbose(message: string): void {
+  if (CURRENT_LOG_LEVEL >= 4) console.error(`[ollama-runner] [verbose] ${message}`);
 }
 
 
@@ -1207,13 +1268,17 @@ async function compressHistory(history: Message[], compressThreshold = HISTORY_C
  * Applied just before sending to Ollama — does NOT modify persisted history.
  */
 function trimHistoryForInference(history: Message[]): Message[] {
-  // Truncate oversized individual messages (tool outputs, long responses)
+  // Strip reasoning blocks from history — prevents model from learning to echo them
   let trimmed = history.map((m) => {
-    const content = typeof m.content === 'string' ? m.content : '';
-    if (content.length > MSG_CONTENT_MAX_CHARS) {
-      return { ...m, content: content.slice(0, MSG_CONTENT_MAX_CHARS) + '\n[...truncated]' };
+    let content = typeof m.content === 'string' ? m.content : '';
+    if (m.role === 'assistant' && content.includes('💭')) {
+      content = content.replace(/💭\s*\*?Reasoning:?\*?\n[\s\S]*?(?:\n\n(?=\S)|$)/, '').trim();
     }
-    return m;
+    // Truncate oversized individual messages (tool outputs, long responses)
+    if (content.length > MSG_CONTENT_MAX_CHARS) {
+      content = content.slice(0, MSG_CONTENT_MAX_CHARS) + '\n[...truncated]';
+    }
+    return content !== (typeof m.content === 'string' ? m.content : '') ? { ...m, content } : m;
   });
 
   // Keep only most recent messages
@@ -1288,13 +1353,20 @@ const DIRECT_PATTERNS: Array<{
   {
     // "version", "what version", "build", "what's new", "changelog", "release notes"
     // Must be before status — "what version are you running" contains "running"
-    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|what changed)\b/i,
+    pattern: /\b(?:version|build\s*(?:id|number)?|what(?:'s| is) (?:new|version|build|changed)|change\s*log|release\s*notes?|version\s*notes?|what changed|(?:last|recent|latest)\s+\d*\s*updates?)\b/i,
     tool: 'get_changelog',
     args: () => ({}),
     format: (r) => {
       const lines = r.split('\n').slice(0, 5);
       return lines.join('\n');
     },
+  },
+  {
+    // "trace", "show traces", "last request", "handoff sequence", "request trace"
+    pattern: /\b(?:(?:show|get|last|recent)\s*(?:request\s*)?traces?|handoff\s*sequence|request\s*trace|trace\s*(?:the\s*)?(?:last|recent))\b/i,
+    tool: 'get_trace',
+    args: () => ({ count: 5 }),
+    format: (r) => r,
   },
   {
     // "status", "are you online", "service status", "check services", "health check"
@@ -1465,19 +1537,10 @@ async function trySecretaryDirect(
     }
   }
 
-  // Image generation: obvious art requests go straight to generate_art
-  const ART_DIRECT = /\b(?:(?:create|generate|make|draw|paint|design)\s+(?:a |an |me )?(?:image|picture|photo|illustration|art|painting|portrait))\b/i;
-  if (ART_DIRECT.test(userText)) {
-    try {
-      const start = Date.now();
-      const result = await handleToolCall('generate_art', { request: userText }, chatJid, groupFolder);
-      log(`[secretary-direct] generate_art → ${Date.now() - start}ms (bypassed coordinator)`);
-      return result;
-    } catch (err) {
-      log(`[secretary-direct] generate_art failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
-      return null;
-    }
-  }
+  // Image generation: route to coordinator (not secretary-direct) so Jarvis can
+  // ask for context and confirm the prompt before calling the Artist.
+  // The coordinator's system prompt instructs it to share the Artist's plan
+  // with the user for confirmation before the expensive generation step.
 
   // Video generation: obvious video requests go straight to generate_film
   const VIDEO_DIRECT = /\b(?:(?:create|generate|make)\s+(?:a |an |me )?(?:video|film|animation|clip))\b/i;
@@ -1566,7 +1629,7 @@ async function translateForListeners(
       body: JSON.stringify({
         model: MODELS.SECRETARY,
         messages: [
-          { role: 'system', content: `Translate the text to each language listed. Verbatim — preserve tone, slang, intent. Return one translation per line, format: LANG: translation\nNo other text.` },
+          { role: 'system', content: `Translate the text to each language listed. Verbatim — preserve tone, slang, intent. If the text is ALREADY in a listed language, skip that language entirely — do NOT translate a language to itself. Return one translation per line, format: LANG: translation\nNo other text.` },
           { role: 'user', content: `Languages: ${langList}\n\nText: ${userText}` },
         ],
         keep_alive: KEEP_ALIVE_PINNED,
@@ -1644,7 +1707,8 @@ function readGroupFile(groupFolder: string, filename: string): string {
   return '';
 }
 
-export function getSystemPrompt(assistantName: string, groupFolder?: string): string {
+export function getSystemPrompt(assistantName: string, groupFolder?: string, chatJid?: string): string {
+  const adminChat = chatJid ? isAdminChat(chatJid) : true; // default to full access if chatJid not provided
   const claudeMd = groupFolder ? readGroupFile(groupFolder, 'CLAUDE.md') : '';
   const jarvisMd = groupFolder ? readGroupFile(groupFolder, 'jarvis.md') : '';
 
@@ -1681,7 +1745,7 @@ It's OK for the phone to ring while you're waiting on an expert. If the user sen
 
 • *Chat & reasoning* — general questions, analysis, brainstorming, explanations. Use escalate to route to a deeper reasoning tier when needed.
 • *Web* — web_search searches the live web via local SearXNG (privacy-first metasearch — no external tracking). fetch_url reads any URL as clean text. Use these for current events, documentation, anything that needs live information. Do not guess or hallucinate — search first.
-• *Image generation* — call generate_art to consult the Artist (qwen2.5vl:72b). The Artist sees reference images, crafts an expert prompt, and returns a plan. Share the plan with the user for confirmation, then call ollama_generate with the Artist's prompt (embellish=false) to execute. For direct control, call ollama_generate with model "flux" and your own prompt.
+• *Image generation* — call generate_art to consult the Artist (qwen2.5vl:72b). IMPORTANT: Do NOT call generate_art until you have a clear description from the user. If the request is vague ("draw me something", "make an image"), ask what they want first — subject, style, mood. Never hallucinate a prompt. Once you have enough detail, ask the user: would they like the Artist to take creative liberties and embellish the prompt, or generate exactly as described? Then call generate_art. The Artist returns a plan — share it with the user for confirmation, then call ollama_generate with the Artist's prompt and embellish set accordingly.
   Available backends: ComfyUI (FLUX T2I — highest quality, 1024x1024), OllamaDiffuser (FLUX/SD/PixArt — supports I2I with reference images), Ollama (fallback).
   Installed image models: use diffuser_list_models to check. Best quality: flux.1-dev. Fastest: flux.2-klein-4b, sdxl-turbo. Best I2I: flux.2-klein-4b with use_reference=true. Photorealistic: realvisxl-v4.
 • *Video generation* — call generate_film to consult the Cinematographer (qwen2.5vl:72b). Returns a cinematic plan to share with the user. After confirmation, call generate_video with the prompt to execute.
@@ -1689,12 +1753,12 @@ It's OK for the phone to ring while you're waiting on an expert. If the user sen
   I2V: if the user sends a photo, it can be used as the start frame. The first frame sets the visual identity; the prompt describes the motion.
 • *Vision* — describe or reason about images the user sends. Images arrive as "[X image(s) attached]" in the message.
 • *Scheduling* — schedule_task creates recurring or one-off tasks. Tasks run as new conversations in this chat at the scheduled time. Support: once (timestamp), interval (ms), cron expression. Confirm details with the user before creating. Use schedule_task(list) to show active tasks.
-• *Shell commands* — run_command executes shell commands in /workspace/extra/nanoclaw. Use only when the user explicitly asks you to run commands or inspect/edit your own code.
+${adminChat ? `• *Shell commands* — run_command executes shell commands in /workspace/extra/nanoclaw. Use only when the user explicitly asks you to run commands or inspect/edit your own code.` : ''}
 • *Memory* — you maintain a jarvis.md file with notes about the user and your own learnings.
 • *Self-restart* — restart_self clears your session and conversation history.
-• *Model management* — You can add, try, and remove models at runtime without rebuilding. For Ollama (text/reasoning): ollama_list_models, ollama_pull, ollama_remove. Browse available models at ollama.com/library — use web_search to find models by capability. For OllamaDiffuser (images/video): diffuser_list_models shows both installed and available models — available models auto-download on first use, no separate pull needed. For ComfyUI (advanced workflows): comfyui_list_models shows installed checkpoints/UNETs/LoRAs. To try a new Ollama model: pull it, then call ollama_generate with the model name. To try a new diffuser model: just use it in generate_art or generate_video — it downloads automatically.
+${adminChat ? `• *Model management* — You can add, try, and remove models at runtime without rebuilding. For Ollama (text/reasoning): ollama_list_models, ollama_pull, ollama_remove. Browse available models at ollama.com/library — use web_search to find models by capability. For OllamaDiffuser (images/video): diffuser_list_models shows both installed and available models — available models auto-download on first use, no separate pull needed. For ComfyUI (advanced workflows): comfyui_list_models shows installed checkpoints/UNETs/LoRAs. To try a new Ollama model: pull it, then call ollama_generate with the model name. To try a new diffuser model: just use it in generate_art or generate_video — it downloads automatically.
 
-• *Service management* — service_status checks all four backends in parallel. manage_service starts or restarts any backend (ollama, searxng, comfyui, ollamadiffuser). If a tool fails because a backend is down, start it yourself — don't ask the user to do it.
+• *Service management* — service_status checks all four backends in parallel. manage_service starts or restarts any backend (ollama, searxng, comfyui, ollamadiffuser). If a tool fails because a backend is down, start it yourself — don't ask the user to do it.` : `• *Service management* — service_status checks all four backends in parallel.`}
 
 Never claim uncertainty about these capabilities. If something fails, report the actual error — do not speculate about whether the capability exists. You have full visibility into your own infrastructure: you can check what models are installed, what services are running, search for and install new models, and manage your own configuration. If a user asks whether a better model exists for a task, use web_search + ollama.com/library or diffuser_list_models to research alternatives and make a recommendation. You are an expert in your own stack.
 
@@ -1754,9 +1818,9 @@ Special modes:
 
 You can restart yourself using the restart_self tool when asked, or to recover from a bad state.
 
-You have read-write access to your own git repo at /workspace/extra/nanoclaw via run_command. Use it to read files, make edits with shell commands (sed, tee, etc.), and commit changes with git. Your git identity is pre-configured. You cannot push — ask the user to push when ready. Only use run_command for git operations when the user explicitly asks you to change or inspect your own code. Never run git commands in response to normal messages or images.
+${adminChat ? `You have read-write access to your own git repo at /workspace/extra/nanoclaw via run_command. Use it to read files, make edits with shell commands (sed, tee, etc.), and commit changes with git. Your git identity is pre-configured. You cannot push — ask the user to push when ready. Only use run_command for git operations when the user explicitly asks you to change or inspect your own code. Never run git commands in response to normal messages or images.` : `In group chats, you can manage preferences and settings for this group (language, engagement mode, scheduled tasks). System-level changes (code, models, services) require the admin's direct message.`}
 
-*Memory* — you maintain a personal memory file at \`${jarvisMemoryPath}\`. Use run_command to update it. Two sections:
+*Memory* — you maintain a personal memory file at \`${jarvisMemoryPath}\`.${adminChat ? ' Use run_command to update it.' : ' In group chats, memory updates happen automatically.'} Two sections:
 
 \`## About the user\` — facts about the user: name, preferences, working style, interests, recurring projects, anything that helps you serve them better over time.
 
@@ -1837,6 +1901,7 @@ export async function handleToolCall(
   }
 
   if (toolName === 'get_help') {
+    const isOwner = isAdminChat(chatJid);
     return `*Hey! Here's what I can help with* (v${buildId})
 
 🗣 *Just talk to me*
@@ -1882,7 +1947,21 @@ export async function handleToolCall(
 • "What's new?" — friendly summary of recent updates
 • "Changelog" — detailed release notes
 • "Status" — check if all services are running
-• "Restart" — restart me fresh`;
+• "Restart" — restart me fresh${isOwner ? `
+
+🔧 *Admin (Admin only)*
+• Shell commands — run_command for code/system operations
+• Model management — install, remove, and test models
+• Service management — start/restart backends` : ''}`;
+  }
+
+  if (toolName === 'get_trace') {
+    const count = Number(toolArgs.count) || 5;
+    const traces = getRecentTraces(count);
+    if (traces.length === 0) return 'No request traces found yet.';
+    return traces.map((t) =>
+      `*Trace ${t.traceId}*\n${formatTrace(t.entries)}`
+    ).join('\n\n---\n\n');
   }
 
   if (toolName === 'get_changelog') {
@@ -2245,6 +2324,8 @@ export async function handleToolCall(
   }
 
   if (toolName === 'run_command') {
+    // Shell commands only allowed from admin's DM
+    if (!isAdminChat(chatJid)) return 'Error: shell commands are only available in the admin\'s direct messages. Group chats can manage preferences and settings.';
     const command = String(toolArgs.command ?? '').trim();
     if (!command) return 'Error: no command provided';
     const rawCwd = toolArgs.cwd ? String(toolArgs.cwd) : '';
@@ -2537,17 +2618,14 @@ Respond with ONLY valid JSON, no explanation, no markdown:
 
       // Task scheduling permissions:
       // - Anyone can schedule reminders (text notifications)
-      // - Only DJ (365278370) can schedule execution tasks
-      const OWNER_ID = '365278370';
+      // - Only admin can schedule execution tasks
       const isReminder = /\b(?:remind|reminder|notify|alert|ping|tell\s+me|let\s+me\s+know)\b/i.test(prompt);
       if (!isReminder) {
-        // Check if the current user is DJ — extract sender from the prompt XML
+        // Check if the current user is admin — extract sender from the prompt XML
         const senderMatch = prompt.match(/<message\s+sender="([^"]*)"/);
         const senderId = senderMatch ? senderMatch[1] : '';
-        // Also check if chatJid is DJ's DM
-        const isDjDm = chatJid.includes(OWNER_ID);
-        if (senderId !== OWNER_ID && !isDjDm) {
-          return 'Only reminders can be scheduled by group members. For execution tasks, ask DJ to set it up.';
+        if (senderId !== '365278370' && !isAdminChat(chatJid)) {
+          return 'Only reminders can be scheduled by group members. For execution tasks, ask the admin to set it up.';
         }
       }
       const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -2581,23 +2659,35 @@ Respond with ONLY valid JSON, no explanation, no markdown:
 
 /** Detect a text-encoded tool call from models that don't use structured tool calling. */
 function parseTextToolCall(content: string): { name: string; parameters: Record<string, unknown> } | null {
-  const patterns = [
+  const ALLOWED_TEXT_TOOLS = ['ollama_generate', 'ollama_list_models', 'generate_art', 'generate_film', 'generate_video', 'restart_self', 'run_command', 'get_changelog', 'get_help', 'get_trace'];
+
+  // Pattern 1: JSON tool call in code block — ```json {"name": "...", "parameters": {...}} ```
+  // Pattern 2: Bare JSON tool call
+  const jsonPatterns = [
     /```(?:json)?\s*(\{[\s\S]*?\})\s*```/,
     /^\s*(\{"name"[\s\S]*?\})\s*$/,
   ];
-  for (const pat of patterns) {
+  for (const pat of jsonPatterns) {
     const m = content.match(pat);
     if (m) {
       try {
         const parsed = JSON.parse(m[1]);
-        // Only allow safe tools via text-encoded calls — run_command requires explicit user intent
-        const ALLOWED_TEXT_TOOLS = ['ollama_generate', 'ollama_list_models', 'generate_art', 'generate_film', 'generate_video', 'restart_self', 'run_command', 'get_changelog', 'get_help'];
         if (typeof parsed.name === 'string' && ALLOWED_TEXT_TOOLS.includes(parsed.name) && parsed.parameters && typeof parsed.parameters === 'object') {
           return { name: parsed.name, parameters: parsed.parameters as Record<string, unknown> };
         }
       } catch { /* not valid JSON */ }
     }
   }
+
+  // Pattern 3: Bare tool name in code block — ```bash\nget_changelog\n```
+  const bareMatch = content.match(/```(?:bash|sh|text)?\s*\n?\s*(\w+)\s*\n?\s*```/);
+  if (bareMatch) {
+    const name = bareMatch[1];
+    if (ALLOWED_TEXT_TOOLS.includes(name)) {
+      return { name, parameters: {} };
+    }
+  }
+
   return null;
 }
 
@@ -2744,32 +2834,51 @@ async function _callOllamaInner(
   const perfStart = Date.now();
   const roundTimings: number[] = [];
 
-  const response = await withTimeout(
+  // Build request body once for initial call + potential retry
+  const requestBody = JSON.stringify({
+    model,
+    messages: messagesWithImages,
+    // Vision and secretary models don't support tools. Low-complexity: minimal tools for speed.
+    ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : {
+      tools: isLowComplexity
+        ? OLLAMA_TOOLS.filter((t) => {
+            const n = (t as { function: { name: string } }).function.name;
+            return ['web_search', 'fetch_url', 'set_status', 'get_help', 'get_changelog',
+                    'ollama_generate', 'escalate', 'service_status', 'preferences'].includes(n);
+          })
+        : OLLAMA_TOOLS,
+    }),
+    options: modelOpts,
+    ...(useThinkFlag ? { think: true } : {}),
+    ...keepAliveArgs,
+    stream: false,
+  });
+
+  let response = await withTimeout(
     fetch(`${OLLAMA_HOST}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: messagesWithImages,
-        // Vision models don't support tools. Low-complexity: minimal tools for speed.
-        ...(MODELS_WITHOUT_TOOLS.has(model) ? {} : {
-          tools: isLowComplexity
-            ? OLLAMA_TOOLS.filter((t) => {
-                const n = (t as { function: { name: string } }).function.name;
-                return ['web_search', 'fetch_url', 'set_status', 'get_help', 'get_changelog',
-                        'ollama_generate', 'escalate', 'service_status', 'preferences'].includes(n);
-              })
-            : OLLAMA_TOOLS,
-        }),
-        options: modelOpts,
-        ...(useThinkFlag ? { think: true } : {}),
-        ...keepAliveArgs,
-        stream: false,
-      }),
+      body: requestBody,
     }),
     TOOL_TIMEOUT_MS,
     `callOllama(${model})`,
   );
+
+  // Retry once on 500 errors — Ollama can transiently fail on concurrent requests
+  if (!response.ok && response.status === 500) {
+    const errBody = await response.text();
+    log(`Ollama 500 error, retrying once: ${errBody.slice(0, 120)}`);
+    await new Promise((r) => setTimeout(r, 1000));
+    response = await withTimeout(
+      fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+      }),
+      TOOL_TIMEOUT_MS,
+      `callOllama retry(${model})`,
+    );
+  }
 
   if (!response.ok) {
     throw new Error(`Ollama API error: ${response.status} ${await response.text()}`);
@@ -2828,7 +2937,13 @@ async function _callOllamaInner(
         result = `Tool error (${tc.function.name}): ${err instanceof Error ? err.message : String(err)}`;
         log(`Tool call failed: ${result}`);
       }
-      log(`[PERF] tool=${tc.function.name} ${Date.now() - toolStart}ms`);
+      const toolMs = Date.now() - toolStart;
+      logDebug(`[PERF] tool=${tc.function.name} ${toolMs}ms`);
+      logPerf({
+        type: 'tool', traceId: currentTraceId, buildId, timestamp: new Date().toISOString(),
+        toolName: tc.function.name, toolMs,
+        responseExcerpt: (result || '').slice(0, 200),
+      });
       if (tc.function.name === 'run_command') commandOutputs.push(result!);
       toolResults.push({ role: 'tool', content: result! });
     }
@@ -2869,12 +2984,26 @@ async function _callOllamaInner(
   } else {
     modelResponse = extractContent(msg.content);
     thinkingContent = think && msg.thinking ? msg.thinking.trim() : '';
+    // Strip reasoning blocks the model may echo into content (qwen3.5+think sometimes does this)
+    modelResponse = modelResponse
+      .replace(/💭\s*\*?Reasoning:?\*?\n[\s\S]*?(?:\n\n(?=\S)|$)/, '')
+      .trim();
   }
 
-  // When reasoning content is available, prepend it so the user can follow the steps
-  const responseWithThinking = thinkingContent
-    ? `💭 *Reasoning:*\n${thinkingContent}\n\n${modelResponse}`
-    : modelResponse;
+  // Reasoning stays separate — logged via IPC, not shown in chat
+  if (thinkingContent) {
+    try {
+      const reasoningFile = path.join(IPC_MSG_DIR, `reasoning-${Date.now()}.json`);
+      fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
+      fs.writeFileSync(reasoningFile, JSON.stringify({
+        type: 'reasoning',
+        chatJid: chatJid ?? '',
+        reasoning: thinkingContent,
+        model,
+        responseExcerpt: modelResponse.slice(0, 200),
+      }));
+    } catch { /* best effort */ }
+  }
 
   const totalMs = Date.now() - perfStart;
   const thinkingMs = thinkingContent ? thinkingContent.length * 4 : 0; // rough estimate: ~4ms/char
@@ -2883,7 +3012,7 @@ async function _callOllamaInner(
   // Always include command outputs verbatim, even if the model omits them
   if (commandOutputs.length > 0) {
     const outputBlock = commandOutputs.map((o) => `\`\`\`\n${o}\n\`\`\``).join('\n\n');
-    return responseWithThinking ? `${responseWithThinking}\n\n${outputBlock}` : outputBlock;
+    return modelResponse ? `${modelResponse}\n\n${outputBlock}` : outputBlock;
   }
 
   // Auto-escalation: if the model apologized, failed, or received an error it couldn't resolve,
@@ -2898,13 +3027,14 @@ async function _callOllamaInner(
     }
   }
 
-  return responseWithThinking;
+  return modelResponse;
 }
 
 interface TaskContext {
   description: string;
   getPhase: () => string;
   startedAt: number;
+  model: string;
 }
 
 interface InterruptExchange {
@@ -2972,28 +3102,37 @@ async function runWithConcurrentPoll(
         const elapsed = Math.round((Date.now() - ctx.startedAt) / 1000);
         const phase = ctx.getPhase();
         const phaseLabel = phase.startsWith('tool:') ? phase.slice(5).replace(/_/g, ' ') : phase;
-        const phaseNote = phaseLabel !== 'thinking' ? `, currently: ${phaseLabel}` : '';
 
-        const systemCtx = `You are ${assistantNameLocal}, currently busy with a task: "${ctx.description.slice(0, 120)}" (${elapsed}s elapsed${phaseNote}). The user sent a message while you're working. Respond in 1-2 sentences only: give a status update if they're asking how it's going, or acknowledge their message and let them know you'll get to it after you finish. Do not pretend the current task is done.`;
-
-        try {
-          const quickReply = await callOllama(
-            MODELS.SECRETARY,
-            [
-              { role: 'system', content: systemCtx },
-              ...recentHistory.slice(-4),
-              { role: 'user', content: msg },
-            ],
-            chatJid,
-            groupFolder,
-          );
-          writeOutput({ status: 'success', result: `_[secretary]_ ${quickReply}`, newSessionId: sessionIdLocal });
-          interrupts.push({ userMessage: msg, quickReply });
-          log(`Quick response sent for mid-task message (${elapsed}s elapsed, phase: ${phaseLabel})`);
-        } catch (err) {
-          log(`Quick response failed: ${err instanceof Error ? err.message : String(err)}`);
-          interrupts.push({ userMessage: msg, quickReply: '' });
+        // Deterministic, accurate quick-replies — no LLM hallucination
+        // Gets progressively sassier with repeated messages
+        const MODEL_FRIENDLY: Record<string, string> = {
+          [MODELS.COORDINATOR]: 'the coordinator',
+          [MODELS.CODER]: 'the coder',
+          [MODELS.ARCHITECT]: 'the architect',
+          [MODELS.VISION]: 'the vision model',
+          [MODELS.SECRETARY]: 'the secretary',
+        };
+        const expertName = MODEL_FRIENDLY[ctx.model] || ctx.model.replace(/:.*/, '');
+        const repeatCount = interrupts.length; // how many times they've pinged during this task
+        let quickReply: string;
+        // Total concurrent model slots available
+        const totalHands = getMaxSlots(MODELS.SECRETARY) + getMaxSlots(MODELS.COORDINATOR)
+          + getMaxSlots(MODELS.CODER) + 1; // +1 for large model shared slot
+        if (repeatCount >= 4) {
+          quickReply = `I only have ${totalHands} hands! Still working on it.`;
+        } else if (repeatCount >= 2) {
+          quickReply = `I heard you! Still on it — ${expertName} is thinking (${elapsed}s).`;
+        } else if (phase.startsWith('tool:')) {
+          quickReply = `One sec — I'm running ${phaseLabel} right now. I'll get to your message next!`;
+        } else if (elapsed < 5) {
+          quickReply = `Got it! I'm just finishing up a thought — one moment.`;
+        } else {
+          quickReply = `Still waiting on the response from ${expertName} (${elapsed}s so far). I'll get to your message next!`;
         }
+
+        writeOutput({ status: 'success', result: `_[secretary]_ ${quickReply}`, newSessionId: sessionIdLocal });
+        interrupts.push({ userMessage: msg, quickReply });
+        log(`Quick ack for mid-task message (${elapsed}s elapsed, phase: ${phaseLabel})`);
       }
       await new Promise<void>((r) => setTimeout(r, IPC_POLL_MS));
     }
@@ -3224,7 +3363,7 @@ async function main(): Promise<void> {
     saveLatestImage(currentImages);
   }
 
-  const systemMsg: Message = { role: 'system', content: getSystemPrompt(assistantName, groupFolder) };
+  const systemMsg: Message = { role: 'system', content: getSystemPrompt(assistantName, groupFolder, chatJid) };
 
   // Background compression: runs during waitForIpcMessage so it doesn't block inference.
   // compressedHistory is applied at the start of the next turn if ready.
@@ -3251,7 +3390,11 @@ async function main(): Promise<void> {
           log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
         }
 
-      const cls = await classifyMessage(prompt, !!currentImages?.length);
+      try { // per-message try/catch — errors send user-facing message, don't crash container
+
+      const traceId = newTraceId();
+      currentTraceId = traceId;
+      const cls = await classifyMessage(prompt, !!currentImages?.length, traceId);
 
       // Send status indicator after classification (one message, no doubles)
       const ackId = `ack-${Date.now()}`;
@@ -3301,10 +3444,20 @@ async function main(): Promise<void> {
       let elapsedSeconds = 0;
       const statusFiles: string[] = [];
 
-      // Single status message with model/task info (sent after classification, ~300ms)
+      // Update reaction emoji to reflect which model is handling the request
+      const MODEL_EMOJI: Record<string, string> = {
+        [MODELS.COORDINATOR]: '👀',   // eyes — coordinator watching
+        [MODELS.CODER]: '😎',         // sunglasses — coder at work
+        [MODELS.ARCHITECT]: '🤓',     // nerdy glasses — deep reasoning
+      };
+      // Thinking mode = analyst (🤔), artist = 🤩, otherwise model-specific
+      const isArtistRoute = taskTypeRich === 'creative' && (model === MODELS.COORDINATOR || model === 'qwen2.5vl:72b');
+      const reactionEmoji = isArtistRoute ? '🤩'
+        : thinking ? '🤔'
+        : (MODEL_EMOJI[model] || '👀');
       fs.writeFileSync(
-        path.join(IPC_MSG_DIR, `${ackId}-start.json`),
-        JSON.stringify({ type: 'thinking_start', chatJid, text: `_${modelLabel} · ${responseType}_`, thinkingId: ackId }),
+        path.join(IPC_MSG_DIR, `${ackId}-react.json`),
+        JSON.stringify({ type: 'reaction_update', chatJid, emoji: reactionEmoji }),
       );
 
       let thinkingInterval: ReturnType<typeof setInterval> | null = null;
@@ -3321,15 +3474,20 @@ async function main(): Promise<void> {
         }));
       };
 
-      // After 5s, start showing elapsed time
+      // Delay status message: only show after 10s (fast responses don't need it)
       const thinkingDelay = setTimeout(() => {
-        elapsedSeconds = 5;
+        // Send initial status message after 10s
+        fs.writeFileSync(
+          path.join(IPC_MSG_DIR, `${ackId}-start.json`),
+          JSON.stringify({ type: 'thinking_start', chatJid, text: `_${modelLabel} · ${responseType}_`, thinkingId: ackId }),
+        );
+        elapsedSeconds = 10;
         setStatus(`${statusLabel}... (${elapsedSeconds}s)`);
         thinkingInterval = setInterval(() => {
           elapsedSeconds += 5;
           setStatus(`${statusLabel}... (${elapsedSeconds}s)`);
         }, 5000);
-      }, 5000);
+      }, 10000);
 
       // On completion: delete the status message (stats go in the response itself)
       const clearThinking = () => {
@@ -3357,6 +3515,7 @@ async function main(): Promise<void> {
         description: prompt.slice(0, 120).replace(/\n/g, ' '),
         getPhase: () => taskPhaseRef.value,
         startedAt: responseStart,
+        model,
       };
       const { response, interrupts } = await runWithConcurrentPoll(
         callPromise, taskCtx, chatJid, groupFolder, history, assistantName, sessionId,
@@ -3376,14 +3535,18 @@ async function main(): Promise<void> {
         });
       }
       logPerf({
-        type: 'response', buildId, timestamp: new Date().toISOString(),
+        type: 'response', traceId, buildId, timestamp: new Date().toISOString(),
         model, think: thinking, taskType, complexity: cls.complexity,
         promptChars: prompt.length, responseChars: response.length,
         responseMs, historyMsgs: history.length,
+        routingModel: cls.usedSecretary ? MODELS.SECRETARY : 'keyword',
+        routedTo: model + (thinking ? '+think' : ''),
+        promptExcerpt: prompt.replace(/<[^>]+>/g, '').trim().slice(0, 120),
+        responseExcerpt: response.replace(/<[^>]+>/g, '').trim().slice(0, 200),
         ...(wasDissatisfied ? { dissatisfied: true } : {}),
       });
       if (wasDissatisfied) {
-        logPerf({ type: 'escalation', buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
+        logPerf({ type: 'escalation', traceId, buildId, timestamp: new Date().toISOString(), reason: 'user_dissatisfaction' });
       }
 
       // <silent/> — model chose not to respond. Add to history but don't output.
@@ -3432,6 +3595,30 @@ async function main(): Promise<void> {
       // Session-update marker so host tracks the session
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });
 
+      } catch (msgErr) {
+        // Per-message error: send error to user, continue processing next messages
+        const errMsg = msgErr instanceof Error ? msgErr.message : String(msgErr);
+        log(`Error processing message: ${errMsg}`);
+        logPerf({
+          type: 'error', buildId, timestamp: new Date().toISOString(),
+          category: errMsg.includes('timed out') || errMsg.includes('ECONNREFUSED') ? 'environmental' : 'code',
+          error: errMsg.slice(0, 200),
+        });
+        try {
+          fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
+          fs.writeFileSync(
+            path.join(IPC_MSG_DIR, `err-${Date.now()}.json`),
+            JSON.stringify({ type: 'message', chatJid, text: `I ran into an issue processing that request. Please try again.` }),
+          );
+        } catch { /* best effort */ }
+        // Clear any lingering thinking/status messages
+        try {
+          fs.writeFileSync(
+            path.join(IPC_MSG_DIR, `err-clear-${Date.now()}.json`),
+            JSON.stringify({ type: 'thinking_clear', thinkingId: `ack-${Date.now()}` }),
+          );
+        } catch { /* best effort */ }
+      }
       } // end per-sender loop
 
       log('Waiting for next message...');

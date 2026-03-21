@@ -169,6 +169,40 @@ describe('translateToMultiple', () => {
     expect(result).toEqual([]);
   });
 
+  it('filters out SAME_LANGUAGE responses in auto mode (English→English bug)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { content: 'SAME_LANGUAGE' } }),
+      }),
+    );
+
+    const result = await translateToMultiple('give me a few minutes', 'auto', [
+      'en',
+    ]);
+    // Model detected source is already English → should be filtered out
+    expect(result).toEqual([]);
+  });
+
+  it('filters out paraphrased same-language translations (auto mode)', async () => {
+    // Model slightly rephrases instead of returning SAME_LANGUAGE
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ message: { content: 'Give me a few minutes' } }),
+      }),
+    );
+
+    const result = await translateToMultiple('give me a few minutes', 'auto', [
+      'en',
+    ]);
+    // Case-insensitive match catches this
+    expect(result).toEqual([]);
+  });
+
   it('returns successful translations, skips failures', async () => {
     let callCount = 0;
     vi.stubGlobal(

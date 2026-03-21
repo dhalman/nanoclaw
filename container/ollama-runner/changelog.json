@@ -1,9 +1,218 @@
 {
+  "0.3.80": {
+    "date": "2026-03-20",
+    "title": "Smarter Quick-Replies",
+    "notes": [
+      "When you message Jarvis while he's busy, he gives an accurate status update \u2014 no more making things up",
+      "Repeated messages get progressively sassier: \"I only have 9 hands!\"",
+      "Status updates reflect actual state: which model is thinking, what tool is running, how long it's been"
+    ]
+  },
+  "0.3.76": {
+    "date": "2026-03-20",
+    "title": "Multi-Message Reaction Clearing",
+    "notes": [
+      "Sending multiple messages no longer leaves stale reaction emojis \u2014 all pending reactions clear when Jarvis replies"
+    ]
+  },
+  "0.3.75": {
+    "date": "2026-03-20",
+    "title": "Crash Resilience and Reliability",
+    "notes": [
+      "Jarvis no longer crashes on backend errors \u2014 he reports the issue and keeps running",
+      "Backend errors are automatically retried once before reporting failure",
+      "Status messages now visually link to the message being processed (reply-to)",
+      "Fixed a compatibility issue where the small classifier model was being sent tool definitions it doesn't support"
+    ]
+  },
+  "0.3.74": {
+    "date": "2026-03-20",
+    "title": "Emoji Reaction Lifecycle",
+    "notes": [
+      "Reaction emojis now properly clear after Jarvis replies \u2014 previously they stayed permanently",
+      "Fixed: reactions were being removed in the wrong code path (IPC handler instead of response handler)"
+    ]
+  },
+  "0.3.73": {
+    "date": "2026-03-20",
+    "title": "English Translation Fix and Test Coverage",
+    "notes": [
+      "Fixed: English text no longer gets translated to English (Latin-script detection + SAME_LANGUAGE response)",
+      "Comprehensive test audit: 595 tests across 27 files, all passing",
+      "Test suite gates every deploy \u2014 tests must pass before build proceeds"
+    ]
+  },
+  "0.3.70": {
+    "date": "2026-03-20",
+    "title": "Force-Route Tags and Emoji Reactions",
+    "notes": [
+      "Use (think), (coder), (analyst), (architect) tags to force-route to a specific model",
+      "Tags are case-insensitive and trigger engagement without needing to say Jarvis's name",
+      "Model-specific emoji reactions: eyes for coordinator, sunglasses for coder, thinking for analyst, nerd for architect, star-eyes for artist",
+      "Thumbs-down reaction triggers Jarvis to ask what went wrong and learn from the feedback"
+    ]
+  },
+  "0.3.65": {
+    "date": "2026-03-20",
+    "title": "Safe Deployment Pipeline",
+    "notes": [
+      "Jarvis stays running until new version is fully built, tested, and verified",
+      "Tests gate every deploy \u2014 if tests fail, nothing ships",
+      "Only nanoclaw containers are stopped during deploy (no longer kills unrelated services)",
+      "Log rotation for production logs (>5MB rotated, 3 copies kept)"
+    ]
+  },
+  "0.3.60": {
+    "date": "2026-03-20",
+    "title": "Art Pipeline and Creative Routing",
+    "notes": [
+      "Jarvis asks for details before generating art \u2014 no more hallucinated prompts from vague requests",
+      "Creative pattern matching tightened to avoid routing simple messages to the artist",
+      "Artist uses generate_art tool directly instead of calling underlying functions"
+    ]
+  },
+  "0.3.55": {
+    "date": "2026-03-20",
+    "title": "Request Tracing and Observability",
+    "notes": [
+      "Every request gets a unique trace ID linking classification, tool calls, and response",
+      "Routing decisions logged with model used, reasoning, and prompt/response excerpts",
+      "Build version appears in all log entries for post-deploy verification"
+    ]
+  },
+  "0.3.50": {
+    "date": "2026-03-20",
+    "title": "Reasoning Cleanup",
+    "notes": [
+      "Jarvis no longer leaks internal reasoning blocks into chat responses",
+      "Reasoning is recorded for async review but never shown to users",
+      "Stale reasoning in conversation history is cleaned so the model doesn't learn to echo it"
+    ]
+  },
+  "0.3.45": {
+    "date": "2026-03-20",
+    "title": "Admin-Only System Access",
+    "notes": [
+      "Shell commands and system configuration are now restricted to admin DM only",
+      "Group chats can change their own preferences but cannot modify Jarvis's behavior or run commands",
+      "System prompt hides admin capabilities from non-admin chats"
+    ]
+  },
+  "0.3.40": {
+    "date": "2026-03-20",
+    "title": "v0.3.40 \u2014 Fix coder misroute on user self-descriptions",
+    "notes": [
+      "v0.3.40 \u2014 Fix coder misroute on user self-descriptions"
+    ]
+  },
+  "0.3.39": {
+    "date": "2026-03-20",
+    "title": "v0.3.38 \u2014 Dynamic response translation, version sync",
+    "notes": [
+      "v0.3.38 \u2014 Dynamic response translation, version sync",
+      "v0.3.38 \u2014 NLP-based reaction sentiment analysis",
+      "v0.3.37 \u2014 Broader praise detection for emoji reactions",
+      "v0.3.36 \u2014 Reasoning forwarded to DM in group chats",
+      "v0.3.35 \u2014 Changelog synced, non-printable characters cleaned"
+    ]
+  },
+  "0.3.38": {
+    "date": "2026-03-20",
+    "title": "Dynamic response translation to registered languages",
+    "notes": [
+      "When a request or response is not in English, Jarvis appends translations to all registered languages. No translation when both request and response are English. Languages controlled by translator_languages preference.",
+      "Reasoning blocks stripped from group chat responses and forwarded privately to DJ DM. Version synced to 0.3.38."
+    ]
+  },
+  "0.3.37": {
+    "date": "2026-03-20",
+    "title": "Broader praise detection for emoji reactions",
+    "notes": [
+      "Short praise like \"Impressive!\", \"I'm proud\", \"Love it\" now gets an emoji reaction instead of a 14s coordinator response. Expanded trivial patterns to catch multi-word praise."
+    ]
+  },
+  "0.3.36": {
+    "date": "2026-03-20",
+    "title": "Reasoning forwarded to DM in group chats",
+    "notes": [
+      "In group chats, reasoning blocks are stripped from the visible response and forwarded privately to DJ's DM. Keeps group chat clean while preserving full transparency for the owner.",
+      "Reasoning arrives as: \ud83e\udde0 [GroupName] reasoning: ... in the Jarvis DM."
+    ]
+  },
+  "0.3.34": {
+    "date": "2026-03-20",
+    "title": "Correct pool allocation",
+    "notes": [
+      "4 secretary, 2 translator, 2 coordinator, 2 coder/image, 1 shared architect/vision. Coordinator was incorrectly capped at 1 slot (now 2). Translator model added to size tracking."
+    ]
+  },
+  "0.3.33": {
+    "date": "2026-03-20",
+    "title": "Shared inference slot for large models",
+    "notes": [
+      "Models over 30GB (architect at 43GB, vision at 49GB) now share a single concurrency slot. Only one can run at a time  -  they can't coexist in VRAM. Prevents OOM and model eviction.",
+      "Slot allocation: secretary 4, coordinator 1, coder/image 2, all >30GB models share 1. 30s timeout with clear error instead of hanging. Pool gate wraps callOllama with acquire/release in finally block."
+    ]
+  },
+  "0.3.32": {
+    "date": "2026-03-20",
+    "title": "Swap secretary to gemma3:4b, NLP-first classification",
+    "notes": [
+      "Replaced qwen2.5:3b with gemma3:4b for message classification. Benchmarked 12/12 accuracy (was 11/12). ~630ms vs 210ms but accuracy matters more than speed for task routing.",
+      "Removed regex guard for creative\u2192coder misrouting  -  gemma3 handles it correctly. qwen2.5:3b stays for translations (lighter, sufficient). Warm script loads both gemma3:4b + qwen2.5:3b + coordinator."
+    ]
+  },
+  "0.3.31": {
+    "date": "2026-03-20",
+    "title": "Guard against coder misrouting creative tasks",
+    "notes": [
+      "\"Retry image request\" was misclassified as code by the secretary. Added a guard: if the message mentions image/picture/art/video/film, never route to the coder regardless of secretary classification. Falls back to coordinator which has conversation history to handle retries."
+    ]
+  },
+  "0.3.30": {
+    "date": "2026-03-20",
+    "title": "Direct art and video generation",
+    "notes": [
+      "\"Create an image of...\" and \"Generate a video of...\" now go straight to the Artist/Cinematographer, bypassing the coordinator entirely. No more 5-10s wait for the coordinator to decide to delegate.",
+      "Secretary-direct paths added for generate_art and generate_film. Pattern matches obvious create/generate/draw/paint + image/video keywords. Falls through to coordinator on failure."
+    ]
+  },
+  "0.3.29": {
+    "date": "2026-03-20",
+    "title": "Fix help trigger false positive",
+    "notes": [
+      "\"help\" in a sentence like \"help you learn\" was triggering the help menu. Now only matches \"help\" as a standalone command (full-line match), not as a verb in conversation."
+    ]
+  },
+  "0.3.28": {
+    "date": "2026-03-20",
+    "title": "Task Permissions and Friendly Help",
+    "notes": [
+      "Only DJ can schedule execution tasks. Anyone can set reminders. Friendlier help menu with all current features including translation, shortcuts, and voice.",
+      "Task scheduling gated by owner ID (365278370). Reminder keywords bypass the gate. get_help rewritten with warm tone, organized by what users actually want to do, includes translation/shortcuts/tags."
+    ]
+  },
+  "0.3.27": {
+    "date": "2026-03-20",
+    "title": "Task Scheduling Security",
+    "notes": [
+      "Group chats can only create reminders (text notifications). Execution tasks like config changes, code runs, or service commands require a private DM.",
+      "Group task gate checks for reminder keywords (remind/notify/alert/ping). Non-reminder tasks return a clear error directing the user to DM. Prevents social engineering of scheduled execution tasks in group chats."
+    ]
+  },
+  "0.3.26": {
+    "date": "2026-03-20",
+    "title": "Inference Pool and Model Cleanup",
+    "notes": [
+      "Per-model thread pool prevents memory overload. Old model workarounds removed. Each specialist gets their own system prompt.",
+      "Semaphore pool: secretary 4 slots, large models 1 slot, others 2. 125GB memory budget, 30s timeout. Removed llama3.2-vision workaround. Specialist personality injection."
+    ]
+  },
   "0.3.22": {
     "date": "2026-03-20",
-    "title": "feat: instant 👀 reaction acknowledgment on message receipt",
+    "title": "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt",
     "notes": [
-      "feat: instant 👀 reaction acknowledgment on message receipt"
+      "feat: instant \ud83d\udc40 reaction acknowledgment on message receipt"
     ]
   },
   "0.3.21": {
@@ -48,32 +257,12 @@
       "fix: stop re-pinning on status update  -  just edit silently"
     ]
   },
-  "0.3.15": {
-    "date": "2026-03-20",
-    "title": "Build 0.3.15",
-    "notes": []
-  },
-  "0.3.14": {
-    "date": "2026-03-20",
-    "title": "Build 0.3.14",
-    "notes": []
-  },
-  "0.3.13": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.13",
-    "notes": []
-  },
   "0.3.12": {
     "date": "2026-03-19",
     "title": "fix: container warms BOTH models with tiny ctx to prevent eviction",
     "notes": [
       "fix: container warms BOTH models with tiny ctx to prevent eviction"
     ]
-  },
-  "0.3.11": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.11",
-    "notes": []
   },
   "0.3.10": {
     "date": "2026-03-19",
@@ -82,21 +271,6 @@
       "fix: cap secretary num_ctx to prevent coordinator eviction"
     ]
   },
-  "0.3.9": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.9",
-    "notes": []
-  },
-  "0.3.8": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.8",
-    "notes": []
-  },
-  "0.3.7": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.7",
-    "notes": []
-  },
   "0.3.6": {
     "date": "2026-03-19",
     "title": "fix: cancel pipes to container IPC + removes is_from_me gate",
@@ -104,22 +278,12 @@
       "fix: cancel pipes to container IPC + removes is_from_me gate"
     ]
   },
-  "0.3.5": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.5",
-    "notes": []
-  },
   "0.3.4": {
     "date": "2026-03-19",
     "title": "feat: immediate cancel via IPC poll loop (100ms response)",
     "notes": [
       "feat: immediate cancel via IPC poll loop (100ms response)"
     ]
-  },
-  "0.3.3": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.3",
-    "notes": []
   },
   "0.3.2": {
     "date": "2026-03-19",
@@ -130,10 +294,13 @@
       "fix: voice replies to other users don't trigger Jarvis"
     ]
   },
-  "0.3.1": {
-    "date": "2026-03-19",
-    "title": "Build 0.3.1",
-    "notes": []
+  "0.3.0": {
+    "date": "2026-03-20",
+    "title": "Translation Pipeline, NLP Router, Instant Commands",
+    "notes": [
+      "Auto-translate group messages. Secretary-direct commands bypass the coordinator (~2ms). Complete engagement overhaul. 520 tests passing.",
+      "Secretary swap to qwen2.5:3b (15x faster). Secretary-direct for version/status/help/restart. Native language tags. On-demand translation via \ud83d\udc40 or reply."
+    ]
   },
   "0.2.70": {
     "date": "2026-03-19",
@@ -250,7 +417,7 @@
     "title": "fix: unpinChatMessage takes messageId directly, not options object",
     "notes": [
       "fix: unpinChatMessage takes messageId directly, not options object",
-      "fix: unpin → edit → re-pin status message on update"
+      "fix: unpin \u2192 edit \u2192 re-pin status message on update"
     ]
   },
   "0.2.54": {
@@ -345,11 +512,6 @@
       "fix: pin secretary in VRAM, add KEEP_ALIVE_PINNED constant, fix warm script"
     ]
   },
-  "0.2.41": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.41",
-    "notes": []
-  },
   "0.2.40": {
     "date": "2026-03-19",
     "title": "feat: auto-pin status messages in Telegram chats",
@@ -370,11 +532,6 @@
     "notes": [
       "feat: secretary-direct web search for simple factual queries"
     ]
-  },
-  "0.2.37": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.37",
-    "notes": []
   },
   "0.2.36": {
     "date": "2026-03-19",
@@ -460,22 +617,12 @@
       "feat: per-user response queuing in group chats"
     ]
   },
-  "0.2.25": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.25",
-    "notes": []
-  },
   "0.2.24": {
     "date": "2026-03-19",
     "title": "fix: prevent history from hanging Ollama inference",
     "notes": [
       "fix: prevent history from hanging Ollama inference"
     ]
-  },
-  "0.2.23": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.23",
-    "notes": []
   },
   "0.2.22": {
     "date": "2026-03-19",
@@ -484,102 +631,12 @@
       "fix: ollama-runner follow-up fetch timeout, IPC race condition, add 113 tests"
     ]
   },
-  "0.2.21": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.21",
-    "notes": []
-  },
-  "0.2.20": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.20",
-    "notes": []
-  },
-  "0.2.19": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.19",
-    "notes": []
-  },
-  "0.2.18": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.18",
-    "notes": []
-  },
-  "0.2.16": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.16",
-    "notes": []
-  },
-  "0.2.15": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.15",
-    "notes": []
-  },
-  "0.2.14": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.14",
-    "notes": []
-  },
-  "0.2.13": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.13",
-    "notes": []
-  },
-  "0.2.12": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.12",
-    "notes": []
-  },
-  "0.2.11": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.11",
-    "notes": []
-  },
-  "0.2.10": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.10",
-    "notes": []
-  },
-  "0.2.9": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.9",
-    "notes": []
-  },
   "0.2.8": {
     "date": "2026-03-19",
     "title": "feat: auto-translation pipeline, passive mode, engagement preferences, code audit",
     "notes": [
       "feat: auto-translation pipeline, passive mode, engagement preferences, code audit"
     ]
-  },
-  "0.2.7": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.7",
-    "notes": []
-  },
-  "0.2.6": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.6",
-    "notes": []
-  },
-  "0.2.5": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.5",
-    "notes": []
-  },
-  "0.2.4": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.4",
-    "notes": []
-  },
-  "0.2.3": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.3",
-    "notes": []
-  },
-  "0.2.2": {
-    "date": "2026-03-19",
-    "title": "Build 0.2.2",
-    "notes": []
   },
   "0.2.1": {
     "date": "2026-03-19",
@@ -643,106 +700,6 @@
       "feat: ollama runner container for local model inference on Apple Silicon",
       "feat: Jarvis bot registration with per-group container isolation",
       "feat: Docker-based sandboxing with credential proxy"
-    ]
-  },
-  "0.3.0": {
-    "date": "2026-03-20",
-    "title": "Translation Pipeline, NLP Router, Instant Commands",
-    "notes": [
-      "Auto-translate group messages. Secretary-direct commands bypass the coordinator (~2ms). Complete engagement overhaul. 520 tests passing.",
-      "Secretary swap to qwen2.5:3b (15x faster). Secretary-direct for version/status/help/restart. Native language tags. On-demand translation via 👀 or reply."
-    ]
-  },
-  "0.3.26": {
-    "date": "2026-03-20",
-    "title": "Inference Pool and Model Cleanup",
-    "notes": [
-      "Per-model thread pool prevents memory overload. Old model workarounds removed. Each specialist gets their own system prompt.",
-      "Semaphore pool: secretary 4 slots, large models 1 slot, others 2. 125GB memory budget, 30s timeout. Removed llama3.2-vision workaround. Specialist personality injection."
-    ]
-  },
-  "0.3.27": {
-    "date": "2026-03-20",
-    "title": "Task Scheduling Security",
-    "notes": [
-      "Group chats can only create reminders (text notifications). Execution tasks like config changes, code runs, or service commands require a private DM.",
-      "Group task gate checks for reminder keywords (remind/notify/alert/ping). Non-reminder tasks return a clear error directing the user to DM. Prevents social engineering of scheduled execution tasks in group chats."
-    ]
-  },
-  "0.3.28": {
-    "date": "2026-03-20",
-    "title": "Task Permissions and Friendly Help",
-    "notes": [
-      "Only DJ can schedule execution tasks. Anyone can set reminders. Friendlier help menu with all current features including translation, shortcuts, and voice.",
-      "Task scheduling gated by owner ID (365278370). Reminder keywords bypass the gate. get_help rewritten with warm tone, organized by what users actually want to do, includes translation/shortcuts/tags."
-    ]
-  },
-  "0.3.29": {
-    "date": "2026-03-20",
-    "title": "Fix help trigger false positive",
-    "notes": [
-      "\"help\" in a sentence like \"help you learn\" was triggering the help menu. Now only matches \"help\" as a standalone command (full-line match), not as a verb in conversation."
-    ]
-  },
-  "0.3.30": {
-    "date": "2026-03-20",
-    "title": "Direct art and video generation",
-    "notes": [
-      "\"Create an image of...\" and \"Generate a video of...\" now go straight to the Artist/Cinematographer, bypassing the coordinator entirely. No more 5-10s wait for the coordinator to decide to delegate.",
-      "Secretary-direct paths added for generate_art and generate_film. Pattern matches obvious create/generate/draw/paint + image/video keywords. Falls through to coordinator on failure."
-    ]
-  },
-  "0.3.31": {
-    "date": "2026-03-20",
-    "title": "Guard against coder misrouting creative tasks",
-    "notes": [
-      "\"Retry image request\" was misclassified as code by the secretary. Added a guard: if the message mentions image/picture/art/video/film, never route to the coder regardless of secretary classification. Falls back to coordinator which has conversation history to handle retries."
-    ]
-  },
-  "0.3.32": {
-    "date": "2026-03-20",
-    "title": "Swap secretary to gemma3:4b, NLP-first classification",
-    "notes": [
-      "Replaced qwen2.5:3b with gemma3:4b for message classification. Benchmarked 12/12 accuracy (was 11/12). ~630ms vs 210ms but accuracy matters more than speed for task routing.",
-      "Removed regex guard for creative→coder misrouting  -  gemma3 handles it correctly. qwen2.5:3b stays for translations (lighter, sufficient). Warm script loads both gemma3:4b + qwen2.5:3b + coordinator."
-    ]
-  },
-  "0.3.33": {
-    "date": "2026-03-20",
-    "title": "Shared inference slot for large models",
-    "notes": [
-      "Models over 30GB (architect at 43GB, vision at 49GB) now share a single concurrency slot. Only one can run at a time  -  they can't coexist in VRAM. Prevents OOM and model eviction.",
-      "Slot allocation: secretary 4, coordinator 1, coder/image 2, all >30GB models share 1. 30s timeout with clear error instead of hanging. Pool gate wraps callOllama with acquire/release in finally block."
-    ]
-  },
-  "0.3.34": {
-    "date": "2026-03-20",
-    "title": "Correct pool allocation",
-    "notes": [
-      "4 secretary, 2 translator, 2 coordinator, 2 coder/image, 1 shared architect/vision. Coordinator was incorrectly capped at 1 slot (now 2). Translator model added to size tracking."
-    ]
-  },
-  "0.3.36": {
-    "date": "2026-03-20",
-    "title": "Reasoning forwarded to DM in group chats",
-    "notes": [
-      "In group chats, reasoning blocks are stripped from the visible response and forwarded privately to DJ's DM. Keeps group chat clean while preserving full transparency for the owner.",
-      "Reasoning arrives as: 🧠 [GroupName] reasoning: ... in the Jarvis DM."
-    ]
-  },
-  "0.3.37": {
-    "date": "2026-03-20",
-    "title": "Broader praise detection for emoji reactions",
-    "notes": [
-      "Short praise like \"Impressive!\", \"I'm proud\", \"Love it\" now gets an emoji reaction instead of a 14s coordinator response. Expanded trivial patterns to catch multi-word praise."
-    ]
-  },
-  "0.3.38": {
-    "date": "2026-03-20",
-    "title": "Dynamic response translation to registered languages",
-    "notes": [
-      "When a request or response is not in English, Jarvis appends translations to all registered languages. No translation when both request and response are English. Languages controlled by translator_languages preference.",
-      "Reasoning blocks stripped from group chat responses and forwarded privately to DJ DM. Version synced to 0.3.38."
     ]
   }
 }

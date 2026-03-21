@@ -48,6 +48,7 @@ vi.mock('grammy', () => ({
       sendChatAction: vi.fn().mockResolvedValue(undefined),
       getFile: vi.fn().mockResolvedValue({ file_path: 'voice/file.ogg' }),
       setMyName: vi.fn().mockResolvedValue(undefined),
+      getMyName: vi.fn().mockResolvedValue({ name: 'Andy' }),
     };
 
     constructor(token: string) {

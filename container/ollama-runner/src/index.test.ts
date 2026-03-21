@@ -539,7 +539,14 @@ describe('callOllama', () => {
     expect(typeof result).toBe('string');
   });
 
-  it('throws on non-ok API response', async () => {
+  it('throws on non-ok API response after retry', async () => {
+    // First call returns 500 — triggers retry
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: async () => 'Internal Server Error',
+    });
+    // Retry also returns 500 — now it throws
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -549,6 +556,20 @@ describe('callOllama', () => {
     await expect(callOllama(model, messages, chatJid, groupFolder)).rejects.toThrow(
       'Ollama API error: 500',
     );
+  });
+
+  it('recovers on retry when first call returns 500', async () => {
+    // First call returns 500
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: async () => 'Transient error',
+    });
+    // Retry succeeds
+    mockFetch.mockResolvedValueOnce(ollamaTextResponse('Recovered!'));
+
+    const result = await callOllama(model, messages, chatJid, groupFolder);
+    expect(result).toContain('Recovered');
   });
 });
 

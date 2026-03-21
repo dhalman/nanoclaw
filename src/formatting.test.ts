@@ -5,7 +5,9 @@ import {
   escapeXml,
   formatMessages,
   formatOutbound,
+  isGroupChatJid,
   stripInternalTags,
+  stripReasoning,
 } from './router.js';
 import { NewMessage } from './types.js';
 
@@ -261,5 +263,73 @@ describe('trigger gating (requiresTrigger interaction)', () => {
   it('non-main group with requiresTrigger=false always processes (no trigger needed)', () => {
     const msgs = [makeMsg({ content: 'hello no trigger' })];
     expect(shouldProcess(false, false, msgs)).toBe(true);
+  });
+});
+
+// --- stripReasoning ---
+
+describe('stripReasoning', () => {
+  it('strips reasoning block and returns both parts', () => {
+    const input =
+      '💭 *Reasoning:*\nThe user wants help.\n\nHere is my response.';
+    const result = stripReasoning(input);
+    expect(result.reasoning).toBe('The user wants help.');
+    expect(result.text).toBe('Here is my response.');
+  });
+
+  it('handles reasoning-only response (no content after)', () => {
+    const input = '💭 *Reasoning:*\nJust thinking out loud.';
+    const result = stripReasoning(input);
+    expect(result.reasoning).toBe('Just thinking out loud.');
+    expect(result.text).toBe('');
+  });
+
+  it('returns null reasoning when no reasoning block present', () => {
+    const input = 'Just a normal response.';
+    const result = stripReasoning(input);
+    expect(result.reasoning).toBeNull();
+    expect(result.text).toBe('Just a normal response.');
+  });
+
+  it('handles multi-line reasoning with code blocks', () => {
+    const input =
+      '💭 *Reasoning:*\nStep 1: parse\nStep 2: execute\n\nHere is the answer.';
+    const result = stripReasoning(input);
+    expect(result.reasoning).toBe('Step 1: parse\nStep 2: execute');
+    expect(result.text).toBe('Here is the answer.');
+  });
+
+  it('handles reasoning with tool call narration (the botski bug)', () => {
+    const input =
+      '💭 *Reasoning:*\nThe user is asking about updates. I should use get_changelog.\n\nLet me check the changelog.\n\n```bash\nget_changelog\n```';
+    const result = stripReasoning(input);
+    expect(result.reasoning).toBe(
+      'The user is asking about updates. I should use get_changelog.',
+    );
+    expect(result.text).toContain('Let me check');
+  });
+});
+
+// --- isGroupChatJid ---
+
+describe('isGroupChatJid', () => {
+  it('detects Telegram supergroups (negative IDs)', () => {
+    expect(isGroupChatJid('tg-j:-1003897457831')).toBe(true);
+  });
+
+  it('does NOT treat Telegram DMs as group chats', () => {
+    expect(isGroupChatJid('tg-j:365278370')).toBe(false);
+  });
+
+  it('detects WhatsApp groups', () => {
+    expect(isGroupChatJid('120363xxx@g.us')).toBe(true);
+  });
+
+  it('does NOT treat WhatsApp DMs as group chats', () => {
+    expect(isGroupChatJid('1234567890@s.whatsapp.net')).toBe(false);
+  });
+
+  it('handles the tg: prefix (non-jarvis bot)', () => {
+    expect(isGroupChatJid('tg:365278370')).toBe(false);
   });
 });

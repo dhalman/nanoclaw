@@ -113,7 +113,7 @@ export async function translateText(
         messages: [
           {
             role: 'system',
-            content: `Translate the following ${sourceName} text to ${targetName}. VERBATIM word-for-word translation — do not paraphrase, summarize, or rephrase. Return ONLY the translated text, nothing else. No explanations, no notes, no quotes, no preamble.`,
+            content: `Translate the following ${sourceName} text to ${targetName}. VERBATIM word-for-word translation — do not paraphrase, summarize, or rephrase. Return ONLY the translated text, nothing else. No explanations, no notes, no quotes, no preamble.${isAuto ? ` If the text is ALREADY in ${targetName}, reply with exactly: SAME_LANGUAGE` : ''}`,
           },
           { role: 'user', content: text },
         ],
@@ -141,6 +141,9 @@ export async function translateText(
           : null;
 
     if (!translation) return null;
+
+    // Model detected text is already in the target language
+    if (translation.toUpperCase().includes('SAME_LANGUAGE')) return null;
 
     logger.info(
       { from: sourceLanguage, to: targetLanguage, chars: translation.length },
