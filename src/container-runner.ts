@@ -10,7 +10,6 @@ import {
   CONTAINER_IMAGE,
   CONTAINER_MAX_OUTPUT_SIZE,
   CONTAINER_TIMEOUT,
-  CREDENTIAL_PROXY_PORT,
   DATA_DIR,
   DISABLE_SECRETARY,
   GROUPS_DIR,
@@ -27,7 +26,6 @@ import {
   readonlyMountArgs,
   stopContainer,
 } from './container-runtime.js';
-import { detectAuthMode } from './credential-proxy.js';
 import { validateAdditionalMounts } from './mount-security.js';
 import { RegisteredGroup } from './types.js';
 
@@ -127,14 +125,6 @@ function buildVolumeMounts(
       readonly: false,
     });
 
-    // Claude CLI inbox — writable so Andy can drop task files
-    const inboxDir = path.join(DATA_DIR, 'claude-inbox');
-    fs.mkdirSync(inboxDir, { recursive: true });
-    mounts.push({
-      hostPath: inboxDir,
-      containerPath: '/workspace/project/data/claude-inbox',
-      readonly: false,
-    });
   } else {
     // Other groups only get their own folder
     mounts.push({
@@ -155,51 +145,6 @@ function buildVolumeMounts(
     }
   }
 
-  // Per-group Claude sessions directory (isolated from other groups)
-  // Each group gets their own .claude/ to prevent cross-group session access
-  const groupSessionsDir = path.join(
-    DATA_DIR,
-    'sessions',
-    group.folder,
-    '.claude',
-  );
-  fs.mkdirSync(groupSessionsDir, { recursive: true });
-  const settingsFile = path.join(groupSessionsDir, 'settings.json');
-  if (!fs.existsSync(settingsFile)) {
-    fs.writeFileSync(
-      settingsFile,
-      JSON.stringify(
-        {
-          env: {
-            // Enable agent swarms (subagent orchestration)
-            // https://code.claude.com/docs/en/agent-teams#orchestrate-teams-of-claude-code-sessions
-            CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
-            // Load CLAUDE.md from additional mounted directories
-            // https://code.claude.com/docs/en/memory#load-memory-from-additional-directories
-            CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: '1',
-            // Enable Claude's memory feature (persists user preferences between sessions)
-            // https://code.claude.com/docs/en/memory#manage-auto-memory
-            CLAUDE_CODE_DISABLE_AUTO_MEMORY: '0',
-          },
-        },
-        null,
-        2,
-      ) + '\n',
-    );
-  }
-
-  // Sync skills from container/skills/ into each group's .claude/skills/
-  syncIfNewer(
-    path.join(process.cwd(), 'container', 'skills'),
-    path.join(groupSessionsDir, 'skills'),
-    { directories: true },
-  );
-  mounts.push({
-    hostPath: groupSessionsDir,
-    containerPath: '/home/node/.claude',
-    readonly: false,
-  });
-
   // Per-group IPC namespace: each group gets its own IPC directory
   // This prevents cross-group privilege escalation via IPC
   const groupIpcDir = resolveGroupIpcPath(group.folder);
@@ -209,24 +154,6 @@ function buildVolumeMounts(
   mounts.push({
     hostPath: groupIpcDir,
     containerPath: '/workspace/ipc',
-    readonly: false,
-  });
-
-  // Sync agent-runner source into a per-group writable location so agents
-  // can customize it without affecting other groups. Recompiled on container startup.
-  const groupAgentRunnerDir = path.join(
-    DATA_DIR,
-    'sessions',
-    group.folder,
-    'agent-runner-src',
-  );
-  syncIfNewer(
-    path.join(projectRoot, 'container', 'agent-runner', 'src'),
-    groupAgentRunnerDir,
-  );
-  mounts.push({
-    hostPath: groupAgentRunnerDir,
-    containerPath: '/app/src',
     readonly: false,
   });
 
@@ -276,23 +203,6 @@ function buildContainerArgs(
 
   if (DISABLE_SECRETARY) {
     args.push('-e', 'DISABLE_SECRETARY=1');
-  }
-
-  // Route API traffic through the credential proxy (containers never see real secrets)
-  args.push(
-    '-e',
-    `ANTHROPIC_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${CREDENTIAL_PROXY_PORT}`,
-  );
-
-  // Mirror the host's auth method with a placeholder value.
-  // API key mode: SDK sends x-api-key, proxy replaces with real key.
-  // OAuth mode:   SDK exchanges placeholder token for temp API key,
-  //               proxy injects real OAuth token on that exchange request.
-  const authMode = detectAuthMode();
-  if (authMode === 'api-key') {
-    args.push('-e', 'ANTHROPIC_API_KEY=placeholder');
-  } else {
-    args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
   }
 
   // Runtime-specific args for host gateway resolution
@@ -381,7 +291,8 @@ export async function runContainerAgent(
 
   const mounts = buildVolumeMounts(group, input.isMain);
   const safeName = group.folder.replace(/[^a-zA-Z0-9-]/g, '-');
-  const containerName = `nanoclaw-${safeName}-${Date.now()}`;
+  const instance = process.env.NANOCLAW_INSTANCE || 'staging';
+  const containerName = `nanoclaw-${instance}-${safeName}-${Date.now()}`;
   const ollamaRunner = group.containerConfig?.ollamaRunner === true;
   const containerArgs = buildContainerArgs(
     mounts,

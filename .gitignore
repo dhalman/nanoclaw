@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.npm-cache/
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Temp files
+.tmp-*
+
+# Secrets
+*.keys.json
+.env
+
+# Package lock
+package-lock.json

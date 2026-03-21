@@ -9,7 +9,6 @@ import {
   sendJarvisMessage,
   sendJarvisPhoto,
   sendJarvisVideo,
-  sendPoolMessage,
   editJarvisMessage,
   deleteJarvisMessage,
   pinJarvisMessage,
@@ -98,6 +97,7 @@ export function markUserActivity(_chatJid: string): void {
 export async function sendOrEditStatus(
   chatJid: string,
   text: string,
+  allowNew: boolean = true,
 ): Promise<void> {
   const entries = getStatusEntries();
   const entry = entries.get(chatJid);
@@ -126,7 +126,10 @@ export async function sendOrEditStatus(
     }
   }
 
-  // Send new status message, pin it — retry once after 3s if bot isn't ready
+  // If not allowed to create new (e.g. "stopped" in group chats), bail
+  if (!allowNew) return;
+
+  // Send new status message, pin it
   let sentId = await sendJarvisMessage(chatJid, text);
   if (!sentId) {
     await new Promise((r) => setTimeout(r, 3000));
@@ -175,9 +178,11 @@ export async function sendStoppedStatus(
         minute: '2-digit',
         hour12: true,
       });
+      const isGroup = chatJid.includes('-100');
       await sendOrEditStatus(
         chatJid,
         `_${assistantName} stopped — ${stopTime}_`,
+        !isGroup, // groups: edit only, never send new
       );
     } catch (err) {
       logger.debug({ chatJid, err }, 'Failed to send stopped status');
@@ -276,13 +281,6 @@ export function startIpcWatcher(deps: IpcDeps): void {
                       data.chatJid.startsWith('tg-j:'))
                   ) {
                     await sendJarvisMessage(data.chatJid, data.text);
-                  } else if (data.sender && data.chatJid.startsWith('tg:')) {
-                    await sendPoolMessage(
-                      data.chatJid,
-                      data.text,
-                      data.sender,
-                      sourceGroup,
-                    );
                   } else {
                     await deps.sendMessage(data.chatJid, data.text);
                   }

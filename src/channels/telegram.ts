@@ -36,7 +36,6 @@ export {
   sendJarvisPhoto,
   getJarvisApi,
 } from './telegram-api.js';
-export { initBotPool, sendPoolMessage } from './telegram-pool.js';
 export { initJarvisBot } from './telegram-jarvis.js';
 
 export interface TelegramChannelOpts {

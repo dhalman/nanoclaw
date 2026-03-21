@@ -6,21 +6,17 @@ import {
   CANCEL_PATTERN,
   RESTART_PATTERN,
   INSTANT_COMMAND_PATTERN,
-  CREDENTIAL_PROXY_PORT,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
   JARVIS_BOT_TOKEN,
-  TELEGRAM_BOT_POOL,
   TIMEZONE,
 } from './config.js';
 import {
-  initBotPool,
   initJarvisBot,
   reactToMessage,
   removeReaction,
   sendJarvisMessage,
 } from './channels/telegram.js';
-import { startCredentialProxy } from './credential-proxy.js';
 import {
   checkEngagement,
   disengageAll,
@@ -37,7 +33,6 @@ import { ContainerOutput, runContainerAgent } from './container-runner.js';
 import {
   cleanupOrphans,
   ensureContainerRuntimeRunning,
-  PROXY_BIND_HOST,
 } from './container-runtime.js';
 import {
   getAllRegisteredGroups,
@@ -73,11 +68,6 @@ import {
   prepareAndWriteSnapshots,
   writeGroupsSnapshot,
 } from './snapshots.js';
-import {
-  restoreRemoteControl,
-  startRemoteControl,
-  stopRemoteControl,
-} from './remote-control.js';
 import {
   isSenderAllowed,
   loadSenderAllowlist,
@@ -752,30 +742,20 @@ async function main(): Promise<void> {
   initDatabase();
   logger.info('Database initialized');
   loadState();
-  restoreRemoteControl();
-
-  // Start credential proxy (containers route API calls through this)
-  const proxyServer = await startCredentialProxy(
-    CREDENTIAL_PROXY_PORT,
-    PROXY_BIND_HOST,
-  );
 
   // Graceful shutdown handlers
   const startedAt = Date.now();
   let shutdownCalled = false;
   const shutdown = async (signal: string) => {
-    if (shutdownCalled) return; // prevent double-shutdown from multiple signals
+    if (shutdownCalled) return;
     shutdownCalled = true;
     logger.info({ signal }, 'Shutdown signal received');
     shuttingDown = true;
 
-    // Send stopped status — edits the previous online message in place.
-    // Only runs if process has been up >10s (prevents spam during crash loops).
     if (Date.now() - startedAt > 10_000) {
       await sendStoppedStatus(registeredGroups, ASSISTANT_NAME);
     }
 
-    proxyServer.close();
     await queue.shutdown(10000);
     for (const ch of channels) await ch.disconnect();
     process.exit(0);
@@ -784,59 +764,9 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
 
   // Handle /remote-control and /remote-control-end commands
-  async function handleRemoteControl(
-    command: string,
-    chatJid: string,
-    msg: NewMessage,
-  ): Promise<void> {
-    const group = registeredGroups[chatJid];
-    if (!group?.isMain) {
-      logger.warn(
-        { chatJid, sender: msg.sender },
-        'Remote control rejected: not main group',
-      );
-      return;
-    }
-
-    const channel = findChannel(channels, chatJid);
-    if (!channel) return;
-
-    if (command === '/remote-control') {
-      const result = await startRemoteControl(
-        msg.sender,
-        chatJid,
-        process.cwd(),
-      );
-      if (result.ok) {
-        await channel.sendMessage(chatJid, result.url);
-      } else {
-        await channel.sendMessage(
-          chatJid,
-          `Remote Control failed: ${result.error}`,
-        );
-      }
-    } else {
-      const result = stopRemoteControl();
-      if (result.ok) {
-        await channel.sendMessage(chatJid, 'Remote Control session ended.');
-      } else {
-        await channel.sendMessage(chatJid, result.error);
-      }
-    }
-  }
-
   // Channel callbacks (shared by all channels)
   const channelOpts = {
     onMessage: (chatJid: string, msg: NewMessage) => {
-      // Remote control commands — intercept before storage
-      const trimmed = msg.content.trim();
-      if (trimmed === '/remote-control' || trimmed === '/remote-control-end') {
-        handleRemoteControl(trimmed, chatJid, msg).catch((err) =>
-          logger.error({ err, chatJid }, 'Remote control command error'),
-        );
-        return;
-      }
-
       // Sender allowlist drop mode: discard messages from denied senders before storing
       if (!msg.is_from_me && !msg.is_bot_message && registeredGroups[chatJid]) {
         const cfg = loadSenderAllowlist();
@@ -947,17 +877,25 @@ async function main(): Promise<void> {
     channels.push(channel);
     await channel.connect();
   }
+  if (JARVIS_BOT_TOKEN) {
+    await initJarvisBot(JARVIS_BOT_TOKEN, channelOpts);
+    // When Jarvis bot is the only bot (no primary channel), register it as a channel
+    // so the message loop can route outbound messages to tg-j: JIDs.
+    if (channels.length === 0) {
+      channels.push({
+        name: 'jarvis',
+        connect: async () => {},
+        sendMessage: (jid, text) => sendJarvisMessage(jid, text).then(() => {}),
+        isConnected: () => true,
+        ownsJid: (jid) => jid.startsWith('tg-j:'),
+        disconnect: async () => {},
+      });
+    }
+  }
+
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
-  }
-
-  if (TELEGRAM_BOT_POOL.length > 0) {
-    await initBotPool(TELEGRAM_BOT_POOL);
-  }
-
-  if (JARVIS_BOT_TOKEN) {
-    await initJarvisBot(JARVIS_BOT_TOKEN, channelOpts);
   }
 
   // Start subsystems (independently of connection handler)
