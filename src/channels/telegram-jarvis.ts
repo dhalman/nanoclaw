@@ -4,9 +4,11 @@
  * Includes auto-restart polling and 60s watchdog.
  */
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 import https from 'https';
-import { Bot } from 'grammy';
+import { spawn, ChildProcess } from 'child_process';
+import { Bot, webhookCallback } from 'grammy';
 
 import { ASSISTANT_NAME, TRIGGER_PATTERN } from '../config.js';
 import { logger } from '../logger.js';
@@ -318,59 +320,188 @@ export async function initJarvisBot(
           chatJid,
           `_Welcome, ${name}! 👋 I'm ${assistantName}. Say my name to start a conversation with me — I'll stay engaged until you dismiss me. Happy to help anytime!_`,
         ).catch(() => {});
-        logger.info({ chatJid, userId: member.id, name }, 'New member welcomed');
+        logger.info(
+          { chatJid, userId: member.id, name },
+          'New member welcomed',
+        );
       }
     });
 
     // --- Reactions ---
     jarvisBot.on('message_reaction', async (ctx) => {
+      logger.info(
+        { chatId: ctx.chat.id, messageId: ctx.messageReaction?.message_id },
+        'Reaction event received',
+      );
       await handleReaction(ctx, opts);
     });
 
     const me = await jarvisBot.api.getMe();
     logger.info({ username: me.username, id: me.id }, 'Jarvis bot initialized');
 
-    // Start polling with auto-restart
-    const startJarvisPolling = () => {
+    // Try webhook mode via Cloudflare quick tunnel, fall back to polling
+    const WEBHOOK_PORT = parseInt(process.env.JARVIS_WEBHOOK_PORT || '8443', 10);
+    const ALLOWED_UPDATES: ('message' | 'edited_message' | 'message_reaction' | 'chat_member')[] = [
+      'message', 'edited_message', 'message_reaction', 'chat_member',
+    ];
+
+    // Start tunnel in background — don't block bot startup
+    // Use polling immediately, then upgrade to webhook once tunnel DNS propagates
+    await jarvisBot.api.deleteWebhook().catch(() => {});
+
+    const startPolling = () => {
       jarvisBot!
-        .start()
+        .start({ allowed_updates: ALLOWED_UPDATES })
         .then(() => {
-          logger.warn(
-            'Jarvis bot polling ended unexpectedly, restarting in 5s',
-          );
-          setTimeout(startJarvisPolling, 5000);
+          logger.warn('Jarvis polling ended, restarting in 5s');
+          setTimeout(startPolling, 5000);
         })
         .catch((err) => {
-          logger.error({ err }, 'Jarvis bot polling error, restarting in 5s');
-          setTimeout(startJarvisPolling, 5000);
+          logger.error({ err }, 'Jarvis polling error, restarting in 5s');
+          setTimeout(startPolling, 5000);
         });
     };
-    startJarvisPolling();
+    startPolling();
+    logger.info('Jarvis bot started (polling mode)');
 
-    // Watchdog: verify Telegram connection every 60s
+    // Watchdog for polling
     setInterval(async () => {
       if (!jarvisBot) return;
       try {
         await jarvisBot.api.getMe();
       } catch (err) {
-        logger.error(
-          { err },
-          'Jarvis bot watchdog: getMe failed, restarting polling',
-        );
-        try {
-          await jarvisBot?.stop();
-        } catch {
-          /* ignore */
-        }
-        startJarvisPolling();
+        logger.error({ err }, 'Jarvis watchdog failed, restarting polling');
+        try { await jarvisBot?.stop(); } catch { /* ignore */ }
+        startPolling();
       }
     }, 60_000);
+
+    // Webhook upgrade available when a stable Cloudflare tunnel domain is configured
+    // Quick tunnels (*.trycloudflare.com) don't work — Telegram can't resolve ephemeral DNS
+    const webhookDomain = process.env.JARVIS_WEBHOOK_DOMAIN;
+    if (webhookDomain) {
+      upgradeToWebhook(jarvisBot, WEBHOOK_PORT, ALLOWED_UPDATES, webhookDomain).catch((err) => {
+        logger.debug({ err }, 'Webhook upgrade failed (staying on polling)');
+      });
+    }
   } catch (err) {
     logger.error({ err }, 'Failed to initialize Jarvis bot');
     setJarvisApi(null);
     jarvisBot = null;
   }
 }
+
+let tunnelProcess: ChildProcess | null = null;
+
+/**
+ * Upgrade from polling to webhook using a stable Cloudflare tunnel domain.
+ * Requires JARVIS_WEBHOOK_DOMAIN env var (e.g., jarvis.yourdomain.com).
+ * Quick tunnels (*.trycloudflare.com) don't work — Telegram can't resolve ephemeral DNS.
+ */
+async function upgradeToWebhook(
+  bot: Bot,
+  port: number,
+  allowedUpdates: string[],
+  domain: string,
+): Promise<void> {
+  const webhookUrl = `https://${domain}/webhook`;
+
+  // Start the webhook HTTP server
+  const handleUpdate = webhookCallback(bot, 'http');
+  const server = http.createServer(async (req, res) => {
+    if (req.method === 'POST' && req.url === '/webhook') {
+      try {
+        await handleUpdate(req, res);
+      } catch (err) {
+        logger.error({ err }, 'Webhook handler error');
+        res.writeHead(500);
+        res.end();
+      }
+    } else {
+      res.writeHead(200);
+      res.end('ok');
+    }
+  });
+  server.listen(port, () => {
+    logger.info({ port }, 'Webhook server listening');
+  });
+
+  // Stop polling and register webhook
+  try {
+    await bot.stop();
+  } catch { /* may not be running */ }
+
+  await bot.api.setWebhook(webhookUrl, {
+    allowed_updates: allowedUpdates as any,
+  });
+  logger.info({ webhookUrl }, 'Upgraded to webhook mode');
+}
+
+async function startCloudflaredTunnel(port: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const cloudflared = process.env.CLOUDFLARED_BIN || '/opt/homebrew/bin/cloudflared';
+    try {
+      fs.accessSync(cloudflared, fs.constants.X_OK);
+    } catch {
+      logger.warn({ cloudflared }, 'cloudflared not found, skipping tunnel');
+      resolve(null);
+      return;
+    }
+
+    tunnelProcess = spawn(cloudflared, ['tunnel', '--url', `http://localhost:${port}`], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let resolved = false;
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        logger.error('Cloudflared tunnel URL not found within 15s');
+        resolve(null);
+      }
+    }, 15_000);
+
+    // Cloudflared prints the tunnel URL to stderr
+    tunnelProcess.stderr?.on('data', (data: Buffer) => {
+      const line = data.toString();
+      // Look for the trycloudflare.com URL
+      const match = line.match(/(https:\/\/[a-z0-9-]+\.trycloudflare\.com)/);
+      if (match && !resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        logger.info({ tunnelUrl: match[1] }, 'Cloudflare tunnel established');
+        resolve(match[1]);
+      }
+    });
+
+    tunnelProcess.on('exit', (code) => {
+      logger.warn({ code }, 'Cloudflared tunnel exited');
+      tunnelProcess = null;
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+
+    tunnelProcess.on('error', (err) => {
+      logger.error({ err }, 'Cloudflared tunnel spawn error');
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Clean up tunnel on process exit
+process.on('exit', () => {
+  if (tunnelProcess) {
+    tunnelProcess.kill();
+    tunnelProcess = null;
+  }
+});
 
 // --- Internal helpers ---
 
@@ -479,7 +610,10 @@ function autoTranslateMessage(
   }
 }
 
-async function handleReaction(ctx: any, opts: TelegramChannelOpts): Promise<void> {
+async function handleReaction(
+  ctx: any,
+  opts: TelegramChannelOpts,
+): Promise<void> {
   const chatJid = `tg-j:${ctx.chat.id}`;
   const group = opts.registeredGroups()[chatJid];
   if (!group) return;
@@ -567,8 +701,8 @@ function analyzeSentiment(
           );
         }
       }
-    } catch {
-      /* background — ignore failures */
+    } catch (err) {
+      logger.debug({ err }, 'Sentiment analysis failed (background)');
     }
   })();
 }
