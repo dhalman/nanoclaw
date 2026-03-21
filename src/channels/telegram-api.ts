@@ -5,6 +5,7 @@
 import { Api, InputFile } from 'grammy';
 
 import { logger } from '../logger.js';
+import { storeMessageDirect } from '../db.js';
 
 // Jarvis bot API instance — set by telegram-jarvis.ts on init
 let jarvisApi: Api | null = null;
@@ -80,6 +81,21 @@ export async function sendJarvisMessage(
       }
     }
     logger.info({ chatId, length: text.length }, 'Jarvis message sent');
+    // Store bot response in message DB for audit trail and feedback loop
+    try {
+      storeMessageDirect({
+        id: firstMessageId ? String(firstMessageId) : `bot-${Date.now()}`,
+        chat_jid: chatId,
+        sender: 'bot',
+        sender_name: 'Jarvis',
+        content: text,
+        timestamp: new Date().toISOString(),
+        is_from_me: true,
+        is_bot_message: true,
+      });
+    } catch (err) {
+      logger.debug({ chatId, err }, 'Failed to store bot response in DB');
+    }
     return firstMessageId;
   } catch (err) {
     logger.error({ chatId, err }, 'Failed to send Jarvis message');
