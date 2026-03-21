@@ -656,7 +656,7 @@ let currentTraceId: string | undefined;
 let containerChatJid = '';
 let containerIsMain = false;
 function isAdminChat(chatJid: string): boolean { return !isGroupChat(chatJid) && containerIsMain; }
-function isGroupChat(chatJid: string): boolean { return chatJid.includes('-'); }
+function isGroupChat(chatJid: string): boolean { return chatJid.includes(':-'); }
 
 // ---------------------------------------------------------------------------
 // Model registry — all model names in one place.

@@ -164,30 +164,11 @@ function readExpectedBuildId(): string | null {
  * Called from the host shutdown handler so the message is reliably delivered.
  */
 export async function sendStoppedStatus(
-  registeredGroups: Record<string, RegisteredGroup>,
-  assistantName: string,
+  _registeredGroups: Record<string, RegisteredGroup>,
+  _assistantName: string,
 ): Promise<void> {
-  for (const [chatJid, group] of Object.entries(registeredGroups)) {
-    if (!group.containerConfig?.ollamaRunner) continue;
-    if (!chatJid.startsWith('tg:') && !chatJid.startsWith('tg-j:')) continue;
-    try {
-      const stopTime = new Date().toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-      const isGroup = chatJid.includes('-');
-      await sendOrEditStatus(
-        chatJid,
-        `_${assistantName} stopped — ${stopTime}_`,
-        !isGroup,
-      );
-    } catch (err) {
-      logger.debug({ chatJid, err }, 'Failed to send stopped status');
-    }
-  }
+  // Disabled — was spamming group chats on every restart.
+  // Will be re-enabled once status is properly edit-only with no fallback sends.
 }
 
 export function startIpcWatcher(deps: IpcDeps): void {
