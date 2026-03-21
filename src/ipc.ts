@@ -35,6 +35,7 @@ export interface IpcDeps {
     availableGroups: AvailableGroup[],
   ) => void;
   getLastTriggerMessageId?: (chatJid: string) => number | undefined;
+  onContainerReady?: (sourceGroup: string, chatJid: string) => void;
 }
 
 let ipcWatcherRunning = false;
@@ -431,6 +432,19 @@ export function startIpcWatcher(deps: IpcDeps): void {
                     () => {},
                   );
                 }
+              } else if (
+                data.type === 'react' &&
+                data.chatJid &&
+                data.messageId &&
+                data.emoji
+              ) {
+                // Direct reaction on a specific message ID (used by container for restart etc.)
+                reactToMessage(data.chatJid, data.messageId, data.emoji).catch(
+                  () => {},
+                );
+              } else if (data.type === 'ready' && data.chatJid) {
+                // Container warmed up and ready — notify host for restart lifecycle
+                deps.onContainerReady?.(sourceGroup, data.chatJid as string);
               } else if (
                 data.type === 'thinking_start' &&
                 data.chatJid &&
