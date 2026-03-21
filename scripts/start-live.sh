@@ -38,6 +38,7 @@ set +a
 export STORE_DIR="$INSTANCE_DIR/store"
 export DATA_DIR="$INSTANCE_DIR/data"
 export GROUPS_DIR="$INSTANCE_DIR/groups"
+export BUILD_DIR="$PROJECT_ROOT/builds/live"
 
 echo "Starting NanoClaw LIVE..."
 exec /opt/homebrew/bin/node "$PROJECT_ROOT/dist/index.js"
