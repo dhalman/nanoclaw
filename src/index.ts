@@ -4,6 +4,7 @@ import path from 'path';
 import {
   ASSISTANT_NAME,
   CANCEL_PATTERN,
+  RESTART_PATTERN,
   CREDENTIAL_PROXY_PORT,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
@@ -418,6 +419,12 @@ async function runAgent(
 
 let shuttingDown = false;
 
+// Track restart message IDs so we can update 🫡→👍 when the container comes back
+const pendingRestartReactions: Record<
+  string,
+  { chatJid: string; msgId: number }
+> = {};
+
 /**
  * Pre-spawn a persistent ollama-runner container at startup.
  * The container runs startBackgroundInit() immediately, then waits in its IPC loop.
@@ -612,6 +619,14 @@ async function startMessageLoop(): Promise<void> {
             allPending.length > 0 ? allPending : groupMessages;
           const formatted = formatMessages(messagesToSend, TIMEZONE);
 
+          // Detect cancel/restart before ack reaction — these get their own reactions
+          const isCancelCommand = groupMessages.some((m) =>
+            CANCEL_PATTERN.test(m.content.trim()),
+          );
+          const isRestartCommand =
+            !isCancelCommand &&
+            groupMessages.some((m) => RESTART_PATTERN.test(m.content.trim()));
+
           // Track the last user message ID for reply-to in groups
           const lastUserMsg = [...groupMessages]
             .reverse()
@@ -622,20 +637,17 @@ async function startMessageLoop(): Promise<void> {
               if (!pendingTriggerMessageIds[chatJid])
                 pendingTriggerMessageIds[chatJid] = [];
               pendingTriggerMessageIds[chatJid].push(numId);
-              // Instant acknowledgment reaction (must be from Telegram's allowed set)
-              reactToMessage(chatJid, numId, '👀').catch((err) =>
-                logger.debug(
-                  { chatJid, numId, err },
-                  'Acknowledgment reaction failed',
-                ),
-              );
+              // Instant acknowledgment reaction — skip for cancel/restart (they have their own)
+              if (!isCancelCommand && !isRestartCommand) {
+                reactToMessage(chatJid, numId, '👀').catch((err) =>
+                  logger.debug(
+                    { chatJid, numId, err },
+                    'Acknowledgment reaction failed',
+                  ),
+                );
+              }
             }
           }
-
-          // Cancel command: pipe to container for immediate IPC cancel, then kill as backup
-          const isCancelCommand = groupMessages.some((m) =>
-            CANCEL_PATTERN.test(m.content.trim()),
-          );
           if (isCancelCommand) {
             // Pipe cancel to container so IPC poll loop catches it (~100ms)
             queue.sendMessage(chatJid, 'cancel');
@@ -649,6 +661,38 @@ async function startMessageLoop(): Promise<void> {
               groupMessages[groupMessages.length - 1].timestamp;
             saveState();
             cancelVideoBackends().catch(() => {});
+          } else if (isRestartCommand) {
+            // React 🫡 on the restart command message
+            const restartMsg = groupMessages.find((m) =>
+              RESTART_PATTERN.test(m.content.trim()),
+            );
+            if (restartMsg?.id) {
+              const restartMsgId = parseInt(restartMsg.id, 10);
+              if (!isNaN(restartMsgId)) {
+                reactToMessage(chatJid, restartMsgId, '🫡').catch(() => {});
+                pendingRestartReactions[group.folder] = {
+                  chatJid,
+                  msgId: restartMsgId,
+                };
+              }
+            }
+            // React 🙏 on the pending trigger message (if mid-task)
+            const pendingIds = pendingTriggerMessageIds[chatJid];
+            if (pendingIds?.length) {
+              for (const pid of pendingIds) {
+                reactToMessage(chatJid, pid, '🙏').catch(() => {});
+              }
+              pendingTriggerMessageIds[chatJid] = [];
+            }
+            // Pipe raw 'restart' so container IPC poll loop matches it instantly
+            queue.sendMessage(chatJid, 'restart');
+            // Only advance past the restart message — leave pending non-restart
+            // messages unprocessed so they get re-queued to the new container
+            const restartTimestamp =
+              restartMsg?.timestamp ||
+              groupMessages[groupMessages.length - 1].timestamp;
+            lastAgentTimestamp[chatJid] = restartTimestamp;
+            saveState();
           } else if (queue.sendMessage(chatJid, formatted)) {
             logger.debug(
               { chatJid, count: messagesToSend.length },
@@ -948,6 +992,14 @@ async function main(): Promise<void> {
     writeGroupsSnapshot,
     getLastTriggerMessageId: (chatJid: string) =>
       pendingTriggerMessageIds[chatJid]?.[0],
+    onContainerReady: (sourceGroup: string) => {
+      // Swap 🫡→👍 on the restart message now that the container is warmed up
+      const pending = pendingRestartReactions[sourceGroup];
+      if (pending) {
+        reactToMessage(pending.chatJid, pending.msgId, '👍').catch(() => {});
+        delete pendingRestartReactions[sourceGroup];
+      }
+    },
   });
   queue.setProcessMessagesFn(processGroupMessages);
 

@@ -95,6 +95,9 @@ export const DISMISS_PATTERN =
 export const CANCEL_PATTERN =
   /^\s*(\/stop|\/cancel|stop|cancel|nevermind)\s*$/i;
 
+// Restart command: exit container cleanly, preserve history
+export const RESTART_PATTERN = /^\s*(?:restart|reboot)\s*$/i;
+
 // Timezone for scheduled tasks (cron expressions, etc.)
 // Uses system timezone by default
 export const TIMEZONE =

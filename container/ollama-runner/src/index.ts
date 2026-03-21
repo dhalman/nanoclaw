@@ -1426,11 +1426,11 @@ const DIRECT_PATTERNS: Array<{
     format: (r) => r,
   },
   {
-    // "restart", "reboot", "reset"
-    pattern: /^\s*(?:restart|reboot|reset)\s*$/i,
+    // "reset", "clear history", "wipe history" — destructive: clears conversation
+    pattern: /^\s*(?:reset|clear\s*history|wipe\s*history|forget\s*everything)\s*$/i,
     tool: 'restart_self',
     args: () => ({}),
-    format: () => 'Restarting now... 🔄',
+    format: () => 'History cleared. Restarting fresh... 🔄',
   },
 ];
 
@@ -3101,6 +3101,7 @@ async function runWithConcurrentPoll(
   const wrappedMain = mainTask.then((r) => { finished = true; return r; }).catch((e) => { finished = true; throw e; });
 
   const CANCEL_PATTERN = /^\s*(?:\/stop|\/cancel|stop|cancel|nevermind|abort)\s*$/i;
+  const RESTART_PATTERN = /^\s*(?:restart|reboot|reset)\s*$/i;
   let cancelled = false;
 
   const pollLoop = async () => {
@@ -3110,10 +3111,22 @@ async function runWithConcurrentPoll(
       const messages = drainIpcInput();
       if (finished && messages.length === 0) break;
       for (const msg of messages) {
-        // Immediate cancel: detect cancel commands in IPC input
         // Extract text from XML if present
         const textMatch = msg.match(/<message[^>]*>([\s\S]*?)<\/message>/);
         const rawText = textMatch ? textMatch[1].trim() : msg.trim();
+
+        // Immediate restart: bypasses coordinator, preserves history, exits
+        // No text response — host handles reactions (🫡 on restart, ⏳ on pending)
+        if (RESTART_PATTERN.test(rawText)) {
+          log('Restart detected in IPC — restarting immediately (history preserved)');
+          cancelled = true;
+          fs.mkdirSync(IPC_INPUT_DIR, { recursive: true });
+          fs.writeFileSync(IPC_INPUT_CLOSE_SENTINEL, '');
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+
+        // Immediate cancel: detect cancel commands in IPC input
         if (CANCEL_PATTERN.test(rawText)) {
           log('Cancel detected in IPC — aborting immediately');
           cancelled = true;
@@ -3305,10 +3318,6 @@ async function main(): Promise<void> {
       // This must complete BEFORE we accept messages — otherwise the first real request
       // pays the full prompt-processing cost (~8s for the coordinator's 6KB system + 473-line tools).
       // Subsequent requests reuse the cached KV prefix and only process incremental tokens.
-      // Warm with the exact payload the first real request will use (low-complexity path).
-      // Ollama caches KV states per model based on the prompt prefix — if the warm-up
-      // matches the production prefix (system prompt + tools), the first real request
-      // reuses the cached KV and only processes the new user message tokens.
       const warmups = [MODELS.SECRETARY, MODELS.COORDINATOR].map(async (wm) => {
         const isCoord = wm === MODELS.COORDINATOR;
         const warmStart = Date.now();
@@ -3334,6 +3343,9 @@ async function main(): Promise<void> {
         } catch { log(`${wm} warm failed (${Date.now() - warmStart}ms)`); }
       });
       await Promise.all(warmups);
+
+      // Signal host that we're warmed up and ready
+      sendIpc(`ready-${Date.now()}.json`, { type: 'ready', chatJid, buildId });
 
       makeServiceMonitor(
         'Ollama',
@@ -3452,6 +3464,21 @@ async function main(): Promise<void> {
         }
 
       try { // per-message try/catch — errors send user-facing message, don't crash container
+
+      // Pre-classify intercept: restart/reboot exits immediately, no classification needed.
+      // Does NOT clear conversation history — that's a separate "reset" command.
+      {
+        const allMsgs = [...prompt.matchAll(/<message[^>]*>([\s\S]*?)<\/message>/g)];
+        const lastText = (allMsgs.length > 0 ? allMsgs[allMsgs.length - 1][1] : prompt).trim();
+        if (/^\s*(?:restart|reboot)\s*$/i.test(lastText)) {
+          log('[instant] restart — exiting immediately (history preserved)');
+          // No text response — host handles reactions (🫡 on restart, ⏳ on pending)
+          fs.mkdirSync(IPC_INPUT_DIR, { recursive: true });
+          fs.writeFileSync(IPC_INPUT_CLOSE_SENTINEL, '');
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+      }
 
       const traceId = newTraceId();
       currentTraceId = traceId;
