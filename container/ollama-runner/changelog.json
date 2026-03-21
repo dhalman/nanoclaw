@@ -1,4 +1,19 @@
 {
+  "0.3.97": {
+    "date": "2026-03-21",
+    "title": "NC-048: Error recovery \u2014 clear thinking, retry on failure, notify user",
+    "notes": [
+      "NC-048: Error recovery \u2014 clear thinking, retry on failure, notify user",
+      "fix: instant commands, pattern tightening, remove setMyName (NC-048 partial)",
+      "fix: tighten version pattern, minor cleanup",
+      "feat: store bot responses in message DB (NC-023)",
+      "feat: instant restart with reaction lifecycle (NC-008, NC-040, NC-045)",
+      "perf: cold-start elimination + ollama timing observability (NC-017, NC-027)",
+      "feat: build sandbox, deploy isolation, crash protection (NC-100, NC-101, NC-102, NC-037, NC-041)",
+      "chore: move ignore rules to local exclude, remove .gitignore",
+      "chore: gitignore group runtime data (logs, history, perf)"
+    ]
+  },
   "0.3.96": {
     "date": "2026-03-20",
     "title": "Build 0.3.96",
