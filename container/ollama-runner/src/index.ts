@@ -1398,15 +1398,15 @@ const DIRECT_PATTERNS: Array<{
     },
   },
   {
-    // "trace", "show traces", "last request", "handoff sequence", "request trace"
-    pattern: /\b(?:(?:show|get|last|recent)\s*(?:request\s*)?traces?|handoff\s*sequence|request\s*trace|trace\s*(?:the\s*)?(?:last|recent))\b/i,
+    // Standalone: "trace", "show traces", "last request", "request trace"
+    pattern: /^\s*(?:(?:show|get|last|recent)\s*(?:request\s*)?traces?|handoff\s*sequence|request\s*trace|trace\s*(?:the\s*)?(?:last|recent))\s*$/i,
     tool: 'get_trace',
     args: () => ({ count: 5 }),
     format: (r) => r,
   },
   {
-    // "status", "are you online", "service status", "check services", "health check"
-    pattern: /\b(?:(?:service\s*)?status|health(?:\s*check)?|backends?|check\s+services?|are you (?:online|up|ok|alive))\b/i,
+    // Standalone: "status", "service status", "health check", "are you online"
+    pattern: /^\s*(?:(?:service\s*)?status|health(?:\s*check)?|backends?|check\s+services?|are you (?:online|up|ok|alive))\s*[?]?\s*$/i,
     tool: 'service_status',
     args: () => ({}),
     format: (r) => r,
@@ -1419,8 +1419,8 @@ const DIRECT_PATTERNS: Array<{
     format: (r) => r,
   },
   {
-    // "perf", "performance", "how fast", "response time", "benchmarks"
-    pattern: /\b(?:perf(?:ormance)?|benchmarks?|response time|how fast|speed|latency)\b/i,
+    // Standalone: "perf", "performance", "how fast", "response time"
+    pattern: /^\s*(?:perf(?:ormance)?|benchmarks?|response time|how fast|speed|latency)\s*[?]?\s*$/i,
     tool: 'perf_summary',
     args: () => ({}),
     format: (r) => r,
@@ -1448,11 +1448,9 @@ async function trySecretaryDirect(
   chatJid: string,
   groupFolder: string,
 ): Promise<string | null> {
-  // Extract the last message's text content from the XML prompt
-  const allMessages = [...prompt.matchAll(/<message[^>]*>([\s\S]*?)<\/message>/g)];
-  const userText = allMessages.length > 0
-    ? allMessages[allMessages.length - 1][1].trim()
-    : prompt;
+  // Extract the last message's raw text content from the XML prompt
+  const lastMsgMatch = prompt.match(/.*<message[^>]*>([^<]*)<\/message>/s);
+  const userText = (lastMsgMatch ? lastMsgMatch[1] : prompt.replace(/<[^>]+>/g, '')).trim();
   if (!userText || userText.length > 300) return null;
 
   // Web-direct: simple factual queries that just need a search
@@ -2039,8 +2037,8 @@ export async function handleToolCall(
 
       return selectedVersions.map((v) => {
         const entry = changelog[v];
-        const isCurrent = v === buildId;
-        const header = `*v${v}${isCurrent ? ' (current)' : ''} — ${entry.title}*`;
+        const isCurrent = v === buildId || v === buildId.split('-')[0];
+        const header = `*v${isCurrent ? buildId : v}${isCurrent ? ' (current)' : ''} — ${entry.title}*`;
         const dateStr = `_${entry.date}_`;
         const notes = entry.notes.map((n) => `• ${n}`).join('\n');
         return `${header}\n${dateStr}\n\n${notes}`;
@@ -3467,29 +3465,52 @@ async function main(): Promise<void> {
           log(`Processing messages from: ${senderGroup.sender} (${prompt.length} chars)`);
         }
 
+      // ackId declared before try so catch can clear the correct thinking message
+      const ackId = `ack-${Date.now()}`;
+
       try { // per-message try/catch — errors send user-facing message, don't crash container
 
-      // Pre-classify intercept: restart/reboot exits immediately, no classification needed.
-      // Does NOT clear conversation history — that's a separate "reset" command.
+      // Pre-classify intercept: handle prefix commands instantly, no classification needed.
+      // These bypass the coordinator entirely — zero inference, sub-millisecond.
       {
-        const allMsgs = [...prompt.matchAll(/<message[^>]*>([\s\S]*?)<\/message>/g)];
-        const lastText = (allMsgs.length > 0 ? allMsgs[allMsgs.length - 1][1] : prompt).trim();
+        // Extract raw user text from the last XML message, stripping tags simply
+        const lastMsgMatch = prompt.match(/.*<message[^>]*>([^<]*)<\/message>/s);
+        const lastText = (lastMsgMatch ? lastMsgMatch[1] : prompt.replace(/<[^>]+>/g, '')).trim();
+
+        // Restart: exit immediately, preserve history
         if (/^\s*(?:restart|reboot)\s*$/i.test(lastText)) {
           log('[instant] restart — exiting immediately (history preserved)');
-          // No text response — host handles reactions (🫡 on restart, ⏳ on pending)
           fs.mkdirSync(IPC_INPUT_DIR, { recursive: true });
           fs.writeFileSync(IPC_INPUT_CLOSE_SENTINEL, '');
           setTimeout(() => process.exit(0), 100);
           return;
         }
+        let handled = false;
+        for (const { pattern, tool, args, format } of DIRECT_PATTERNS) {
+          const match = lastText.match(pattern);
+          if (!match) continue;
+          try {
+            const start = Date.now();
+            const result = await handleToolCall(tool, args(match, lastText), chatJid, groupFolder);
+            const response = format(result);
+            log(`[instant] ${tool} → ${Date.now() - start}ms (pre-classify)`);
+            const userMsg: Message = { role: 'user', content: prompt };
+            history = [...history, userMsg, { role: 'assistant', content: response }];
+            saveHistory(history);
+            writeOutput({ status: 'success', result: response, newSessionId: sessionId });
+            writeOutput({ status: 'success', result: null, newSessionId: sessionId });
+            handled = true;
+          } catch (err) {
+            log(`[instant] ${tool} failed: ${err instanceof Error ? err.message : String(err)} — falling through to coordinator`);
+          }
+          break;
+        }
+        if (handled) continue;
       }
 
       const traceId = newTraceId();
       currentTraceId = traceId;
       const cls = await classifyMessage(prompt, !!currentImages?.length, traceId);
-
-      // Send status indicator after classification (one message, no doubles)
-      const ackId = `ack-${Date.now()}`;
       fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
       const { model, think: thinking, taskType, taskTypeRich, temperature } = cls;
       log(`Model: ${model} think=${thinking} task=${taskTypeRich} complexity=${cls.complexity} prompt_len=${prompt.length}${currentImages ? ` images=${currentImages.length}` : ''}`);
@@ -3703,11 +3724,12 @@ async function main(): Promise<void> {
             JSON.stringify({ type: 'message', chatJid, text: `I ran into an issue processing that request. Please try again.` }),
           );
         } catch { /* best effort */ }
-        // Clear any lingering thinking/status messages
+        // Clear the thinking/status indicator using the correct ackId
         try {
+          fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
           fs.writeFileSync(
             path.join(IPC_MSG_DIR, `err-clear-${Date.now()}.json`),
-            JSON.stringify({ type: 'thinking_clear', thinkingId: `ack-${Date.now()}` }),
+            JSON.stringify({ type: 'thinking_clear', thinkingId: ackId }),
           );
         } catch { /* best effort */ }
       }

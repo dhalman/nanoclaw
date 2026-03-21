@@ -58,8 +58,12 @@ mkdir -p "$STAGING_DIR"
 cd "$PROJECT_ROOT/container/ollama-runner"
 /opt/homebrew/bin/npx tsc --outDir "$STAGING_DIR/dist"
 
+# Stamp staging with version from package.json + git short hash
+STAGING_VERSION=$(/opt/homebrew/bin/node -p "require('$PROJECT_ROOT/package.json').version" 2>/dev/null || echo "0.0.0")
+STAGING_HASH=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+echo "${STAGING_VERSION}-${STAGING_HASH}" > "$STAGING_DIR/build-id.txt"
+
 # Copy non-TS assets needed at runtime
-cp build-id.txt "$STAGING_DIR/" 2>/dev/null || true
 cp changelog.json "$STAGING_DIR/" 2>/dev/null || true
 
 cd "$SCRIPT_DIR"
