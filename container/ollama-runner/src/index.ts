@@ -2884,17 +2884,32 @@ async function _callOllamaInner(
     stream: false,
   });
 
-  let response = await withTimeout(
-    fetch(`${OLLAMA_HOST}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: requestBody,
-    }),
-    TOOL_TIMEOUT_MS,
-    `callOllama(${model})`,
-  );
+  // Retry once on network errors (fetch failed) or 500 errors
+  let response: Response;
+  try {
+    response = await withTimeout(
+      fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+      }),
+      TOOL_TIMEOUT_MS,
+      `callOllama(${model})`,
+    );
+  } catch (fetchErr) {
+    log(`Ollama fetch failed, retrying once: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+    await new Promise((r) => setTimeout(r, 2000));
+    response = await withTimeout(
+      fetch(`${OLLAMA_HOST}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+      }),
+      TOOL_TIMEOUT_MS,
+      `callOllama retry(${model})`,
+    );
+  }
 
-  // Retry once on 500 errors — Ollama can transiently fail on concurrent requests
   if (!response.ok && response.status === 500) {
     const errBody = await response.text();
     log(`Ollama 500 error, retrying once: ${errBody.slice(0, 120)}`);
@@ -3709,24 +3724,26 @@ async function main(): Promise<void> {
       writeOutput({ status: 'success', result: null, newSessionId: sessionId });
 
       } catch (msgErr) {
-        // Per-message error: send error to user, continue processing next messages
+        // Per-message error: notify user, clear thinking, continue to next message
         const errMsg = msgErr instanceof Error ? msgErr.message : String(msgErr);
         log(`Error processing message: ${errMsg}`);
         logPerf({
           type: 'error', buildId, timestamp: new Date().toISOString(),
-          category: errMsg.includes('timed out') || errMsg.includes('ECONNREFUSED') ? 'environmental' : 'code',
+          category: errMsg.includes('timed out') || errMsg.includes('fetch failed') || errMsg.includes('ECONNREFUSED') ? 'environmental' : 'code',
           error: errMsg.slice(0, 200),
         });
+        // Send error to user via both IPC (for host relay) and stdout (for streaming output)
+        const errorText = '_I ran into an issue processing that request. Please try again._';
+        writeOutput({ status: 'success', result: errorText, newSessionId: sessionId });
         try {
           fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
           fs.writeFileSync(
             path.join(IPC_MSG_DIR, `err-${Date.now()}.json`),
-            JSON.stringify({ type: 'message', chatJid, text: `I ran into an issue processing that request. Please try again.` }),
+            JSON.stringify({ type: 'message', chatJid, text: errorText, buildId }),
           );
         } catch { /* best effort */ }
         // Clear the thinking/status indicator using the correct ackId
         try {
-          fs.mkdirSync(IPC_MSG_DIR, { recursive: true });
           fs.writeFileSync(
             path.join(IPC_MSG_DIR, `err-clear-${Date.now()}.json`),
             JSON.stringify({ type: 'thinking_clear', thinkingId: ackId }),

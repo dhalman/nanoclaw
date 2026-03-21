@@ -571,6 +571,55 @@ describe('callOllama', () => {
     const result = await callOllama(model, messages, chatJid, groupFolder);
     expect(result).toContain('Recovered');
   });
+
+  it('retries once on network fetch failure then succeeds', async () => {
+    // First call throws (network error / fetch failed)
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+    // Retry succeeds
+    mockFetch.mockResolvedValueOnce(ollamaTextResponse('Recovered from network error!'));
+
+    const result = await callOllama(model, messages, chatJid, groupFolder);
+    expect(result).toContain('Recovered from network error');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws when both fetch attempts fail with network error', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed again'));
+
+    await expect(callOllama(model, messages, chatJid, groupFolder)).rejects.toThrow(
+      'fetch failed',
+    );
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not produce duplicate responses on successful retry', async () => {
+    // Network error then success — should return exactly one response
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+    mockFetch.mockResolvedValueOnce(ollamaTextResponse('Single response'));
+
+    const result = await callOllama(model, messages, chatJid, groupFolder);
+    expect(result).toBe('Single response');
+    // Only 2 fetch calls (original + retry), not 3
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries network error then handles 500 on retry', async () => {
+    // First: network error
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
+    // Retry returns 500
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: async () => 'Server error on retry',
+    });
+    // 500 retry succeeds
+    mockFetch.mockResolvedValueOnce(ollamaTextResponse('Third time lucky'));
+
+    const result = await callOllama(model, messages, chatJid, groupFolder);
+    expect(result).toContain('Third time lucky');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
 });
 
 // ---------------------------------------------------------------------------
