@@ -26,7 +26,7 @@ export interface PerfMetric {
   ollamaWarmMs?: number;
   // Classify metrics
   classifyMs?: number;
-  classifyMethod?: 'keyword' | 'secretary' | 'regex_fallback';
+  classifyMethod?: 'keyword' | 'secretary' | 'regex_fallback' | 'trivial';
   // Response metrics
   model?: string;
   think?: boolean;

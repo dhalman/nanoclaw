@@ -329,7 +329,7 @@ describe('classifyMessage', () => {
 
   it('includes needs_web instruction in classify prompt', async () => {
     mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
-    await classifyMessage('test', false);
+    await classifyMessage('what is the capital of France?', false);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     const prompt: string = body.messages[0].content;
     expect(prompt).toContain('needs_web');
@@ -359,7 +359,7 @@ describe('classifyMessage', () => {
 
   it('falls back to regex when fetch returns non-ok status', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 503, text: async () => '' });
-    const cls = await classifyMessage('hello', false);
+    const cls = await classifyMessage('explain quantum computing', false);
     expect(cls.model).toBe('qwen3.5:35b');
   });
 
@@ -375,20 +375,20 @@ describe('classifyMessage', () => {
     ];
     for (const [task_type, expected] of cases) {
       mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson({ task_type })));
-      const cls = await classifyMessage('test', false);
+      const cls = await classifyMessage('explain this concept in detail', false);
       expect(cls.temperature, `${task_type} temperature`).toBe(expected);
     }
   });
 
   it('sets usedSecretary=true on successful classify call', async () => {
     mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson({ model: 'default' })));
-    const cls = await classifyMessage('hello', false);
+    const cls = await classifyMessage('what should I do about this error?', false);
     expect(cls.usedSecretary).toBe(true);
   });
 
   it('uses the configured secretary model as the classifier', async () => {
     mockFetch.mockResolvedValueOnce(ollamaTextResp(classifyJson()));
-    await classifyMessage('hello world', false);
+    await classifyMessage('explain how this feature works', false);
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.model).toBe('gemma3:4b');
   });
@@ -527,6 +527,34 @@ describe('handleToolCall — get_help', () => {
   });
 });
 
+
+// ---------------------------------------------------------------------------
+// Trivial message fast path
+// ---------------------------------------------------------------------------
+
+describe('trivial message detection', () => {
+  it('skips classification for greetings', async () => {
+    const cls = await classifyMessage('hi jarvis', false);
+    expect(cls.usedSecretary).toBe(false);
+    expect(cls.taskTypeRich).toBe('chat');
+    expect(cls.complexity).toBe('low');
+  });
+
+  it('skips classification for short acknowledgments', async () => {
+    for (const msg of ['ok', 'thanks', 'cool', 'nice', 'yep', 'lol']) {
+      const cls = await classifyMessage(msg, false);
+      expect(cls.usedSecretary).toBe(false);
+    }
+  });
+
+  it('does NOT skip classification for real questions', async () => {
+    mockFetch.mockResolvedValueOnce(
+      ollamaTextResp(classifyJson({ model: 'default', complexity: 'low' })),
+    );
+    const cls = await classifyMessage('what is the weather in tokyo?', false);
+    expect(cls.usedSecretary).toBe(true);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Model-tool compatibility

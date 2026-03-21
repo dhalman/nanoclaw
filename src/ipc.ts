@@ -560,7 +560,7 @@ export function startIpcWatcher(deps: IpcDeps): void {
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
       processIpcFiles();
-    }, 50); // 50ms debounce to batch rapid writes
+    }, 10); // 10ms debounce to batch rapid writes
   };
 
   // Watch each group's IPC directories

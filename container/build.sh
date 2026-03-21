@@ -157,6 +157,9 @@ if [ "$BAKED_ID" != "$BUILD_ID" ]; then
 fi
 echo "✅ Image verified: build ID ${BAKED_ID}"
 
+# Clear build-status so containers don't warn about stale images
+echo "{\"status\":\"ok\",\"at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"${BUILD_ID}\"}" > "$PROJECT_ROOT/.build-status.json"
+
 echo ""
 echo "Build complete!"
 echo "Image: ${IMAGE_NAME}:${TAG}"

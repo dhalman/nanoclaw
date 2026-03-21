@@ -21,7 +21,7 @@ export const ASSISTANT_HAS_OWN_NUMBER =
 // is used (false) or bypassed in favor of keyword classification (true).
 export const DISABLE_SECRETARY =
   (process.env.DISABLE_SECRETARY || envConfig.DISABLE_SECRETARY) === '1';
-export const POLL_INTERVAL = 2000;
+export const POLL_INTERVAL = 1000;
 export const SCHEDULER_POLL_INTERVAL = 60000;
 
 // Absolute paths needed for container mounts

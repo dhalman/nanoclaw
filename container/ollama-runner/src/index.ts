@@ -755,7 +755,7 @@ const INFERENCE_MAX_MESSAGES = 20;     // tight — fast responses over deep con
 const INFERENCE_MAX_CHARS = 24_000;    // ~6K tokens — keeps inference fast
 const MSG_CONTENT_MAX_CHARS = 2_000;   // truncate tool outputs and long messages
 const SECRETARY_FEEDBACK_MAX = 50; // rolling store; only non-correct grades kept
-const IPC_POLL_MS = 100;
+const IPC_POLL_MS = 50;
 
 const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
 const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
@@ -992,6 +992,23 @@ export async function classifyMessage(text: string, hasImages: boolean, traceId?
     return { model: MODELS.VISION, think: false, taskType: 'analysis', taskTypeRich: 'analysis', temperature: 0.3, complexity: 'low', usedSecretary: false };
   }
 
+  // Trivial messages — skip classification entirely, route straight to coordinator
+  // Saves ~0.8-1.7s for greetings, acknowledgments, short phrases
+  const stripped = text.replace(/<[^>]+>/g, '').trim();
+  const lastLine = stripped.split('\n').pop()?.trim() || stripped;
+  const TRIVIAL = /^(?:h(?:i|ello|ey|owdy)|yo|sup|thanks?|ty|ok(?:ay)?|cool|nice|got it|sure|yep|yeah|yes|no|nah|lol|haha|wow|whats up|what'?s up|gm|good (?:morning|evening|night|afternoon)|jarvis\??|test+)[\s!?.]*$/i;
+  if (TRIVIAL.test(lastLine) && lastLine.length < 30) {
+    log(`[classify] trivial→qwen3.5:35b (skipped secretary)`);
+    logPerf({
+      type: 'classify', traceId, buildId, timestamp: new Date().toISOString(),
+      classifyMs: 0, classifyMethod: 'trivial',
+      routingModel: 'trivial', routedTo: MODELS.COORDINATOR,
+      routingReason: 'trivial message, skipped classification',
+      promptExcerpt: lastLine.slice(0, 60),
+    });
+    return { model: MODELS.COORDINATOR, think: false, taskType: 'analysis', taskTypeRich: 'chat', temperature: 0.5, complexity: 'low', needsWeb: false, usedSecretary: false };
+  }
+
   // Fast keyword classification — zero inference, sub-millisecond.
   // Detects task type, complexity, needs_web, and think mode from keywords.
   // The coordinator gets a route hint injected into context to act on.
@@ -1049,7 +1066,7 @@ Message: ${JSON.stringify(text.slice(0, 400))}`;
         model: MODELS.SECRETARY,
         messages: [{ role: 'user', content: classifyPrompt }],
         keep_alive: KEEP_ALIVE_PINNED,
-        options: { num_ctx: 1024, temperature: 0.1 },
+        options: { num_ctx: 512, temperature: 0.1, num_predict: 80 },
         stream: false,
       }),
       signal: AbortSignal.timeout(5000),
@@ -3066,8 +3083,8 @@ async function runWithConcurrentPoll(
   let cancelled = false;
 
   const pollLoop = async () => {
-    // 2s startup delay — skip polling overhead for very fast responses.
-    await new Promise<void>((r) => setTimeout(r, 2000));
+    // Brief startup delay — skip polling overhead for very fast responses.
+    await new Promise<void>((r) => setTimeout(r, 500));
     while (!finished && !cancelled) {
       const messages = drainIpcInput();
       if (finished && messages.length === 0) break;
@@ -3238,7 +3255,7 @@ async function main(): Promise<void> {
         const buildStatusFile = `${WORKSPACE_PROJECT}/.build-status.json`;
         if (fs.existsSync(buildStatusFile)) {
           const bs = JSON.parse(fs.readFileSync(buildStatusFile, 'utf-8')) as { status: string; at: string };
-          if (bs.status === 'failed') {
+          if (bs.status === 'failed' && isAdminChat(chatJid)) {
             sendIpc(`build-fail-${Date.now()}.json`, {
               type: 'message',
               chatJid,
@@ -3270,7 +3287,8 @@ async function main(): Promise<void> {
         fetch(`${OLLAMA_HOST}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: wm, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 0, num_ctx: 512 }, stream: false }),
+          // Warm with the same num_ctx used in production — Ollama re-allocates KV cache on ctx change
+          body: JSON.stringify({ model: wm, messages: [{ role: 'user', content: '' }], keep_alive: KEEP_ALIVE_PINNED, options: { num_predict: 1, num_ctx: wm === MODELS.COORDINATOR ? 8192 : 1024 }, stream: false }),
         }).then(() => log(`${wm} warmed`)).catch(() => {});
       }
 

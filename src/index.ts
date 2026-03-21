@@ -483,7 +483,7 @@ function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
   queue.prespawn(chatJid, group.folder, doSpawn).finally(() => {
     if (!shuttingDown) {
       // Brief pause before restart so deploy's stop/start cycle doesn't double-spawn
-      setTimeout(() => prespawnGroup(chatJid, group), 3000);
+      setTimeout(() => prespawnGroup(chatJid, group), 1000);
     }
   });
 }
@@ -674,7 +674,10 @@ async function main(): Promise<void> {
 
   // Graceful shutdown handlers
   const startedAt = Date.now();
+  let shutdownCalled = false;
   const shutdown = async (signal: string) => {
+    if (shutdownCalled) return; // prevent double-shutdown from multiple signals
+    shutdownCalled = true;
     logger.info({ signal }, 'Shutdown signal received');
     shuttingDown = true;
 

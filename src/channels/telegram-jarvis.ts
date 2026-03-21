@@ -340,10 +340,16 @@ export async function initJarvisBot(
     logger.info({ username: me.username, id: me.id }, 'Jarvis bot initialized');
 
     // Try webhook mode via Cloudflare quick tunnel, fall back to polling
-    const WEBHOOK_PORT = parseInt(process.env.JARVIS_WEBHOOK_PORT || '8443', 10);
-    const ALLOWED_UPDATES: ('message' | 'edited_message' | 'message_reaction' | 'chat_member')[] = [
-      'message', 'edited_message', 'message_reaction', 'chat_member',
-    ];
+    const WEBHOOK_PORT = parseInt(
+      process.env.JARVIS_WEBHOOK_PORT || '8443',
+      10,
+    );
+    const ALLOWED_UPDATES: (
+      | 'message'
+      | 'edited_message'
+      | 'message_reaction'
+      | 'chat_member'
+    )[] = ['message', 'edited_message', 'message_reaction', 'chat_member'];
 
     // Start tunnel in background — don't block bot startup
     // Use polling immediately, then upgrade to webhook once tunnel DNS propagates
@@ -371,7 +377,11 @@ export async function initJarvisBot(
         await jarvisBot.api.getMe();
       } catch (err) {
         logger.error({ err }, 'Jarvis watchdog failed, restarting polling');
-        try { await jarvisBot?.stop(); } catch { /* ignore */ }
+        try {
+          await jarvisBot?.stop();
+        } catch {
+          /* ignore */
+        }
         startPolling();
       }
     }, 60_000);
@@ -380,7 +390,12 @@ export async function initJarvisBot(
     // Quick tunnels (*.trycloudflare.com) don't work — Telegram can't resolve ephemeral DNS
     const webhookDomain = process.env.JARVIS_WEBHOOK_DOMAIN;
     if (webhookDomain) {
-      upgradeToWebhook(jarvisBot, WEBHOOK_PORT, ALLOWED_UPDATES, webhookDomain).catch((err) => {
+      upgradeToWebhook(
+        jarvisBot,
+        WEBHOOK_PORT,
+        ALLOWED_UPDATES,
+        webhookDomain,
+      ).catch((err) => {
         logger.debug({ err }, 'Webhook upgrade failed (staying on polling)');
       });
     }
@@ -429,7 +444,9 @@ async function upgradeToWebhook(
   // Stop polling and register webhook
   try {
     await bot.stop();
-  } catch { /* may not be running */ }
+  } catch {
+    /* may not be running */
+  }
 
   await bot.api.setWebhook(webhookUrl, {
     allowed_updates: allowedUpdates as any,
@@ -439,7 +456,8 @@ async function upgradeToWebhook(
 
 async function startCloudflaredTunnel(port: number): Promise<string | null> {
   return new Promise((resolve) => {
-    const cloudflared = process.env.CLOUDFLARED_BIN || '/opt/homebrew/bin/cloudflared';
+    const cloudflared =
+      process.env.CLOUDFLARED_BIN || '/opt/homebrew/bin/cloudflared';
     try {
       fs.accessSync(cloudflared, fs.constants.X_OK);
     } catch {
@@ -448,9 +466,13 @@ async function startCloudflaredTunnel(port: number): Promise<string | null> {
       return;
     }
 
-    tunnelProcess = spawn(cloudflared, ['tunnel', '--url', `http://localhost:${port}`], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    tunnelProcess = spawn(
+      cloudflared,
+      ['tunnel', '--url', `http://localhost:${port}`],
+      {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
 
     let resolved = false;
     const timeout = setTimeout(() => {
