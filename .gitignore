@@ -3,6 +3,7 @@ node_modules/
 .npm-cache/
 # Build output
 dist/
+builds/
 
 # Local data & auth
 store/
@@ -23,6 +24,11 @@ groups/telegram_ollama/*
 !groups/global/CLAUDE.md
 !groups/telegram_main/CLAUDE.md
 !groups/telegram_ollama/CLAUDE.md
+
+# Group runtime data (auto-generated, never committed)
+groups/**/*.jsonl
+groups/**/*.json
+groups/**/logs/
 
 nanoclaw.db
 .mcp.json
