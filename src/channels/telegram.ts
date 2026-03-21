@@ -304,15 +304,6 @@ export class TelegramChannel implements Channel {
               `  Send /chatid to the bot to get a chat's registration ID\n`,
             );
           }
-          this.bot!.api.getMyName()
-            .then((result: { name: string }) => {
-              if (result.name !== ASSISTANT_NAME) {
-                return this.bot!.api.setMyName(ASSISTANT_NAME);
-              }
-            })
-            .catch((err: unknown) => {
-              logger.warn({ err }, 'Failed to check/set bot name in Telegram');
-            });
           if (resolveConnect) {
             resolveConnect();
             resolveConnect = null;

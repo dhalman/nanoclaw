@@ -5,6 +5,7 @@ import {
   ASSISTANT_NAME,
   CANCEL_PATTERN,
   RESTART_PATTERN,
+  INSTANT_COMMAND_PATTERN,
   CREDENTIAL_PROXY_PORT,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
@@ -638,7 +639,10 @@ async function startMessageLoop(): Promise<void> {
                 pendingTriggerMessageIds[chatJid] = [];
               pendingTriggerMessageIds[chatJid].push(numId);
               // Instant acknowledgment reaction — skip for cancel/restart (they have their own)
-              if (!isCancelCommand && !isRestartCommand) {
+              const isInstantCommand = groupMessages.some((m) =>
+                INSTANT_COMMAND_PATTERN.test(m.content.trim()),
+              );
+              if (!isCancelCommand && !isRestartCommand && !isInstantCommand) {
                 reactToMessage(chatJid, numId, '👀').catch((err) =>
                   logger.debug(
                     { chatJid, numId, err },

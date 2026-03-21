@@ -98,6 +98,10 @@ export const CANCEL_PATTERN =
 // Restart command: exit container cleanly, preserve history
 export const RESTART_PATTERN = /^\s*(?:restart|reboot)\s*$/i;
 
+// Instant commands handled pre-classify in the container — no ack reaction needed
+export const INSTANT_COMMAND_PATTERN =
+  /^\s*(?:version|log|changelog|status|service\s*status|health\s*check|help|perf|performance|reset|clear\s*history|restart|reboot)\s*[?]?\s*$/i;
+
 // Timezone for scheduled tasks (cron expressions, etc.)
 // Uses system timezone by default
 export const TIMEZONE =
