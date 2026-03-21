@@ -423,10 +423,18 @@ let shuttingDown = false;
  * The container runs startBackgroundInit() immediately, then waits in its IPC loop.
  * First user message is routed via IPC for instant response.
  * Automatically restarts on exit (unless shutting down).
+ *
+ * Circuit breaker: after 3 consecutive fast failures (<10s each), sends one error
+ * message and stops retrying. Prevents crash-loop spam to Telegram.
  */
+const prespawnFailures: Record<string, { count: number; lastError: string }> =
+  {};
+const MAX_PRESPAWN_RETRIES = 3;
+
 function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
   if (shuttingDown) return;
 
+  const spawnStart = Date.now();
   const doSpawn = async () => {
     const isMain = group.isMain === true;
     const sessionId = sessions[group.folder];
@@ -481,8 +489,40 @@ function prespawnGroup(chatJid: string, group: RegisteredGroup): void {
   };
 
   queue.prespawn(chatJid, group.folder, doSpawn).finally(() => {
-    if (!shuttingDown) {
-      // Brief pause before restart so deploy's stop/start cycle doesn't double-spawn
+    if (shuttingDown) return;
+
+    const duration = Date.now() - spawnStart;
+    const isQuickCrash = duration < 10_000;
+
+    if (isQuickCrash) {
+      const state = (prespawnFailures[group.folder] ??= {
+        count: 0,
+        lastError: '',
+      });
+      state.count++;
+
+      if (state.count >= MAX_PRESPAWN_RETRIES) {
+        logger.error(
+          { group: group.name, failures: state.count, duration },
+          'Container crash loop detected — stopping retries',
+        );
+        sendJarvisMessage(
+          chatJid,
+          `_${group.containerConfig?.assistantName || ASSISTANT_NAME} offline — container crashed ${state.count} times in a row. Check logs or redeploy._`,
+        ).catch(() => {});
+        return; // Stop retrying
+      }
+
+      // Exponential backoff: 2s, 4s, 8s...
+      const backoff = Math.min(2000 * Math.pow(2, state.count - 1), 30_000);
+      logger.warn(
+        { group: group.name, failures: state.count, backoffMs: backoff },
+        'Container quick crash — retrying with backoff',
+      );
+      setTimeout(() => prespawnGroup(chatJid, group), backoff);
+    } else {
+      // Normal exit (long-lived container) — reset and restart promptly
+      delete prespawnFailures[group.folder];
       setTimeout(() => prespawnGroup(chatJid, group), 1000);
     }
   });
