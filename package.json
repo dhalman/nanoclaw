@@ -1,6 +1,6 @@
 {
   "name": "nanoclaw",
-  "version": "0.3.86",
+  "version": "0.3.87",
   "description": "Personal Claude assistant. Lightweight, secure, customizable.",
   "type": "module",
   "main": "dist/index.js",
