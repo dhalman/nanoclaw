@@ -948,8 +948,15 @@ async function main(): Promise<void> {
   // Send online status from host (bot is initialized, can pin)
   {
     const buildId = (() => {
-      const buildDir = process.env.BUILD_DIR || path.join(process.cwd(), 'builds', 'live');
-      try { return fs.readFileSync(path.join(buildDir, 'build-id.txt'), 'utf-8').trim(); } catch { return '?'; }
+      const buildDir =
+        process.env.BUILD_DIR || path.join(process.cwd(), 'builds', 'live');
+      try {
+        return fs
+          .readFileSync(path.join(buildDir, 'build-id.txt'), 'utf-8')
+          .trim();
+      } catch {
+        return '?';
+      }
     })();
     const onlineTime = new Date().toLocaleString('en-US', {
       month: 'short',

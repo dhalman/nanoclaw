@@ -256,7 +256,9 @@ export function startIpcWatcher(deps: IpcDeps): void {
                   isMain ||
                   (targetGroup && targetGroup.folder === sourceGroup)
                 ) {
-                  const sourceIsOllama = registeredGroups[data.chatJid]?.containerConfig?.ollamaRunner === true;
+                  const sourceIsOllama =
+                    registeredGroups[data.chatJid]?.containerConfig
+                      ?.ollamaRunner === true;
                   if (sourceIsOllama && data.chatJid.startsWith('tg-j:')) {
                     await sendJarvisMessage(data.chatJid, data.text);
                   } else {

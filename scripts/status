@@ -1,8 +1,5 @@
 #!/bin/bash
 # Show NanoClaw status — instances, containers, versions, health
-#
-# Usage:
-#   ./scripts/status
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -10,21 +7,20 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 echo "=== Instances ==="
 echo ""
 
-# Staging
-STAGE_PID=$(pgrep -f "NANOCLAW_INSTANCE=staging" 2>/dev/null | head -1)
+# Staging — check by container existence
+STAGE_CONTAINERS=$(docker ps --filter name=nanoclaw-staging- --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')
 STAGE_BUILD=$(cat "$PROJECT_ROOT/builds/staging/build-id.txt" 2>/dev/null || echo "none")
-if [ -n "$STAGE_PID" ]; then
-  echo "  Staging:  RUNNING (pid $STAGE_PID, build $STAGE_BUILD)"
+if [ "$STAGE_CONTAINERS" -gt 0 ]; then
+  echo "  Staging:  RUNNING ($STAGE_CONTAINERS containers, build $STAGE_BUILD)"
 else
   echo "  Staging:  STOPPED (build $STAGE_BUILD)"
 fi
 
 # Live
-LIVE_PID=$(pgrep -f "NANOCLAW_INSTANCE=live" 2>/dev/null | head -1)
+LIVE_CONTAINERS=$(docker ps --filter name=nanoclaw-live- --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')
 LIVE_BUILD=$(cat "$PROJECT_ROOT/builds/live/build-id.txt" 2>/dev/null || echo "none")
-LIVE_TARGET=$(readlink "$PROJECT_ROOT/builds/live" 2>/dev/null || echo "none")
-if [ -n "$LIVE_PID" ]; then
-  echo "  Live:     RUNNING (pid $LIVE_PID, build $LIVE_BUILD)"
+if [ "$LIVE_CONTAINERS" -gt 0 ]; then
+  echo "  Live:     RUNNING ($LIVE_CONTAINERS containers, build $LIVE_BUILD)"
 else
   echo "  Live:     STOPPED (build $LIVE_BUILD)"
 fi
@@ -36,7 +32,9 @@ docker ps --filter name=nanoclaw --format '  {{.Names}}  {{.Status}}' 2>/dev/nul
 echo ""
 echo "=== Builds ==="
 echo "  Staging: $STAGE_BUILD"
-echo "  Live:    $LIVE_BUILD → $(basename "$LIVE_TARGET" 2>/dev/null || echo "?")"
+LIVE_TARGET=$(readlink "$PROJECT_ROOT/builds/live" 2>/dev/null)
+echo "  Live:    $LIVE_BUILD ($(basename "$LIVE_TARGET" 2>/dev/null || echo "?"))"
+
 echo ""
 echo "=== Services ==="
 curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && echo "  Ollama:          UP" || echo "  Ollama:          DOWN"
