@@ -1,4 +1,23 @@
 {
+  "0.3.82": {
+    "date": "2026-03-20",
+    "title": "feat: webhook infrastructure + polling watchdog",
+    "notes": [
+      "feat: webhook infrastructure + polling watchdog",
+      "refactor: split telegram.ts into focused components + add polling watchdog",
+      "v0.3.80 \u2014 Crash Resilience, Emoji Lifecycle, Smarter Quick-Replies",
+      "v0.3.38 \u2014 Dynamic response translation, version sync",
+      "v0.3.38 \u2014 NLP-based reaction sentiment analysis"
+    ]
+  },
+  "0.3.81": {
+    "date": "2026-03-20",
+    "title": "feat: webhook infrastructure + polling watchdog",
+    "notes": [
+      "feat: webhook infrastructure + polling watchdog",
+      "refactor: split telegram.ts into focused components + add polling watchdog"
+    ]
+  },
   "0.3.80": {
     "date": "2026-03-20",
     "title": "Smarter Quick-Replies",
